@@ -2,35 +2,11 @@
 
 ## High-level design
 ```mermaid
-graph TD
-    A[Client] -->|WebSocket| B(API Gateway)
-    B --> C(Voting Service)
-    C --> D[Cache<br/>(Redis)]
-    C --> E[Database<br/>(PostgreSQL)]
-    
-    subgraph Frontend
-        A
-    end
-    
-    subgraph Backend
-        B
-        C
-        D
-        E
-    end
-    
-    A -->|1. Establish WebSocket| B
-    B -->|2. Route Request| C
-    C -->|3. Process Vote| D
-    C -->|4. Persist Vote| E
-    C -->|5. Broadcast Update| B
-    B -->|6. Real-time Update| A
-
-    classDef frontend fill:#f9f,stroke:#333,stroke-width:2px;
-    classDef backend fill:#bbf,stroke:#333,stroke-width:2px;
-    class A frontend;
-    class B,C,D,E backend;
-
+graph TD;
+    A-->B;
+    A-->C;
+    B-->D;
+    C-->D;
 ```
 
 ```
