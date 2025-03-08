@@ -2,12 +2,6 @@
 
 ## High-level design
 ```mermaid
----
-config:
-  theme: mc
-  layout: fixed
-  look: handDrawn
----
 flowchart TD
     Client["Client"] L_Client_APIGateway_0@-. WebSocket Connection .-> APIGateway["APIGateway"]
     Client -- HTTP POST/GET /images --> APIGateway
@@ -34,7 +28,6 @@ flowchart TD
     linkStyle 0 stroke:#2962FF,fill:none
     linkStyle 10 stroke:#D50000,fill:none
     L_Client_APIGateway_0@{ animation: fast }
-
 ```
 
 ```
