@@ -1,6 +1,15 @@
 <h1 style="width: 100%; text-align: center;">Realtime polling system with GO</h1>
 
+# Project Votify
+
+One Paragraph of project description goes here
+
+## Getting Started
+
+These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See deployment for notes on how to deploy the project on a live system.
+
 ## High-level design
+
 ```mermaid
 flowchart TD
     Client -->|WebSocket Connection| APIGateway
@@ -27,46 +36,54 @@ flowchart TD
 ```
 
 ```
-polling-system-backend/
+voting-service/
 ├── cmd/
-│   └── server/
-│       └── main.go          # Application entry point
+│   └── main.go
 ├── internal/
-│   ├── adapters/            # Adapters for external systems
-│   │   ├── handlers/        # HTTP handlers (e.g., Gin)
-│   │   │   ├── poll.go      # Poll-related endpoints
-│   │   │   ├── vote.go      # Vote-related endpoints
-│   │   │   └── auth.go      # Authentication endpoints
-│   │   ├── repositories/    # Data persistence implementations
-│   │   │   ├── mysql/       # MySQL database access
-│   │   │   │   └── poll_repository.go
-│   │   │   ├── redis/       # Redis caching
-│   │   │   │   └── vote_cache.go
-│   │   │   └── kafka/       # Kafka messaging
-│   │   │       └── vote_producer.go
-│   │   └── external/        # External service implementations
-│   │       ├── minio/       # MinIO for image uploads
-│   │       │   └── image_uploader.go
-│   │       └── socketio/    # Socket.IO for real-time updates
-│   │           └── broadcaster.go
-│   ├── core/                # Core business logic
-│   │   ├── domain/          # Domain entities
-│   │   │   ├── poll.go      # Poll entity
-│   │   │   ├── poll_option.go # Poll option entity
-│   │   │   ├── vote.go      # Vote entity
-│   │   │   └── user.go      # User entity
-│   │   └── services/        # Application services (use cases)
-│   │       ├── poll_service.go   # Poll-related logic
-│   │       ├── vote_service.go   # Vote-related logic
-│   │       └── auth_service.go   # Authentication logic
-│   └── ports/               # Interfaces for external interactions
-│       ├── repositories.go  # Repository interfaces
-│       ├── services.go      # Service interfaces (optional)
-│       └── external.go      # External service interfaces
-├── pkg/                     # Shared utilities (optional)
-│   ├── config/              # Configuration management
-│   │   └── config.go
-│   └── middleware/          # Middleware functions
-│       └── auth.go          # Authentication middleware
-└── go.mod                   # Go module file
+│   ├── core/
+│   │   ├── domain/
+│   │   │   ├── vote.go          # Entity
+│   │   │   └── election.go      # Aggregate root
+│   │   ├── ports/
+│   │   │   ├── repository.go    # Repository interfaces
+│   │   │   ├── service.go       # Service interfaces
+│   │   │   └── handler.go       # HTTP handlers interface
+│   │   └── services/
+│   │       └── voting_service.go # Domain service implementation
+│   │
+│   ├── adapters/
+│   │   ├── handlers/
+│   │   │   ├── http/
+│   │   │   │   ├── vote_handler.go  # Gin handlers
+│   │   │   │   └── websocket.go     # WebSocket implementation
+│   │   │   └── cli/
+│   │   ├── repositories/
+│   │   │   ├── mysql/
+│   │   │   │   ├── vote_repository.go # MySQL implementation
+│   │   │   │   └── election_repository.go
+│   │   │   └── redis/
+│   │   │       └── cache_repository.go # Redis cache
+│   │   └── storage/
+│   │       └── minio/
+│   │           └── image_storage.go    # MinIO adapter
+│   │
+│   └── infrastructure/
+│       ├── database.go         # DB connection
+│       ├── redis.go            # Redis client
+│       └── minio.go            # MinIO client
+│
+├── pkg/
+│   ├── config/
+│   │   └── config.go           # Configuration loader
+│   └── utils/
+│       ├── logger.go
+│       └── validator.go
+│
+├── configs/
+│   └── default.yaml            # Default configuration
+│
+├── go.mod
+├── go.sum
+├── .env
+└── Dockerfile
 ```

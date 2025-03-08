@@ -1,0 +1,95 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: votify-config
+data:
+  VOTIFY_ENVIRONMENT: "production"
+  VOTIFY_SERVICE_PORT: "8080"
+  VOTIFY_MYSQL_DATABASE: "voting_db"
+  VOTIFY_MINIO_ENDPOINT: "minio:9000"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: votify-secrets
+stringData:
+  VOTIFY_MYSQL_ROOT_PASSWORD: "rootpass"
+  VOTIFY_MYSQL_USER: "admin"
+  VOTIFY_MYSQL_PASSWORD: "adminpass"
+  VOTIFY_REDIS_PASSWORD: "redispass"
+  VOTIFY_MINIO_ROOT_USER: "minioadmin"
+  VOTIFY_MINIO_ROOT_PASSWORD: "minioadmin"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+spec:
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.0
+          envFrom:
+            - secretRef:
+                name: votify-secrets
+            - configMapRef:
+                name: votify-config
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: votify-secrets
+                  key: VOTIFY_MYSQL_ROOT_PASSWORD
+            - name: MYSQL_DATABASE
+              valueFrom:
+                configMapRef:
+                  name: votify-config
+                  key: VOTIFY_MYSQL_DATABASE
+          ports:
+            - containerPort: 3306
+          volumeMounts:
+            - name: mysql-persistent-storage
+              mountPath: /var/lib/mysql
+      volumes:
+        - name: mysql-persistent-storage
+          persistentVolumeClaim:
+            claimName: mysql-pv-claim
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: phpmyadmin
+spec:
+  selector:
+    matchLabels:
+      app: phpmyadmin
+  template:
+    metadata:
+      labels:
+        app: phpmyadmin
+    spec:
+      containers:
+        - name: phpmyadmin
+          image: phpmyadmin/phpmyadmin
+          env:
+            - name: PMA_HOST
+              value: "mysql"
+            - name: PMA_USER
+              valueFrom:
+                secretKeyRef:
+                  name: votify-secrets
+                  key: VOTIFY_MYSQL_USER
+            - name: PMA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: votify-secrets
+                  key: VOTIFY_MYSQL_PASSWORD
+          ports:
+            - containerPort: 80
