@@ -3,31 +3,27 @@
 ## High-level design
 ```mermaid
 flowchart TD
-    Client["Client"] L_Client_APIGateway_0@-. WebSocket Connection .-> APIGateway["APIGateway"]
-    Client -- HTTP POST/GET /images --> APIGateway
-    APIGateway -- Route Voting Messages --> VotingService["VotingService"]
-    APIGateway -- Route Image Requests --> BlobService["BlobService"]
-    VotingService -- Cache Results/Updates --> Redis[("Redis")]
-    VotingService -- Persist Votes --> Database[("Database")]
-    BlobService -- Store Metadata --> Database
-    BlobService -- Store Image Data --> ObjectStorage[("Object Storage")]
-    VotingService -- "Publish Real-time Updates" --> Redis
-    Redis -. Notify Updates via Pub/Sub .-> APIGateway
-    APIGateway -. Push Updates (WebSocket) .-> Client
-     Client:::client
-     APIGateway:::gateway
-     VotingService:::service
-     BlobService:::service
-     Redis:::storage
-     Database:::storage
-     ObjectStorage:::storage
-    classDef service fill:#4a90e2,color:white
-    classDef storage fill:#7ed321,color:black
-    classDef gateway fill:#f5a623,color:white
-    classDef client fill:#bd10e0,color:white
-    linkStyle 0 stroke:#2962FF,fill:none
-    linkStyle 10 stroke:#D50000,fill:none
-    L_Client_APIGateway_0@{ animation: fast }
+    Client -->|WebSocket Connection| APIGateway
+    Client -->|HTTP POST/GET /images| APIGateway
+    APIGateway -->|Route Voting Messages| VotingService
+    APIGateway -->|Route Image Requests| BlobService
+    VotingService -->|Cache Results/Updates| Redis[(Redis)]
+    VotingService -->|Persist Votes| Database[(Database)]
+    BlobService -->|Store Metadata| Database
+    BlobService -->|Store Image Data| ObjectStorage[(Object Storage)]
+    VotingService -->|Publish Real-time Updates| Redis
+    Redis -->|Notify Updates via Pub/Sub| APIGateway
+    APIGateway -->|Push Updates via WebSocket| Client
+
+    classDef service fill:#4a90e2,color:white;
+    classDef storage fill:#7ed321,color:black;
+    classDef gateway fill:#f5a623,color:white;
+    classDef client fill:#bd10e0,color:white;
+
+    class Client client;
+    class APIGateway gateway;
+    class VotingService,BlobService service;
+    class Redis,Database,ObjectStorage storage;
 ```
 
 ```
