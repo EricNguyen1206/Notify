@@ -37,53 +37,53 @@ flowchart TD
 
 ```
 voting-service/
-├── cmd/
-│   └── main.go
-├── internal/
-│   ├── core/
-│   │   ├── domain/
-│   │   │   ├── vote.go          # Entity
-│   │   │   └── election.go      # Aggregate root
-│   │   ├── ports/
-│   │   │   ├── repository.go    # Repository interfaces
-│   │   │   ├── service.go       # Service interfaces
-│   │   │   └── handler.go       # HTTP handlers interface
-│   │   └── services/
-│   │       └── voting_service.go # Domain service implementation
-│   │
-│   ├── adapters/
-│   │   ├── handlers/
-│   │   │   ├── http/
-│   │   │   │   ├── vote_handler.go  # Gin handlers
-│   │   │   │   └── websocket.go     # WebSocket implementation
-│   │   │   └── cli/
-│   │   ├── repositories/
-│   │   │   ├── mysql/
-│   │   │   │   ├── vote_repository.go # MySQL implementation
-│   │   │   │   └── election_repository.go
-│   │   │   └── redis/
-│   │   │       └── cache_repository.go # Redis cache
-│   │   └── storage/
-│   │       └── minio/
-│   │           └── image_storage.go    # MinIO adapter
-│   │
-│   └── infrastructure/
-│       ├── database.go         # DB connection
-│       ├── redis.go            # Redis client
-│       └── minio.go            # MinIO client
-│
-├── pkg/
-│   ├── config/
-│   │   └── config.go           # Configuration loader
-│   └── utils/
-│       ├── logger.go
-│       └── validator.go
-│
-├── configs/
-│   └── default.yaml            # Default configuration
-│
-├── go.mod
-├── go.sum
-├── .env
-└── Dockerfile
+|____cmd/
+| |____api/
+| | |____main.go
+|____internal/
+| |____server/
+| | |____middleware/
+| | | |____cors.go
+| | | |____auth.go
+| | |____repository/
+| | | |____user_repository.go
+| | | |____voting_repository.go
+| | | |____auth_repository.go
+| | |____server.go
+| | |____routes_test.go
+| | |____routes.go
+| | |____service/
+| | | |____voting_service.go
+| | | |____auth_service.go
+| | |____handlers/
+| | | |____auth_handler.go
+| |____adapters/
+| | |____database/
+| | | |____database.go
+| | | |____database_test.go
+| | | |____minio.go
+| | | |____migrate.go
+| | |____utils/
+| | | |____uuid.go
+| |____ports/
+| | |____dao/
+| | | |____option_dao.go
+| | | |____auth_dao.go
+| | | |____topic_dao.go
+| | |____models/
+| | | |____option.go
+| | | |____user.go
+| | | |____topic.go
+| | | |____vote.go
+|____docs/
+| |____swagger.yaml
+| |____docs.go
+| |____swagger.json
+|____.env
+|____go.mod
+|____go.sum
+|____Dockerfile
+|____Makefile
+|____README.md
+
 ```
