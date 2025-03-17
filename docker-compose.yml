@@ -43,34 +43,6 @@ services:
 
 
 
-  voting-service:
-    build: ./voting-service
-    ports:
-      - "${VOTIFY_SERVICE_PORT}:${VOTIFY_SERVICE_PORT}"
-    env_file:
-      - .env
-    environment:
-      - VOTIFY_DB_HOST=mysql
-      - VOTIFY_DB_PORT=3306
-      - VOTIFY_DB_USER=${VOTIFY_MYSQL_USER}
-      - VOTIFY_DB_PASSWORD=${VOTIFY_MYSQL_PASSWORD}
-      - VOTIFY_DB_NAME=${VOTIFY_MYSQL_DATABASE}
-      - VOTIFY_DB_PROTOCOL=tcp
-      - VOTIFY_REDIS_ADDR=redis:6379
-      - VOTIFY_MINIO_ENDPOINT=minio:9000
-    depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_started
-      minio:
-        condition: service_started
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
     links:
@@ -90,9 +62,38 @@ services:
       - ./nginx.conf:/etc/nginx/nginx.conf
     env_file:
       - .env
+    # Remove voting-service from depends_on since we'll run it locally
     depends_on:
-      - voting-service
       - minio
+
+  # Comment out voting-service as it will be run locally
+  # voting-service:
+  #   build: ./voting-service
+  #   ports:
+  #     - "${VOTIFY_SERVICE_PORT}:${VOTIFY_SERVICE_PORT}"
+  #   env_file:
+  #     - .env
+  #   environment:
+  #     - VOTIFY_DB_HOST=mysql
+  #     - VOTIFY_DB_PORT=3306
+  #     - VOTIFY_DB_USER=${VOTIFY_MYSQL_USER}
+  #     - VOTIFY_DB_PASSWORD=${VOTIFY_MYSQL_PASSWORD}
+  #     - VOTIFY_DB_NAME=${VOTIFY_MYSQL_DATABASE}
+  #     - VOTIFY_DB_PROTOCOL=tcp
+  #     - VOTIFY_REDIS_ADDR=redis:6379
+  #     - VOTIFY_MINIO_ENDPOINT=minio:9000
+  #   depends_on:
+  #     mysql:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_started
+  #     minio:
+  #       condition: service_started
+  #   healthcheck:
+  #     test: ["CMD", "wget", "--spider", "-q", "http://localhost:8000/health"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
 
 volumes:
   mysql-data:
