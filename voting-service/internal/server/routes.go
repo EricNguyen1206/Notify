@@ -11,7 +11,7 @@ import (
 )
 
 // SetupRoutes configures all the routes for the application
-func SetupRoutes(router *gin.Engine, authHandler *handlers.AuthHandler, topicHandler *handlers.TopicHandler) {
+func SetupRoutes(router *gin.Engine, authHandler *handlers.AuthHandler, topicHandler *handlers.TopicHandler, optionHandler *handlers.OptionHandler, voteHandler *handlers.VoteHandler, wsHandler *handlers.WebSocketHandler) {
 	// Swagger documentation
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
@@ -43,5 +43,16 @@ func SetupRoutes(router *gin.Engine, authHandler *handlers.AuthHandler, topicHan
 
 		// Topic routes
 		protected.POST("/topics", topicHandler.CreateTopic)
+
+		// Option routes
+		protected.POST("/topics/:topic_id/options", optionHandler.AddOption)
+
+		// Vote routes
+		protected.POST("/topics/:topic_id/options/:option_id/vote", voteHandler.CastVote)
+
+		// WebSocket route
+		protected.GET("/ws", func(c *gin.Context) {
+			wsHandler.HandleWebSocket(c.Writer, c.Request)
+		})
 	}
 }

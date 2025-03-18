@@ -4,15 +4,16 @@ import (
 	"gorm.io/gorm"
 )
 
-// Vote represents an individual vote
+// Vote represents a user's vote for an option
 type Vote struct {
 	gorm.Model
-	TopicID  uint `gorm:"not null;index:idx_vote_topic_user" json:"topic_id"`
+	UserID   uint `gorm:"not null;index" json:"user_id"`
+	TopicID  uint `gorm:"not null;index" json:"topic_id"`
 	OptionID uint `gorm:"not null;index" json:"option_id"`
-	UserID   uint `gorm:"not null;index:idx_vote_topic_user" json:"user_id"`
+}
 
-	// Relationships
-	User   User   `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE" json:"-"`
-	Topic  Topic  `gorm:"foreignKey:TopicID;constraint:OnDelete:CASCADE" json:"-"`
-	Option Option `gorm:"foreignKey:OptionID;constraint:OnDelete:CASCADE" json:"-"`
+// VoteRequest defines the input for casting a vote
+type VoteRequest struct {
+	TopicID  uint `json:"topic_id" binding:"required"`
+	OptionID uint `json:"option_id" binding:"required"`
 }
