@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
+	"voting-service/internal/adapters/database"
 	"voting-service/internal/server/handlers"
 	"voting-service/internal/server/middleware"
 	"voting-service/internal/server/repository"
@@ -32,15 +33,35 @@ func NewServer(db *gorm.DB) *Server {
 	// Initialize services
 	authService := service.NewAuthService(
 		authRepo,
-		"your-jwt-secret-key", // Replace with your JWT secret
-		24*time.Hour,          // Token expiration time
+		"your-secret-key", // Replace with your JWT secret
+		time.Hour,         // Token expiration time
 	)
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(authService)
 
+	// Initialize MinIO client
+	minioClient, err := database.NewMinIOClient(
+		"localhost:9000", // MinIO endpoint
+		"admin",          // MinIO access key
+		"password",       // MinIO secret key
+		"voting-images",  // Bucket name
+	)
+	if err != nil {
+		log.Fatalf("Failed to initialize MinIO client: %v", err)
+	}
+
+	// Initialize repositories
+	topicRepo := repository.NewTopicRepository(db)
+
+	// Initialize services
+	topicService := service.NewTopicService(topicRepo, minioClient)
+
+	// Initialize handlers
+	topicHandler := handlers.NewTopicHandler(topicService)
+
 	// Setup routes
-	SetupRoutes(router, authHandler)
+	SetupRoutes(router, authHandler, topicHandler)
 
 	return &Server{
 		router: router,

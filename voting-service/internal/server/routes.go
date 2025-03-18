@@ -11,7 +11,7 @@ import (
 )
 
 // SetupRoutes configures all the routes for the application
-func SetupRoutes(router *gin.Engine, authHandler *handlers.AuthHandler) {
+func SetupRoutes(router *gin.Engine, authHandler *handlers.AuthHandler, topicHandler *handlers.TopicHandler) {
 	// Swagger documentation
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
@@ -40,5 +40,8 @@ func SetupRoutes(router *gin.Engine, authHandler *handlers.AuthHandler) {
 			user, _ := middleware.GetUserFromContext(c.Request.Context())
 			c.JSON(200, gin.H{"user": user})
 		})
+
+		// Topic routes
+		protected.POST("/topics", topicHandler.CreateTopic)
 	}
 }
