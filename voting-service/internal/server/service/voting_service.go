@@ -2,60 +2,46 @@ package service
 
 import (
 	"context"
+	"encoding/json"
+	"voting-service/internal/adapters/websocket"
 	"voting-service/internal/ports/models"
 	"voting-service/internal/server/repository"
 )
 
-type VotingService struct {
-	repo repository.VotingRepository
+type VoteService struct {
+	voteRepo *repository.VoteRepository
+	hub      *websocket.Hub
 }
 
-func NewVotingService(repo repository.VotingRepository) *VotingService {
-	return &VotingService{repo: repo}
+func NewVoteService(voteRepo *repository.VoteRepository, hub *websocket.Hub) *VoteService {
+	return &VoteService{voteRepo: voteRepo, hub: hub}
 }
 
-// func (s *VotingService) CreateTopic(ctx context.Context, req models.CreateTopicRequest) (*models.Topic, error) {
-// 	startTime, err := time.Parse(time.RFC3339, req.StartTime)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("invalid start time format: %w", err)
-// 	}
-
-// 	endTime, err := time.Parse(time.RFC3339, req.EndTime)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("invalid end time format: %w", err)
-// 	}
-
-// 	topic := &models.Topic{
-// 		Title:       req.Title,
-// 		Description: req.Description,
-// 		StartTime:   startTime,
-// 		EndTime:     endTime,
-// 	}
-
-// 	if err := s.repo.CreateTopic(ctx, topic); err != nil {
-// 		return nil, err
-// 	}
-
-// 	return topic, nil
-// }
-
-// func (s *VotingService) AddOption(ctx context.Context, topicID string, req dao.AddOptionRequest) error {
-// 	option := &models.Option{
-// 		TopicID:  topicID,
-// 		Title:    req.Title,
-// 		ImageURL: req.ImageURL,
-// 		Link:     req.Link,
-// 	}
-
-// 	return s.repo.AddOption(ctx, option)
-// }
-
-func (s *VotingService) CastVote(ctx context.Context, voterID, topicID, optionID uint) error {
+// CastVote records a user's vote and broadcasts the update
+func (s *VoteService) CastVote(ctx context.Context, userID uint, req models.VoteRequest) error {
 	vote := &models.Vote{
-		TopicID:  topicID,
-		OptionID: optionID,
-		UserID:   voterID,
+		UserID:   userID,
+		TopicID:  req.TopicID,
+		OptionID: req.OptionID,
 	}
 
-	return s.repo.RecordVote(ctx, vote)
+	if err := s.voteRepo.CastVote(ctx, vote); err != nil {
+		return err
+	}
+
+	// Get updated vote count
+	count, err := s.voteRepo.GetVoteCount(ctx, req.OptionID)
+	if err != nil {
+		return err
+	}
+
+	// Broadcast vote update
+	update := map[string]interface{}{
+		"option_id":  req.OptionID,
+		"vote_count": count,
+	}
+	message, _ := json.Marshal(update)
+	s.hub.Broadcast <- message
+
+	return nil
 }

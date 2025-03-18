@@ -8,6 +8,7 @@ import (
 	"gorm.io/gorm"
 
 	"voting-service/internal/adapters/database"
+	"voting-service/internal/adapters/websocket"
 	"voting-service/internal/server/handlers"
 	"voting-service/internal/server/middleware"
 	"voting-service/internal/server/repository"
@@ -53,15 +54,26 @@ func NewServer(db *gorm.DB) *Server {
 
 	// Initialize repositories
 	topicRepo := repository.NewTopicRepository(db)
+	optionRepo := repository.NewOptionRepository(db)
+	voteRepo := repository.NewVoteRepository(db)
+
+	// Initialize WebSocket hub and run it in a separate goroutine
+	hub := websocket.NewHub()
+	go hub.Run()
 
 	// Initialize services
 	topicService := service.NewTopicService(topicRepo, minioClient)
+	optionService := service.NewOptionService(optionRepo)
+	voteService := service.NewVoteService(voteRepo, hub)
 
 	// Initialize handlers
 	topicHandler := handlers.NewTopicHandler(topicService)
+	optionHandler := handlers.NewOptionHandler(optionService)
+	voteHandler := handlers.NewVoteHandler(voteService)
+	wsHandler := handlers.NewWebSocketHandler(hub)
 
 	// Setup routes
-	SetupRoutes(router, authHandler, topicHandler)
+	SetupRoutes(router, authHandler, topicHandler, optionHandler, voteHandler, wsHandler)
 
 	return &Server{
 		router: router,

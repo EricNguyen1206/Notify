@@ -3,23 +3,26 @@ package repository
 import (
 	"context"
 	"voting-service/internal/ports/models"
+
+	"gorm.io/gorm"
 )
 
-type VotingRepository interface {
-	// Topics
-	CreateTopic(ctx context.Context, topic *models.Topic) error
-	GetTopicByID(ctx context.Context, id string) (*models.Topic, error)
-	ListActiveTopics(ctx context.Context) ([]models.Topic, error)
+type VoteRepository struct {
+	db *gorm.DB
+}
 
-	// Options
-	AddOption(ctx context.Context, option *models.Option) error
-	GetOptionsByTopic(ctx context.Context, topicID string) ([]models.Option, error)
+func NewVoteRepository(db *gorm.DB) *VoteRepository {
+	return &VoteRepository{db: db}
+}
 
-	// Votes
-	RecordVote(ctx context.Context, vote *models.Vote) error
-	GetVoteCount(ctx context.Context, optionID string) (int, error)
-	GetVoterHistory(ctx context.Context, voterID string) ([]models.Vote, error)
+// CastVote records a user's vote for an option
+func (r *VoteRepository) CastVote(ctx context.Context, vote *models.Vote) error {
+	return r.db.WithContext(ctx).Create(vote).Error
+}
 
-	// Results
-	GetTopicResults(ctx context.Context, topicID string) ([]models.Option, error)
+// GetVoteCount retrieves the vote count for an option
+func (r *VoteRepository) GetVoteCount(ctx context.Context, optionID uint) (uint, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&models.Vote{}).Where("option_id = ?", optionID).Count(&count).Error
+	return uint(count), err
 }
