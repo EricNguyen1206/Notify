@@ -13,8 +13,10 @@ type VoteService struct {
 	hub      *websocket.Hub
 }
 
-func NewVoteService(voteRepo *repository.VoteRepository, hub *websocket.Hub) *VoteService {
-	return &VoteService{voteRepo: voteRepo, hub: hub}
+// TODO: add hub *websocket.Hub
+func NewVoteService(voteRepo *repository.VoteRepository) *VoteService {
+	// return &VoteService{voteRepo: voteRepo, hub: hub}
+	return &VoteService{voteRepo: voteRepo}
 }
 
 // CastVote records a user's vote and broadcasts the update
