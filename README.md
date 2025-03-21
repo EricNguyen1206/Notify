@@ -11,6 +11,15 @@ These instructions will get you a copy of the project up and running on your loc
 ## High-level design
 
 ```mermaid
+%%{
+  init: {
+    'theme': 'forest',
+    'themeVariables': {
+      'primaryColor': '#BB2528',
+      'primaryTextColor': '#000',
+    }
+  }
+}%%
 flowchart TD
     %% Client Layer
     subgraph Client Layer
