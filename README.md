@@ -12,27 +12,61 @@ These instructions will get you a copy of the project up and running on your loc
 
 ```mermaid
 flowchart TD
-    Client -->|WebSocket Connection| APIGateway
-    Client -->|HTTP POST/GET /images| APIGateway
-    APIGateway -->|Route Voting Messages| VotingService
-    APIGateway -->|Route Image Requests| BlobService
-    VotingService -->|Cache Results/Updates| Redis[(Redis)]
-    VotingService -->|Persist Votes| Database[(Database)]
-    BlobService -->|Store Metadata| Database
-    BlobService -->|Store Image Data| ObjectStorage[(Object Storage)]
-    VotingService -->|Publish Real-time Updates| Redis
-    Redis -->|Notify Updates via Pub/Sub| APIGateway
-    APIGateway -->|Push Updates via WebSocket| Client
+    %% Client Layer
+    subgraph Client Layer
+        A[🖥️ Next.js Frontend <br/> Client] 
+    end
+    style A fill:#E3F2FD,stroke:#1E88E5,stroke-width:2px
 
-    classDef service fill:#4a90e2,color:white;
-    classDef storage fill:#7ed321,color:black;
-    classDef gateway fill:#f5a623,color:white;
-    classDef client fill:#bd10e0,color:white;
+    %% API Gateway Layer
+    subgraph API Gateway Layer
+        B[🌐 NGINX API Gateway <br/> & Load Balancer]
+    end
+    style B fill:#E1F5FE,stroke:#0288D1,stroke-width:2px
 
-    class Client client;
-    class APIGateway gateway;
-    class VotingService,BlobService service;
-    class Redis,Database,ObjectStorage storage;
+    %% Backend Services
+    subgraph Backend Services
+        C[🔄 Vote API Service <br/> Golang]
+    end
+    style C fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px
+
+    %% Vote Processing Pipeline
+    subgraph Vote Processing Pipeline
+        D[📨 Message Broker <br/> Apache Kafka]
+        E[📊 Vote Aggregation Service <br/> Golang]
+        F[⚡ In-Memory Store <br/> Redis]
+    end
+    style D fill:#FFF3E0,stroke:#F57C00,stroke-width:2px
+    style E fill:#F1F8E9,stroke:#33691E,stroke-width:2px
+    style F fill:#FBE9E7,stroke:#D84315,stroke-width:2px
+
+    %% Real-Time Notification
+    subgraph Real-Time Notification
+        G[📡 WebSocket Server <br/> Real-Time Notification Service Golang]
+    end
+    style G fill:#F3E5F5,stroke:#8E24AA,stroke-width:2px
+
+    %% Monitoring & Logging
+    subgraph Monitoring & Logging
+        H[📈 Prometheus & Grafana]
+    end
+    style H fill:#ECEFF1,stroke:#455A64,stroke-width:2px
+
+    %% Connections
+    A -- "Vote Submission <br/> & Receive Updates" --> B
+    B --> C
+    C --> D
+    D --> E
+    E --> F
+    F --> G
+    G --> A
+
+    %% Monitoring Connections
+    C --- H
+    E --- H
+    F --- H
+    G --- H
+
 ```
 
 ```
