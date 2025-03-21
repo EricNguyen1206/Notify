@@ -77,55 +77,113 @@ flowchart TD
 
 ```
 
-```
-voting-service/
-|____cmd/
-| |____api/
-| | |____main.go
-|____internal/
-| |____server/
-| | |____middleware/
-| | | |____cors.go
-| | | |____auth.go
-| | |____repository/
-| | | |____user_repository.go
-| | | |____voting_repository.go
-| | | |____auth_repository.go
-| | |____server.go
-| | |____routes_test.go
-| | |____routes.go
-| | |____service/
-| | | |____voting_service.go
-| | | |____auth_service.go
-| | |____handlers/
-| | | |____auth_handler.go
-| |____adapters/
-| | |____database/
-| | | |____database.go
-| | | |____database_test.go
-| | | |____minio.go
-| | | |____migrate.go
-| | |____utils/
-| | | |____uuid.go
-| |____ports/
-| | |____dao/
-| | | |____option_dao.go
-| | | |____auth_dao.go
-| | | |____topic_dao.go
-| | |____models/
-| | | |____option.go
-| | | |____user.go
-| | | |____topic.go
-| | | |____vote.go
-|____docs/
-| |____swagger.yaml
-| |____docs.go
-| |____swagger.json
-|____.env
-|____go.mod
-|____go.sum
-|____Dockerfile
-|____Makefile
-|____README.md
+## Folder Structure
 
+```plaintext
+Votify/
+├── README.md
+├── .gitignore
+├── docker-compose.yml             # Local orchestration including MySQL, Kafka, Redis, etc.
+├── k8s/                           # Kubernetes deployment configurations
+│   ├── namespaces.yaml
+│   ├── mysql-deployment.yaml
+│   ├── mysql-service.yaml
+│   ├── frontend-deployment.yaml
+│   ├── frontend-service.yaml
+│   ├── vote-api-deployment.yaml
+│   ├── vote-api-service.yaml
+│   ├── vote-aggregator-deployment.yaml
+│   ├── vote-aggregator-service.yaml
+│   ├── realtime-notification-deployment.yaml
+│   ├── realtime-notification-service.yaml
+│   ├── kafka-deployment.yaml
+│   ├── kafka-service.yaml
+│   └── redis-deployment.yaml
+├── frontend/                      # Next.js frontend code
+│   ├── Dockerfile
+│   ├── package.json
+│   ├── next.config.js
+│   ├── public/
+│   └── src/
+│       ├── components/
+│       ├── pages/
+│       └── styles/
+├── backend/                       # Backend services code
+│   ├── vote-api-service/          # Vote API Service (Golang)
+│   │   ├── Dockerfile
+│   │   ├── main.go
+│   │   ├── go.mod
+│   │   └── go.sum
+│   ├── vote-aggregator-service/   # Vote Aggregation Service (Golang)
+│   │   ├── Dockerfile
+│   │   ├── main.go
+│   │   ├── go.mod
+│   │   └── go.sum
+│   └── realtime-notification-service/   # Real-Time Notification (WebSocket)
+│       ├── Dockerfile
+│       ├── main.go
+│       ├── go.mod
+│       └── go.sum
+├── infra/                         # Infrastructure configuration
+│   ├── nginx/                     # NGINX API Gateway configuration
+│   │   ├── Dockerfile
+│   │   └── default.conf
+│   ├── kafka/                     # Apache Kafka configuration
+│   │   ├── Dockerfile
+│   │   └── config/
+│   │       └── server.properties
+│   ├── redis/                     # Redis configuration
+│   │   └── redis.conf
+│   └── mysql/                     # MySQL configuration
+│       ├── Dockerfile             # Optional (or use official image)
+│       └── my.cnf
+└── scripts/                       # Utility scripts for deployment
+    └── deploy.sh
 ```
+
+## Architecture Overview
+
+### Client Layer
+- **Next.js Frontend:**  
+  - Provides a user interface for submitting votes and viewing real-time results.
+  - Communicates with backend services through the NGINX API Gateway.
+
+### API Gateway Layer
+- **NGINX API Gateway & Load Balancer:**  
+  - Routes incoming requests to the appropriate backend services.
+  - Ensures efficient distribution of load across services.
+
+### Backend Services
+- **Vote API Service (Golang):**  
+  - Receives vote submissions from the frontend.
+  - Checks campaign metadata (start and end times) stored in MySQL before accepting votes.
+  - Forwards valid votes to the Kafka message broker.
+
+- **Message Broker (Apache Kafka):**  
+  - Handles asynchronous vote processing by queuing vote messages.
+
+- **Vote Aggregation Service (Golang):**  
+  - Consumes vote messages from Kafka.
+  - Aggregates votes in real time, temporarily caching results in Redis.
+  - Persists final vote counts into MySQL after the campaign ends.
+
+- **Realtime Notification Service (Golang WebSocket):**  
+  - Pushes live updates to the frontend based on real-time data from Redis.
+
+### Infrastructure Services
+- **Redis:**  
+  - Provides an in-memory cache for fast retrieval of real-time voting data.
+- **MySQL:**  
+  - Stores campaign metadata (vote topics, start/end times) and final vote results.
+- **NGINX (Infra):**  
+  - Configured as an API Gateway to route client requests.
+  
+### Additional Components
+- **Monitoring & Logging:**  
+  - Components such as Prometheus and Grafana can be attached to monitor system health and performance.
+- **Time-Constrained Voting:**  
+  - Each vote topic includes start and end times. Votes outside this window are rejected.
+- **Deployment:**  
+  - The system is containerized with Docker.
+  - Local development uses Docker Compose for multi-container orchestration.
+  - Production deployment is handled via Kubernetes with dedicated YAML configurations for each service.
