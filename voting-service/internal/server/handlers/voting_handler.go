@@ -1,21 +1,29 @@
 package handlers
 
 import (
+	"encoding/json"
+	"log"
 	"net/http"
+	"time"
 
 	"voting-service/internal/ports/models"
 	"voting-service/internal/server/middleware"
 	"voting-service/internal/server/service"
 
+	"github.com/IBM/sarama"
 	"github.com/gin-gonic/gin"
 )
 
 type VoteHandler struct {
 	voteService *service.VoteService
+	producer    sarama.SyncProducer
 }
 
-func NewVoteHandler(voteService *service.VoteService) *VoteHandler {
-	return &VoteHandler{voteService: voteService}
+func NewVoteHandler(voteService *service.VoteService, producer sarama.SyncProducer) *VoteHandler {
+	return &VoteHandler{
+		voteService: voteService,
+		producer:    producer,
+	}
 }
 
 // @Summary Cast a vote for an option
@@ -43,10 +51,38 @@ func (h *VoteHandler) CastVote(c *gin.Context) {
 		return
 	}
 
-	if err := h.voteService.CastVote(c.Request.Context(), user.ID, req); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	// Prepare vote event data for Kafka
+	voteEvent := map[string]interface{}{
+		"user_id":   user.ID,
+		"option_id": req.OptionID,
+		"topic_id":  req.TopicID,
+		"timestamp": time.Now().Unix(),
+	}
+
+	eventBytes, err := json.Marshal(voteEvent)
+	if err != nil {
+		log.Printf("Error marshalling vote event: %v", err)
+		// Don't return error to client as vote was successful
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "vote recorded successfully"})
+	// Publish the vote event to Kafka asynchronously
+	go func() {
+		msg := &sarama.ProducerMessage{
+			Topic: "votes",
+			Value: sarama.ByteEncoder(eventBytes),
+			Key:   sarama.StringEncoder(req.TopicID), // Use topicID as key for partitioning
+		}
+
+		partition, offset, err := h.producer.SendMessage(msg)
+		if err != nil {
+			log.Printf("Failed to send vote event to Kafka: %v", err)
+			return
+		}
+		log.Printf("Vote event sent to Kafka partition %d at offset %d", partition, offset)
+	}()
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "vote recorded successfully",
+	})
 }
