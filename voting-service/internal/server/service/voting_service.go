@@ -13,9 +13,7 @@ type VoteService struct {
 	hub      *websocket.Hub
 }
 
-// TODO: add hub *websocket.Hub
 func NewVoteService(voteRepo *repository.VoteRepository) *VoteService {
-	// return &VoteService{voteRepo: voteRepo, hub: hub}
 	return &VoteService{voteRepo: voteRepo}
 }
 
