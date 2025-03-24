@@ -17,3 +17,10 @@ type VoteRequest struct {
 	TopicID  uint `json:"topic_id" binding:"required"`
 	OptionID uint `json:"option_id" binding:"required"`
 }
+
+type VoteMessage struct {
+	UserID    uint  `json:"user_id"`
+	TopicID   uint  `json:"topic_id"`
+	OptionID  uint  `json:"option_id"`
+	Timestamp int64 `json:"timestamp"`
+}

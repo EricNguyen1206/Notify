@@ -9,7 +9,13 @@ func InitKafkaProducer(brokers []string) (sarama.SyncProducer, error) {
 	config.Producer.RequiredAcks = sarama.WaitForAll
 	config.Producer.Retry.Max = 5
 	config.Producer.Return.Successes = true
+	config.Producer.Compression = sarama.CompressionSnappy  // Enable compression
+	config.Producer.Partitioner = sarama.NewHashPartitioner // Consistent hashing
 
 	producer, err := sarama.NewSyncProducer(brokers, config)
-	return producer, err
+	if err != nil {
+		return nil, err
+	}
+
+	return producer, nil
 }

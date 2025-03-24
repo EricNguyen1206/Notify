@@ -28,6 +28,20 @@ func NewServer(db *gorm.DB) *Server {
 	// Initialize middleware
 	router.Use(middleware.CORS())
 
+	// Initialize Kafka producer with better config
+	kafkaProducer, err := kafka.InitKafkaProducer([]string{"kafka:9092"})
+	if err != nil {
+		log.Fatalf("Failed to initialize Kafka producer: %v", err)
+	}
+
+	// Add graceful shutdown for Kafka producer
+	go func() {
+		<-time.After(5 * time.Second) // Wait for 5 seconds before closing
+		if err := kafkaProducer.Close(); err != nil {
+			log.Printf("Error closing Kafka producer: %v", err)
+		}
+	}()
+
 	// Initialize repositories
 	authRepo := repository.NewAuthRepository(db)
 
