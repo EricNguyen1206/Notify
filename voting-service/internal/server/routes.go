@@ -49,10 +49,5 @@ func SetupRoutes(router *gin.Engine, authHandler *handlers.AuthHandler, topicHan
 
 		// Vote routes
 		protected.POST("/topics/:topic_id/options/:option_id/vote", voteHandler.CastVote)
-
-		// WebSocket route
-		// protected.GET("/ws", func(c *gin.Context) {
-		// 	wsHandler.HandleWebSocket(c.Writer, c.Request)
-		// })
 	}
 }
