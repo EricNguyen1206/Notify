@@ -13,7 +13,7 @@ services:
     ports:
       - "3306:3306"
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u${VOTIFY_MYSQL_USER}", "-p${VOTIFY_MYSQL_PASSWORD}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "mysql", "-u${VOTIFY_MYSQL_USER}", "-p${VOTIFY_MYSQL_PASSWORD}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -46,11 +46,7 @@ services:
     links:
       - mysql:db
     ports:
-      - "${VOTIFY_PHPMYADMIN_PORT}:80"  # Using 8081 from .env
-    environment:
-      - PMA_HOST=mysql
-      - PMA_USER=${VOTIFY_MYSQL_USER}
-      - PMA_PASSWORD=${VOTIFY_MYSQL_PASSWORD}
+      - "${VOTIFY_PHPMYADMIN_PORT}:80"  # Maps to 8000:80
 
   nginx:
     image: nginx:alpine
@@ -84,36 +80,38 @@ services:
       - mysql
 
   # Comment out voting-service as it will be run locally
-  # voting-service:
-  #   build: ./voting-service
-  #   ports:
-  #     - "${VOTIFY_SERVICE_PORT}:${VOTIFY_SERVICE_PORT}"
-  #   env_file:
-  #     - .env
-  #   environment:
-  #     - VOTIFY_DB_HOST=mysql
-  #     - VOTIFY_DB_PORT=3306
-  #     - VOTIFY_DB_USER=${VOTIFY_MYSQL_USER}
-  #     - VOTIFY_DB_PASSWORD=${VOTIFY_MYSQL_PASSWORD}
-  #     - VOTIFY_DB_NAME=${VOTIFY_MYSQL_DATABASE}
-  #     - VOTIFY_DB_PROTOCOL=tcp
-  #     - VOTIFY_REDIS_ADDR=redis:6379
-  #     - VOTIFY_MINIO_ENDPOINT=minio:9000
-  #   depends_on:
-  #     mysql:
-  #       condition: service_healthy
-  #     redis:
-  #       condition: service_started
-  #     minio:
-  #       condition: service_started
-  #   healthcheck:
-  #     test: ["CMD", "wget", "--spider", "-q", "http://localhost:8000/health"]
-  #     interval: 30s
-  #     timeout: 10s
-  #     retries: 3
+  voting-service:
+      build: ./voting-service
+      ports:
+        - "${VOTIFY_SERVICE_PORT}:8080"  # Maps to 8080:8080
+      env_file:
+        - .env
+      environment:
+        - VOTIFY_DB_HOST=mysql
+        - VOTIFY_DB_PORT=3306
+        - VOTIFY_DB_USER=${VOTIFY_MYSQL_USER}
+        - VOTIFY_DB_PASSWORD=${VOTIFY_MYSQL_PASSWORD}
+        - VOTIFY_DB_NAME=${VOTIFY_MYSQL_DATABASE}
+        - VOTIFY_DB_PROTOCOL=tcp
+        - VOTIFY_REDIS_ADDR=redis:6379
+        - VOTIFY_MINIO_ENDPOINT=minio:9000
+      depends_on:
+        mysql:
+          condition: service_healthy
+        redis:
+          condition: service_started
+        minio:
+          condition: service_started
+      healthcheck:
+        test: ["CMD", "wget", "--spider", "-q", "http://localhost:8000/health"]
+        interval: 30s
+        timeout: 10s
+        retries: 3
 
   aggregation-service:
     build: ./aggregation-service
+    ports:
+      - "${VOTIFY_AGGREGATION_PORT}:8080"  # Using different port from .env
     env_file:
       - .env
     environment:
@@ -122,8 +120,6 @@ services:
       - MYSQL_DSN=${VOTIFY_MYSQL_USER}:${VOTIFY_MYSQL_PASSWORD}@tcp(mysql:3306)/${VOTIFY_MYSQL_DATABASE}?charset=utf8mb4&parseTime=True&loc=Local
       - KAFKA_BROKERS=kafka:9092
       - KAFKA_TOPIC=votes
-    ports:
-      - "${VOTIFY_AGGREGATION_PORT}:8080"  # Using different port from .env
     depends_on:
       mysql:
         condition: service_healthy

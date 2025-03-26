@@ -26,6 +26,7 @@ func NewMySQLDB(user, password, host, port, dbName string) (*gorm.DB, error) {
 		if err == nil {
 			break
 		}
+		log.Printf(dsn)
 		log.Printf("Failed to connect to database (attempt %d/%d): %v", i+1, maxRetries, err)
 		time.Sleep(retryDelay)
 	}
