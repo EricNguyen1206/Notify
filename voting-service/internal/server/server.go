@@ -4,6 +4,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/IBM/sarama"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
@@ -22,17 +23,11 @@ type Server struct {
 }
 
 // NewServer creates a new HTTP server
-func NewServer(db *gorm.DB) *Server {
+func NewServer(db *gorm.DB, minioClient *database.MinIOClient, kafkaProducer sarama.SyncProducer) *Server {
 	router := gin.Default()
 
 	// Initialize middleware
 	router.Use(middleware.CORS())
-
-	// Initialize Kafka producer with better config
-	kafkaProducer, err := kafka.InitKafkaProducer([]string{"kafka:9092"})
-	if err != nil {
-		log.Fatalf("Failed to initialize Kafka producer: %v", err)
-	}
 
 	// Add graceful shutdown for Kafka producer
 	go func() {
@@ -54,17 +49,6 @@ func NewServer(db *gorm.DB) *Server {
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(authService)
-
-	// Initialize MinIO client
-	minioClient, err := database.NewMinIOClient(
-		"localhost:9000", // MinIO endpoint
-		"admin",          // MinIO access key
-		"password",       // MinIO secret key
-		"voting-images",  // Bucket name
-	)
-	if err != nil {
-		log.Fatalf("Failed to initialize MinIO client: %v", err)
-	}
 
 	// Initialize repositories
 	topicRepo := repository.NewTopicRepository(db)

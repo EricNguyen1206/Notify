@@ -1,17 +1,21 @@
 package server
 
 import (
+	"voting-service/configs"
+
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 
-	"voting-service/internal/config"
 	"voting-service/internal/server/handlers"
 	"voting-service/internal/server/middleware"
 )
 
 // SetupRoutes configures all the routes for the application
 func SetupRoutes(router *gin.Engine, authHandler *handlers.AuthHandler, topicHandler *handlers.TopicHandler, optionHandler *handlers.OptionHandler, voteHandler *handlers.VoteHandler) {
+	// Load configuration
+	cfg := configs.Load()
+
 	// Swagger documentation
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
@@ -33,7 +37,7 @@ func SetupRoutes(router *gin.Engine, authHandler *handlers.AuthHandler, topicHan
 
 	// Protected routes (require JWT authentication)
 	protected := router.Group("/api/v1")
-	protected.Use(middleware.JWTAuth(config.LoadConfig().JWTSecret)) // Apply JWT middleware
+	protected.Use(middleware.JWTAuth(cfg.App.JWTSecret)) // Apply JWT middleware
 	{
 		// Example protected route
 		protected.GET("/profile", func(c *gin.Context) {

@@ -1,6 +1,7 @@
 package configs
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 )
@@ -12,7 +13,12 @@ type Config struct {
 		DB       int
 	}
 	MySQL struct {
-		DSN string
+		DBHost     string
+		DBPort     string
+		DBUser     string
+		DBPassword string
+		DBName     string
+		DSN        string
 	}
 	Kafka struct {
 		Brokers []string
@@ -28,15 +34,22 @@ func Load() *Config {
 	var cfg Config
 
 	// Redis
-	cfg.Redis.Addr = getEnv("REDIS_ADDR", "localhost:6379")
-	cfg.Redis.Password = getEnv("REDIS_PASSWORD", "")
+	cfg.Redis.Addr = getEnv("REDIS_ADDR", "redis:6379")
+	cfg.Redis.Password = getEnv("REDIS_PASSWORD", "password")
 	cfg.Redis.DB, _ = strconv.Atoi(getEnv("REDIS_DB", "0"))
 
 	// MySQL
-	cfg.MySQL.DSN = getEnv("MYSQL_DSN", "root:@tcp(localhost:3306)/votes?charset=utf8mb4&parseTime=True&loc=Local")
+	cfg.MySQL.DBHost = getEnv("VOTIFY_MYSQL_HOST", "mysql")
+	cfg.MySQL.DBPort = getEnv("VOTIFY_MYSQL_PORT", "3306")
+	cfg.MySQL.DBUser = getEnv("VOTIFY_MYSQL_USER", "root")
+	cfg.MySQL.DBPassword = getEnv("VOTIFY_MYSQL_PASSWORD", "password")
+	cfg.MySQL.DBName = getEnv("VOTIFY_MYSQL_DATABASE", "voting_db")
+
+	cfg.MySQL.DSN = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local&allowNativePasswords=true&multiStatements=true",
+		cfg.MySQL.DBUser, cfg.MySQL.DBPassword, cfg.MySQL.DBHost, cfg.MySQL.DBPort, cfg.MySQL.DBName)
 
 	// Kafka
-	cfg.Kafka.Brokers = []string{getEnv("KAFKA_BROKERS", "localhost:9092")}
+	cfg.Kafka.Brokers = []string{getEnv("KAFKA_BROKERS", "kafka:9092")}
 	cfg.Kafka.Topic = getEnv("KAFKA_TOPIC", "votes")
 
 	// WebSocket
