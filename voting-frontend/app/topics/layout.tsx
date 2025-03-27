@@ -5,11 +5,7 @@ import { Button } from "@/components/ui/button";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { LogOut } from "lucide-react";
 
-export default function TopicsLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function TopicsLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const router = useRouter();
 
   const handleLogout = () => {
@@ -24,12 +20,7 @@ export default function TopicsLayout({
         <header className="border-b">
           <div className="container mx-auto px-4 h-16 flex items-center justify-between">
             <h1 className="text-xl font-bold">Votify</h1>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleLogout}
-              className="flex items-center gap-2"
-            >
+            <Button variant="ghost" size="sm" onClick={handleLogout} className="flex items-center gap-2">
               <LogOut className="w-4 h-4" />
               Logout
             </Button>

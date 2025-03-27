@@ -9,7 +9,6 @@ import (
 	"gorm.io/gorm"
 
 	"voting-service/internal/adapters/database"
-	"voting-service/internal/adapters/kafka"
 	"voting-service/internal/server/handlers"
 	"voting-service/internal/server/middleware"
 	"voting-service/internal/server/repository"
@@ -54,13 +53,6 @@ func NewServer(db *gorm.DB, minioClient *database.MinIOClient, kafkaProducer sar
 	topicRepo := repository.NewTopicRepository(db)
 	optionRepo := repository.NewOptionRepository(db)
 	voteRepo := repository.NewVoteRepository(db)
-
-	// Initialize Kafka producer
-	kafkaProducer, kafkaErr := kafka.InitKafkaProducer([]string{"kafka:9092"})
-	if kafkaErr != nil {
-		log.Fatalf("Error creating Kafka producer: %v", kafkaErr)
-	}
-	defer kafkaProducer.Close()
 
 	// Initialize services
 	topicService := service.NewTopicService(topicRepo, minioClient)

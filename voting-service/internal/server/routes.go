@@ -48,6 +48,8 @@ func SetupRoutes(router *gin.Engine, authHandler *handlers.AuthHandler, topicHan
 		// Topic routes
 		protected.POST("/topics", topicHandler.CreateTopic)
 
+		protected.GET("/topics", topicHandler.GetAllTopics) // Add this line to get all topics
+
 		// Option routes
 		protected.POST("/topics/:topic_id/options", optionHandler.AddOption)
 

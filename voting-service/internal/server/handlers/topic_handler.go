@@ -46,3 +46,20 @@ func (h *TopicHandler) CreateTopic(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, topic)
 }
+
+// @Summary Get all topics
+// @Description Get all voting topics
+// @Tags topics
+// @Produce json
+// @Success 200 {array} models.Topic
+// @Failure 500 {object} map[string]string
+// @Router /topics [get]
+func (h *TopicHandler) GetAllTopics(c *gin.Context) {
+	topics, err := h.topicService.GetAllTopics(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, topics)
+}

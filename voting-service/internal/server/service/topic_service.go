@@ -44,3 +44,12 @@ func (s *TopicService) CreateTopic(ctx context.Context, req models.CreateTopicRe
 
 	return topic, nil
 }
+
+func (s *TopicService) GetAllTopics(ctx context.Context) ([]*models.Topic, error) {
+	// Get all topics
+	topics, err := s.topicRepo.GetTopics(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get topics: %w", err)
+	}
+	return topics, nil
+}
