@@ -28,14 +28,15 @@ func main() {
 		log.Fatal("Failed to connect to database:", err)
 	}
 
-	// Start services
-	consumerService := services.NewVoteConsumerService(cfg, rdb, db)
-	go consumerService.Start()
+	// Create services
+	voteCountSvc := services.NewVoteCountService(cfg, rdb)
+	consumerSvc := services.NewVoteConsumerService(cfg, rdb, db, voteCountSvc)
 
-	voteCountService := services.NewVoteCountService(cfg, rdb)
-	router := gin.Default()
-	voteCountService.RegisterRoutes(router)
+	// Start consumer
+	go consumerSvc.Start()
 
 	// Start API server
-	log.Fatal(router.Run(":" + "8080"))
+	router := gin.Default()
+	voteCountSvc.RegisterRoutes(router)
+	log.Fatal(router.Run(":" + cfg.App.Port))
 }
