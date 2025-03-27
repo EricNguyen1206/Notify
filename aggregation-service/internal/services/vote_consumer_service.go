@@ -16,35 +16,65 @@ import (
 )
 
 type VoteConsumerService struct {
-	cfg   *configs.Config
-	redis *redis.Client
-	db    *gorm.DB
+	cfg           *configs.Config
+	redis         *redis.Client
+	db            *gorm.DB
+	voteCountSvc  *VoteCountService // Reference to vote count service
 }
 
-func NewVoteConsumerService(cfg *configs.Config, redis *redis.Client, db *gorm.DB) *VoteConsumerService {
+func NewVoteConsumerService(
+	cfg *configs.Config, 
+	redis *redis.Client, 
+	db *gorm.DB,
+	voteCountSvc *VoteCountService,
+) *VoteConsumerService {
 	return &VoteConsumerService{
-		cfg:   cfg,
-		redis: redis,
-		db:    db,
+		cfg:          cfg,
+		redis:        redis,
+		db:           db,
+		voteCountSvc: voteCountSvc,
 	}
 }
 
 func (s *VoteConsumerService) Start() {
 	config := sarama.NewConfig()
-	consumer, err := sarama.NewConsumer(s.cfg.Kafka.Brokers, config)
+	config.Consumer.Offsets.Initial = sarama.OffsetOldest
+
+	consumer, err := sarama.NewConsumerGroup(s.cfg.Kafka.Brokers, "aggregation-group", config)
 	if err != nil {
-		log.Fatal("Error creating consumer:", err)
+		log.Fatal("Error creating consumer group:", err)
 	}
 
-	partitionConsumer, err := consumer.ConsumePartition(
-		s.cfg.Kafka.Topic, 0, sarama.OffsetNewest)
-	if err != nil {
-		log.Fatal("Error creating partition consumer:", err)
-	}
+	go func() {
+		for {
+			if err := consumer.Consume(
+				context.Background(),
+				[]string{s.cfg.Kafka.Topic},
+				s,
+			); err != nil {
+				log.Printf("Error from consumer: %v", err)
+			}
+		}
+	}()
+}
 
-	for msg := range partitionConsumer.Messages() {
+func (s *VoteConsumerService) Setup(sarama.ConsumerGroupSession) error {
+	return nil
+}
+
+func (s *VoteConsumerService) Cleanup(sarama.ConsumerGroupSession) error {
+	return nil
+}
+
+func (s *VoteConsumerService) ConsumeClaim(
+	session sarama.ConsumerGroupSession, 
+	claim sarama.ConsumerGroupClaim,
+) error {
+	for msg := range claim.Messages() {
 		s.processMessage(msg)
+		session.MarkMessage(msg, "")
 	}
+	return nil
 }
 
 func (s *VoteConsumerService) processMessage(msg *sarama.ConsumerMessage) {
@@ -56,16 +86,42 @@ func (s *VoteConsumerService) processMessage(msg *sarama.ConsumerMessage) {
 
 	ctx := context.Background()
 	userKey := fmt.Sprintf("vote:%d:%d", vote.UserID, vote.TopicID)
+	
+	// Check for duplicate vote
 	if s.redis.Exists(ctx, userKey).Val() == 1 {
 		return
 	}
 
-	if err := s.db.Create(&vote).Error; err != nil {
+	// Start transaction
+	tx := s.db.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// Save to database
+	if err := tx.Create(&vote).Error; err != nil {
+		tx.Rollback()
 		log.Println("DB write error:", err)
 		return
 	}
 
+	// Update Redis
 	rankingKey := fmt.Sprintf("ranking:%d", vote.TopicID)
-	s.redis.ZIncrBy(ctx, rankingKey, 1, strconv.FormatUint(uint64(vote.OptionID), 10))
+	prevScore := s.redis.ZScore(ctx, rankingKey, strconv.FormatUint(uint64(vote.OptionID), 10)).Val()
+	
+	if _, err := s.redis.ZIncrBy(ctx, rankingKey, 1, strconv.FormatUint(uint64(vote.OptionID), 10)).Result(); err != nil {
+		tx.Rollback()
+		log.Println("Redis update error:", err)
+		return
+	}
+
+	// Only broadcast if score changed
+	if newScore := s.redis.ZScore(ctx, rankingKey, strconv.FormatUint(uint64(vote.OptionID), 10)).Val(); newScore != prevScore {
+		s.voteCountSvc.BroadcastUpdate(strconv.FormatUint(uint64(vote.TopicID), 10))
+	}
+
 	s.redis.Set(ctx, userKey, 1, 24*time.Hour)
+	tx.Commit()
 }

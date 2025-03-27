@@ -7,6 +7,9 @@ import (
 )
 
 type Config struct {
+	App struct {
+		Port string
+	}
 	Redis struct {
 		Addr     string
 		Password string
@@ -33,6 +36,8 @@ type Config struct {
 func Load() *Config {
 	var cfg Config
 
+	cfg.App.Port = getEnv("VOTIFY_AGGREGATION_PORT", "8081")
+
 	// Redis
 	cfg.Redis.Addr = getEnv("REDIS_ADDR", "redis:6379")
 	cfg.Redis.Password = getEnv("REDIS_PASSWORD", "password")
@@ -49,12 +54,12 @@ func Load() *Config {
 		cfg.MySQL.DBUser, cfg.MySQL.DBPassword, cfg.MySQL.DBHost, cfg.MySQL.DBPort, cfg.MySQL.DBName)
 
 	// Kafka
-	cfg.Kafka.Brokers = []string{getEnv("KAFKA_BROKERS", "kafka:9092")}
-	cfg.Kafka.Topic = getEnv("KAFKA_TOPIC", "votes")
+	cfg.Kafka.Brokers = []string{getEnv("VOTIFY_KAFKA_BROKERS", "kafka:9092")}
+	cfg.Kafka.Topic = getEnv("VOTIFY_KAFKA_TOPIC", "voting-events")
 
 	// WebSocket
-	cfg.WebSocket.ReadBufferSize, _ = strconv.Atoi(getEnv("WS_READ_BUFFER", "1024"))
-	cfg.WebSocket.WriteBufferSize, _ = strconv.Atoi(getEnv("WS_WRITE_BUFFER", "1024"))
+	cfg.WebSocket.ReadBufferSize, _ = strconv.Atoi(getEnv("VOTIFY_WS_READ_BUFFER", "1024"))
+	cfg.WebSocket.WriteBufferSize, _ = strconv.Atoi(getEnv("VOTIFY_WS_WRITE_BUFFER", "1024"))
 
 	return &cfg
 }
