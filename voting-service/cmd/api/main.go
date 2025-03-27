@@ -36,7 +36,7 @@ func main() {
 	}
 
 	// Initialize Kafka producer with better config
-	kafkaProducer, kafkaErr := kafka.InitKafkaProducer(cfg.Kafka.Brokers)
+	kafkaProducer, kafkaErr := kafka.InitKafkaProducer(cfg.Kafka.Brokers, cfg.Kafka.Topic)
 	if kafkaErr != nil {
 		log.Fatalf("Failed to initialize Kafka producer: %v", kafkaErr)
 	}

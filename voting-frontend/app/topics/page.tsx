@@ -25,16 +25,29 @@ export default function TopicsPage() {
   const fetchTopics = useCallback(
     () => async () => {
       try {
-        const response = await api.get("/topics", {
-          params: { search: searchQuery },
-        });
+        const response = await api.get("/topics");
+        console.log("TEST", response.data);
         setTopics(response.data);
       } catch (error) {
         console.error("Failed to fetch topics:", error);
       }
     },
-    [searchQuery]
+    []
   );
+
+  const getTopics = async () => {
+    console.log("TEST");
+    const response = await fetch("http://localhost:8080/api/v1/topics", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InVzZXIxQGV4YW1wbGUuY29tIiwiZXhwIjoxNzQzMDk2ODk2LCJzdWIiOjF9.kRmSx2hPNJ41oyAagoZne62lP4tG0ye2mbEPBjPpA4c`,
+      },
+    });
+    const data = await response.json();
+    console.log("TEST response", data);
+    return data;
+  };
 
   useEffect(() => {
     fetchTopics();
@@ -43,6 +56,9 @@ export default function TopicsPage() {
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">Topics</h1>
+      <button className="p-2 bg-amber-400 border-2 rounded-2xl" onClick={getTopics}>
+        Refresh
+      </button>
       <div className="flex justify-between mb-4">
         <Input
           placeholder="Search topics..."
@@ -66,12 +82,7 @@ export default function TopicsPage() {
               </div>
               {topic.thumbnail_url && (
                 <div className="relative h-48">
-                  <Image
-                    src={topic.thumbnail_url}
-                    alt={topic.title}
-                    fill
-                    className="object-cover rounded-md"
-                  />
+                  <Image src={topic.thumbnail_url} alt={topic.title} fill className="object-cover rounded-md" />
                 </div>
               )}
             </div>
