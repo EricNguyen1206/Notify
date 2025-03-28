@@ -1,79 +1,94 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import api from "@/lib/api";
-import { Badge } from "@/components/ui/badge";
-import { Topic } from "@/models/topic";
-import OptionCard from "@/components/OptionCard";
+import { useState, useCallback } from "react";
+import { useWebSocket } from "@/lib/socket";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { toast } from "sonner";
+import Image from "next/image";
+type Option = {
+  id: string;
+  title: string;
+  imageUrl: string;
+  votes: number;
+};
 
-export default function TopicDetailPage() {
-  const params = useParams();
-  const [topic, setTopic] = useState<Topic | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [voting, setVoting] = useState<string | null>(null);
+type VoteMessage = {
+  type: "vote";
+  optionId: string;
+  newVoteCount: number;
+};
 
-  const fetchTopicDetails = useCallback(async () => {
+type NewOptionMessage = {
+  type: "new_option";
+  option: Option;
+};
+
+export default function TopicDetail({ topicId }: { topicId: string }) {
+  const [optionMap, setOptionMap] = useState<Map<string, Option>>(new Map());
+
+  // WebSocket listener to update vote count and add new options
+  const handleWebSocketMessage = useCallback((data: VoteMessage | NewOptionMessage) => {
+    setOptionMap((prevMap) => {
+      const newMap = new Map(prevMap);
+      
+      if (data.type === "vote") {
+        const option = newMap.get(data.optionId);
+        if (option) {
+          newMap.set(data.optionId, { ...option, votes: data.newVoteCount });
+        }
+      } else if (data.type === "new_option") {
+        newMap.set(data.option.id, data.option);
+      }
+
+      return newMap;
+    });
+  }, []);
+
+  // Connect WebSocket
+  useWebSocket<VoteMessage | NewOptionMessage>(
+    `wss://your-websocket-server.com/topics/${topicId}`,
+    handleWebSocketMessage
+  );
+
+  // Handle Vote Click
+  async function handleVote(optionId: string) {
     try {
-      const response = await api.get(`/topics/${params.id}`);
-      setTopic(response.data);
+      setOptionMap((prevMap) => {
+        const newMap = new Map(prevMap);
+        const option = newMap.get(optionId);
+        if (option) {
+          newMap.set(optionId, { ...option, votes: option.votes + 1 }); // Optimistic UI update
+        }
+        return newMap;
+      });
+
+      // Send vote request to the server
+      const res = await fetch(`/api/vote`, {
+        method: "POST",
+        body: JSON.stringify({ optionId }),
+      });
+
+      if (!res.ok) throw new Error("Failed to vote");
+
+      toast.success("Vote submitted!");
     } catch (error) {
-      console.error("Failed to fetch topic details:", error);
-    } finally {
-      setLoading(false);
+      console.error(error);
+      toast.error("Failed to submit vote.");
     }
-  }, [params.id]);
-
-  useEffect(() => {
-    fetchTopicDetails();
-  }, [fetchTopicDetails]);
-
-  const handleVote = async (optionId: string) => {
-    try {
-      setVoting(optionId);
-      await api.post(`/topics/${params.id}/vote`, { option_id: optionId });
-      fetchTopicDetails(); // Refresh the data after voting
-    } catch (error) {
-      console.error("Failed to vote:", error);
-    } finally {
-      setVoting(null);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="container mx-auto p-4">
-        <div className="text-center">Loading...</div>
-      </div>
-    );
-  }
-
-  if (!topic) {
-    return (
-      <div className="container mx-auto p-4">
-        <div className="text-center">Topic not found</div>
-      </div>
-    );
   }
 
   return (
-    <div className="container mx-auto p-4">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">{topic.title}</h1>
-        <p className="text-gray-600 mb-4">{topic.description}</p>
-        <div className="flex gap-2 text-sm text-gray-500">
-          <Badge variant="secondary">
-            Start: {new Date(topic.start_time).toLocaleString()}
-          </Badge>
-          <Badge variant="secondary">
-            End: {new Date(topic.end_time).toLocaleString()}
-          </Badge>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {topic.options.map((option) => (
-          <OptionCard key={option.id} option={option} handleVote={handleVote} voting={voting ?? ""} />
+    <div>
+      <h1 className="text-2xl font-bold">Topic Details</h1>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {[...optionMap.values()].map((option) => (
+          <Card key={option.id} className="p-4 flex flex-col items-center">
+            <h2 className="text-xl font-semibold">{option.title}</h2>
+            <Image src={option.imageUrl} alt={option.title} width={128} height={128} className="my-2" />
+            <p className="text-lg">Votes: {option.votes}</p>
+            <Button onClick={() => handleVote(option.id)}>Vote</Button>
+          </Card>
         ))}
       </div>
     </div>
