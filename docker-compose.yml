@@ -95,7 +95,27 @@ services:
       - redis
       - mysql
 
-  # Comment out voting-service as it will be run locally
+  aggregation-service:
+    build: ./aggregation-service
+    ports:
+      - "${VOTIFY_AGGREGATION_PORT}:8080"  # Using different port from .env
+    env_file:
+      - .env
+    environment:
+      - REDIS_ADDR=redis:6379
+      - REDIS_PASSWORD=${VOTIFY_REDIS_PASSWORD}
+      - MYSQL_DSN=${VOTIFY_MYSQL_USER}:${VOTIFY_MYSQL_PASSWORD}@tcp(mysql:3306)/${VOTIFY_MYSQL_DATABASE}?charset=utf8mb4&parseTime=True&loc=Local
+      - KAFKA_BROKERS=kafka:9092
+      - KAFKA_TOPIC=votes
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      kafka:
+        condition: service_started
+
+  # voting-service
   voting-service:
       build: ./voting-service
       ports:
@@ -118,31 +138,15 @@ services:
           condition: service_started
         minio:
           condition: service_started
+        aggregation-service:
+          condition: service_started
+      networks:
+        - default
       healthcheck:
         test: ["CMD", "wget", "--spider", "-q", "http://localhost:8000/health"]
         interval: 30s
         timeout: 10s
         retries: 3
-
-  aggregation-service:
-    build: ./aggregation-service
-    ports:
-      - "${VOTIFY_AGGREGATION_PORT}:8080"  # Using different port from .env
-    env_file:
-      - .env
-    environment:
-      - REDIS_ADDR=redis:6379
-      - REDIS_PASSWORD=${VOTIFY_REDIS_PASSWORD}
-      - MYSQL_DSN=${VOTIFY_MYSQL_USER}:${VOTIFY_MYSQL_PASSWORD}@tcp(mysql:3306)/${VOTIFY_MYSQL_DATABASE}?charset=utf8mb4&parseTime=True&loc=Local
-      - KAFKA_BROKERS=kafka:9092
-      - KAFKA_TOPIC=votes
-    depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_started
-      kafka:
-        condition: service_started
 
   # Add Nginx as a reverse proxy
   nginx:
@@ -160,6 +164,25 @@ services:
       - phpmyadmin
       - kafka
       - voting-service
+
+  # frontend:
+  #   platform: linux/amd64
+  #   build: 
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     - NEXT_PUBLIC_API_URL=http://localhost:80
+  #     - WATCHPACK_POLLING=true
+  #   volumes:
+  #     - ./frontend:/app
+  #     - /app/node_modules
+  #     - /app/.next
+  #   depends_on:
+  #     - nginx
+  #   networks:
+  #     - default
 
 volumes:
   mysql-data:
