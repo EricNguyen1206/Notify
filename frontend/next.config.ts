@@ -14,6 +14,14 @@ const nextConfig: NextConfig = {
         turbo: {
             // ...
         }
+    },
+    images: {
+        remotePatterns: [
+            {
+                protocol: 'http',
+                hostname: '**'
+            }
+        ]
     }
 };
 
