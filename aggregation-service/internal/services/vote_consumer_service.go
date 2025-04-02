@@ -16,15 +16,15 @@ import (
 )
 
 type VoteConsumerService struct {
-	cfg           *configs.Config
-	redis         *redis.Client
-	db            *gorm.DB
-	voteCountSvc  *VoteCountService // Reference to vote count service
+	cfg          *configs.Config
+	redis        *redis.Client
+	db           *gorm.DB
+	voteCountSvc *VoteCountService // Reference to vote count service
 }
 
 func NewVoteConsumerService(
-	cfg *configs.Config, 
-	redis *redis.Client, 
+	cfg *configs.Config,
+	redis *redis.Client,
 	db *gorm.DB,
 	voteCountSvc *VoteCountService,
 ) *VoteConsumerService {
@@ -67,7 +67,7 @@ func (s *VoteConsumerService) Cleanup(sarama.ConsumerGroupSession) error {
 }
 
 func (s *VoteConsumerService) ConsumeClaim(
-	session sarama.ConsumerGroupSession, 
+	session sarama.ConsumerGroupSession,
 	claim sarama.ConsumerGroupClaim,
 ) error {
 	for msg := range claim.Messages() {
@@ -86,7 +86,7 @@ func (s *VoteConsumerService) processMessage(msg *sarama.ConsumerMessage) {
 
 	ctx := context.Background()
 	userKey := fmt.Sprintf("vote:%d:%d", vote.UserID, vote.TopicID)
-	
+
 	// Check for duplicate vote
 	if s.redis.Exists(ctx, userKey).Val() == 1 {
 		return
@@ -110,7 +110,7 @@ func (s *VoteConsumerService) processMessage(msg *sarama.ConsumerMessage) {
 	// Update Redis
 	rankingKey := fmt.Sprintf("ranking:%d", vote.TopicID)
 	prevScore := s.redis.ZScore(ctx, rankingKey, strconv.FormatUint(uint64(vote.OptionID), 10)).Val()
-	
+
 	if _, err := s.redis.ZIncrBy(ctx, rankingKey, 1, strconv.FormatUint(uint64(vote.OptionID), 10)).Result(); err != nil {
 		tx.Rollback()
 		log.Println("Redis update error:", err)

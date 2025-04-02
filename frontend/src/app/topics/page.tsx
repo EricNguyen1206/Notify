@@ -1,86 +1,46 @@
 'use server';
 
-import { GetServerSideProps } from 'next';
+import { cookies } from 'next/headers';
 import Image from 'next/image';
 import Link from 'next/link';
 
+import { BASE_URL } from '@/lib/api';
+
 interface Topic {
-    id: string;
+    ID: number;
+    CreatedAt: string;
+    UpdatedAt: string;
+    DeletedAt: string | null;
     title: string;
     description: string;
-    start_time: string;
-    end_time: string;
-    thumbnail_url: string;
+    image_url: string;
+    start_time: string | Date;
+    end_time: string | Date;
 }
 
-export const getServerSideProps: GetServerSideProps = async (context) => {
-    // 1. Get token from cookies (sent from the browser)
-    const token = context.req.cookies.token;
-
-    if (!token) {
-        // Redirect to login if no token
-        return {
-            redirect: {
-                destination: '/login',
-                permanent: false
-            }
-        };
-    }
-
-    // 2. Fetch data with the token
+async function getTopics(token?: string) {
+    if (!token) return [];
     try {
-        const response = await fetch('http://localhost:8000/api/v1/topics', {
+        const res = await fetch(`${BASE_URL}/topics`, {
             method: 'GET',
             headers: {
+                'Content-Type': 'application/json',
                 Authorization: `Bearer ${token}`
-            }
+            },
+            cache: 'no-store' // Ensures fresh data on each request (SSR)
         });
-        if (!response.ok) {
-            // Redirect to login if token is invalid
-            return {
-                redirect: {
-                    destination: '/login',
-                    permanent: false
-                }
-            };
-        }
-        const responseData = await response.json();
-        return {
-            props: {
-                topics: responseData
-            }
-        };
+        if (!res.ok) throw new Error('Failed to fetch data');
+        return res.json() as Promise<Topic[]>;
     } catch (error) {
-        // Handle errors (e.g., token expired)
-        return {
-            redirect: {
-                destination: '/login',
-                permanent: false
-            }
-        };
+        console.error('Error fetching topics:', error);
+        return [];
     }
-};
+}
 
-// async function getTopics(page: number) {
-//   const res = await fetch(`${BASE_URL}/topics?page=${page}&limit=10`, {
-//     method: "GET",
-//     headers: {
-//       "Content-Type": "application/json",
-//       Authorization: `Bearer ${localStorage.getItem("token")}`,
-//     },
-//     cache: "no-store", // Ensures fresh data on each request (SSR)
-//   });
-
-//   if (!res.ok) throw new Error("Failed to fetch data");
-//   return res.json() as Promise<{ items: Topic[]; totalPages: number }>;
-// }
-
-type Props = {
-    searchParams?: { page?: string };
-    topics: Topic[];
-};
-
-export default async function TopicsPage({ topics }: Props) {
+export default async function TopicsPage() {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('token')?.value;
+    const topics = await getTopics(token);
     // const page = (searchParams && Number(searchParams.page)) || 1;
 
     return (
@@ -88,7 +48,7 @@ export default async function TopicsPage({ topics }: Props) {
             <h1 className='mb-4 text-2xl font-bold'>Topics</h1>
             <div className='grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3'>
                 {topics.map((topic) => (
-                    <Link href={`/topics/${topic.id}`} key={topic.id}>
+                    <Link href={`/topics/${topic.ID}`} key={topic.ID}>
                         <div className='rounded border p-4 transition-shadow hover:shadow-lg'>
                             <h2 className='text-xl font-bold'>{topic.title}</h2>
                             <p className='mb-2 text-gray-600'>{topic.description}</p>
@@ -96,10 +56,10 @@ export default async function TopicsPage({ topics }: Props) {
                                 <p>Start: {new Date(topic.start_time).toLocaleString()}</p>
                                 <p>End: {new Date(topic.end_time).toLocaleString()}</p>
                             </div>
-                            {topic.thumbnail_url && (
+                            {topic.image_url && (
                                 <div className='relative h-48'>
                                     <Image
-                                        src={topic.thumbnail_url}
+                                        src={topic.image_url}
                                         alt={topic.title}
                                         fill
                                         className='rounded-md object-cover'
