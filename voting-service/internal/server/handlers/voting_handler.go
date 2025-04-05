@@ -1,29 +1,28 @@
 package handlers
 
 import (
+	"context"
+	"encoding/binary"
 	"encoding/json"
-	"log"
 	"net/http"
-	"strconv"
 	"time"
 
+	"voting-service/configs"
 	"voting-service/internal/ports/models"
 	"voting-service/internal/server/middleware"
 	"voting-service/internal/server/service"
 
-	"github.com/IBM/sarama"
 	"github.com/gin-gonic/gin"
+	"github.com/segmentio/kafka-go"
 )
 
 type VoteHandler struct {
 	voteService *service.VoteService
-	producer    sarama.SyncProducer
 }
 
-func NewVoteHandler(voteService *service.VoteService, producer sarama.SyncProducer) *VoteHandler {
+func NewVoteHandler(voteService *service.VoteService) *VoteHandler {
 	return &VoteHandler{
 		voteService: voteService,
-		producer:    producer,
 	}
 }
 
@@ -40,12 +39,6 @@ func (h *VoteHandler) CastVote(c *gin.Context) {
 		return
 	}
 
-	// Validate vote first
-	if err := h.voteService.CastVote(c.Request.Context(), user.ID, req); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to record vote"})
-		return
-	}
-
 	// Prepare Kafka message
 	voteMessage := models.VoteMessage{
 		UserID:    user.ID,
@@ -54,38 +47,30 @@ func (h *VoteHandler) CastVote(c *gin.Context) {
 		Timestamp: time.Now().Unix(),
 	}
 
+	// Load configuration
+	cfg := configs.Load()
+	writer := kafka.NewWriter(kafka.WriterConfig{
+		Brokers: cfg.Kafka.Brokers,
+		Topic:   cfg.Kafka.Topic,
+	})
+	defer writer.Close()
+
 	messageBytes, err := json.Marshal(voteMessage)
 	if err != nil {
-		log.Printf("Error marshalling vote message: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+
+		c.JSON(http.StatusBadRequest, gin.H{"message": "vote recorded failed"})
 		return
 	}
-
-	// Send to Kafka
-	msg := &sarama.ProducerMessage{
-		Topic: "votes",
-		Value: sarama.ByteEncoder(messageBytes),
-		Key:   sarama.StringEncoder(strconv.FormatUint(uint64(req.TopicID), 10)), // Partition by topic
+	idBytes := make([]byte, 8) // Assuming uint64 or uint size
+	binary.BigEndian.PutUint64(idBytes, uint64(user.ID))
+	kafkaErr := writer.WriteMessages(context.Background(),
+		kafka.Message{
+			Key:   idBytes,
+			Value: messageBytes,
+		})
+	if kafkaErr != nil {
+		c.JSON(http.StatusConflict, gin.H{"message": "vote recorded failed"})
+		return
 	}
-
-	if _, _, err := h.producer.SendMessage(msg); err != nil {
-		log.Printf("Failed to send vote to Kafka: %v", err)
-		// Consider how to handle this - maybe retry queue?
-	}
-
 	c.JSON(http.StatusOK, gin.H{"message": "vote recorded successfully"})
-}
-
-func (h *VoteHandler) sendToKafkaWithRetry(msg *sarama.ProducerMessage, maxRetries int) error {
-	var err error
-	for i := 0; i < maxRetries; i++ {
-		_, _, err = h.producer.SendMessage(msg)
-		if err == nil {
-			return nil
-		}
-
-		log.Printf("Attempt %d: Failed to send to Kafka: %v", i+1, err)
-		time.Sleep(time.Second * time.Duration(i+1)) // Exponential backoff
-	}
-	return err
 }
