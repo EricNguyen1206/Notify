@@ -5,7 +5,6 @@ import (
 
 	"voting-service/configs"
 	"voting-service/internal/adapters/database"
-	"voting-service/internal/adapters/kafka"
 	"voting-service/internal/server"
 )
 
@@ -35,14 +34,8 @@ func main() {
 		log.Fatalf("Failed to initialize MinIO client: %v", minIOErr)
 	}
 
-	// Initialize Kafka producer with better config
-	kafkaProducer, kafkaErr := kafka.InitKafkaProducer(cfg.Kafka.Brokers, cfg.Kafka.Topic)
-	if kafkaErr != nil {
-		log.Fatalf("Failed to initialize Kafka producer: %v", kafkaErr)
-	}
-
 	// Initialize server
-	srv := server.NewServer(db, minioClient, kafkaProducer)
+	srv := server.NewServer(db, minioClient)
 
 	// Start server
 	if err := srv.Start(":" + cfg.App.Port); err != nil {

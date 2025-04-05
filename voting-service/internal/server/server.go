@@ -4,7 +4,6 @@ import (
 	"log"
 	"time"
 
-	"github.com/IBM/sarama"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
@@ -22,19 +21,11 @@ type Server struct {
 }
 
 // NewServer creates a new HTTP server
-func NewServer(db *gorm.DB, minioClient *database.MinIOClient, kafkaProducer sarama.SyncProducer) *Server {
+func NewServer(db *gorm.DB, minioClient *database.MinIOClient) *Server {
 	router := gin.Default()
 
 	// Initialize middleware
 	router.Use(middleware.CORS())
-
-	// Add graceful shutdown for Kafka producer
-	go func() {
-		<-time.After(5 * time.Second) // Wait for 5 seconds before closing
-		if err := kafkaProducer.Close(); err != nil {
-			log.Printf("Error closing Kafka producer: %v", err)
-		}
-	}()
 
 	// Initialize repositories
 	authRepo := repository.NewAuthRepository(db)
@@ -62,7 +53,7 @@ func NewServer(db *gorm.DB, minioClient *database.MinIOClient, kafkaProducer sar
 	// Initialize handlers
 	topicHandler := handlers.NewTopicHandler(topicService)
 	optionHandler := handlers.NewOptionHandler(optionService)
-	voteHandler := handlers.NewVoteHandler(voteService, kafkaProducer)
+	voteHandler := handlers.NewVoteHandler(voteService)
 
 	// Setup routes
 	SetupRoutes(router, authHandler, topicHandler, optionHandler, voteHandler)
