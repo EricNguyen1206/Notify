@@ -19,8 +19,7 @@ type VoteRequest struct {
 }
 
 type VoteMessage struct {
-	UserID    uint  `json:"user_id"`
-	TopicID   uint  `json:"topic_id"`
-	OptionID  uint  `json:"option_id"`
-	Timestamp int64 `json:"timestamp"`
+	UserID   uint `json:"user_id"`
+	TopicID  uint `json:"topic_id"`
+	OptionID uint `json:"option_id"`
 }
