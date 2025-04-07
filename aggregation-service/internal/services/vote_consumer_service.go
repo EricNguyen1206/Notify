@@ -10,8 +10,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/IBM/sarama"
 	"github.com/go-redis/redis/v8"
+	"github.com/segmentio/kafka-go"
 	"gorm.io/gorm"
 )
 
@@ -37,91 +37,77 @@ func NewVoteConsumerService(
 }
 
 func (s *VoteConsumerService) Start() {
-	config := sarama.NewConfig()
-	config.Consumer.Offsets.Initial = sarama.OffsetOldest
-
-	consumer, err := sarama.NewConsumerGroup(s.cfg.Kafka.Brokers, "aggregation-group", config)
-	if err != nil {
-		log.Fatal("Error creating consumer group:", err)
-	}
+	reader := kafka.NewReader(kafka.ReaderConfig{
+		Brokers: []string{"localhost:29092"},
+		Topic:   "votes",
+		GroupID: "vote-group",
+	})
+	defer reader.Close()
 
 	go func() {
 		for {
-			if err := consumer.Consume(
-				context.Background(),
-				[]string{s.cfg.Kafka.Topic},
-				s,
-			); err != nil {
-				log.Printf("Error from consumer: %v", err)
+			msg, err := reader.ReadMessage(context.Background())
+			if err != nil {
+				log.Println("❌ Kafka read error:", err)
+				continue
 			}
+
+			var message models.VoteMessage
+			if err := json.Unmarshal(msg.Value, &message); err != nil {
+				log.Println("Invalid message format:", err)
+				continue
+			}
+			s.processMessage(message)
 		}
 	}()
 }
 
-func (s *VoteConsumerService) Setup(sarama.ConsumerGroupSession) error {
-	return nil
-}
-
-func (s *VoteConsumerService) Cleanup(sarama.ConsumerGroupSession) error {
-	return nil
-}
-
-func (s *VoteConsumerService) ConsumeClaim(
-	session sarama.ConsumerGroupSession,
-	claim sarama.ConsumerGroupClaim,
-) error {
-	for msg := range claim.Messages() {
-		s.processMessage(msg)
-		session.MarkMessage(msg, "")
-	}
-	return nil
-}
-
-func (s *VoteConsumerService) processMessage(msg *sarama.ConsumerMessage) {
-	var vote models.Vote
-	if err := json.Unmarshal(msg.Value, &vote); err != nil {
-		log.Println("Error decoding message:", err)
-		return
-	}
-
+func (s *VoteConsumerService) processMessage(msg models.VoteMessage) {
 	ctx := context.Background()
-	userKey := fmt.Sprintf("vote:%d:%d", vote.UserID, vote.TopicID)
+	userKey := fmt.Sprintf("vote:%d:%d", msg.UserID, msg.TopicID)
 
 	// Check for duplicate vote
-	if s.redis.Exists(ctx, userKey).Val() == 1 {
+	exists, err := s.redis.Exists(ctx, userKey).Result()
+	if err != nil {
+		log.Println("Redis exists error:", err)
+		return
+	}
+	if exists == 1 {
 		return
 	}
 
-	// Start transaction
 	tx := s.db.Begin()
 	defer func() {
 		if r := recover(); r != nil {
+			log.Println("Recovered from panic:", r)
 			tx.Rollback()
 		}
 	}()
 
-	// Save to database
-	if err := tx.Create(&vote).Error; err != nil {
+	// Save to DB
+	if err := tx.Create(&msg).Error; err != nil {
 		tx.Rollback()
 		log.Println("DB write error:", err)
 		return
 	}
 
-	// Update Redis
-	rankingKey := fmt.Sprintf("ranking:%d", vote.TopicID)
-	prevScore := s.redis.ZScore(ctx, rankingKey, strconv.FormatUint(uint64(vote.OptionID), 10)).Val()
+	// Update Redis vote count
+	voteKey := fmt.Sprintf("votes:%d", msg.TopicID)
+	field := strconv.Itoa(int(msg.OptionID))
 
-	if _, err := s.redis.ZIncrBy(ctx, rankingKey, 1, strconv.FormatUint(uint64(vote.OptionID), 10)).Result(); err != nil {
+	if _, err := s.redis.HIncrBy(ctx, voteKey, field, 1).Result(); err != nil {
 		tx.Rollback()
-		log.Println("Redis update error:", err)
+		log.Println("Redis HIncrBy error:", err)
 		return
 	}
 
-	// Only broadcast if score changed
-	if newScore := s.redis.ZScore(ctx, rankingKey, strconv.FormatUint(uint64(vote.OptionID), 10)).Val(); newScore != prevScore {
-		s.voteCountSvc.BroadcastUpdate(strconv.FormatUint(uint64(vote.TopicID), 10))
+	// Optional: only set expire if key has no TTL
+	if ttl := s.redis.TTL(ctx, voteKey).Val(); ttl == -1 {
+		s.redis.Expire(ctx, voteKey, 12*time.Hour)
 	}
 
-	s.redis.Set(ctx, userKey, 1, 24*time.Hour)
+	// Mark user as voted
+	s.redis.Set(ctx, userKey, true, 24*time.Hour)
+
 	tx.Commit()
 }

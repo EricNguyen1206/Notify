@@ -2,8 +2,7 @@ package services
 
 import (
 	"aggregation-service/configs"
-	"context"
-	"fmt"
+	"log"
 	"net/http"
 	"sync"
 
@@ -12,50 +11,67 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+type subscription struct {
+	topicID string
+	conn    *websocket.Conn
+}
+
+type VoteUpdate struct {
+	TopicID  string `json:"topic_id"`
+	OptionID string `json:"option_id"`
+	Count    int64  `json:"count"`
+}
+
 type VoteCountService struct {
-	cfg       *configs.Config
-	redis     *redis.Client
-	clients   map[string]map[*websocket.Conn]bool // topicID -> clients
-	clientsMu sync.RWMutex
+	cfg        *configs.Config
+	redis      *redis.Client
+	clients    map[string]map[*websocket.Conn]bool
+	clientsMu  sync.RWMutex
+	register   chan subscription
+	unregister chan subscription
+	broadcast  chan VoteUpdate
 }
 
 func NewVoteCountService(cfg *configs.Config, redis *redis.Client) *VoteCountService {
-	return &VoteCountService{
-		cfg:     cfg,
-		redis:   redis,
-		clients: make(map[string]map[*websocket.Conn]bool),
+	svc := &VoteCountService{
+		cfg:        cfg,
+		redis:      redis,
+		clients:    make(map[string]map[*websocket.Conn]bool),
+		register:   make(chan subscription),
+		unregister: make(chan subscription),
+		broadcast:  make(chan VoteUpdate),
 	}
+	go svc.run()
+	return svc
 }
 
 func (s *VoteCountService) RegisterRoutes(router *gin.Engine) {
-	router.GET("/ws/ranking/:topic_id", s.handleWebSocket)
+	router.GET("/ws/topics/:topic_id", s.handleWebSocket)
 }
 
 func (s *VoteCountService) handleWebSocket(c *gin.Context) {
 	topicID := c.Param("topic_id")
-	// TODO: Add authentication to verify user has access to this topic
 
 	upgrader := websocket.Upgrader{
-		ReadBufferSize:  s.cfg.WebSocket.ReadBufferSize,
-		WriteBufferSize: s.cfg.WebSocket.WriteBufferSize,
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
 		CheckOrigin: func(r *http.Request) bool {
-			return true // In production, restrict to allowed origins
+			return true
 		},
 	}
 
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
+		log.Println("WebSocket upgrade failed:", err)
 		return
 	}
 
-	// Register client
-	s.registerClient(topicID, conn)
-	defer s.unregisterClient(topicID, conn)
+	sub := subscription{topicID: topicID, conn: conn}
+	s.register <- sub
+	defer func() {
+		s.unregister <- sub
+	}()
 
-	// Send initial ranking
-	s.sendCurrentRanking(conn, topicID)
-
-	// Keep connection alive
 	for {
 		if _, _, err := conn.ReadMessage(); err != nil {
 			break
@@ -63,73 +79,38 @@ func (s *VoteCountService) handleWebSocket(c *gin.Context) {
 	}
 }
 
-func (s *VoteCountService) registerClient(topicID string, conn *websocket.Conn) {
-	s.clientsMu.Lock()
-	defer s.clientsMu.Unlock()
+func (s *VoteCountService) run() {
+	for {
+		select {
+		case sub := <-s.register:
+			s.clientsMu.Lock()
+			if s.clients[sub.topicID] == nil {
+				s.clients[sub.topicID] = make(map[*websocket.Conn]bool)
+			}
+			s.clients[sub.topicID][sub.conn] = true
+			s.clientsMu.Unlock()
 
-	if _, exists := s.clients[topicID]; !exists {
-		s.clients[topicID] = make(map[*websocket.Conn]bool)
-	}
-	s.clients[topicID][conn] = true
-}
+		case sub := <-s.unregister:
+			s.clientsMu.Lock()
+			if clients, ok := s.clients[sub.topicID]; ok {
+				if _, exists := clients[sub.conn]; exists {
+					delete(clients, sub.conn)
+					sub.conn.Close()
+				}
+			}
+			s.clientsMu.Unlock()
 
-func (s *VoteCountService) unregisterClient(topicID string, conn *websocket.Conn) {
-	s.clientsMu.Lock()
-	defer s.clientsMu.Unlock()
-
-	if clients, exists := s.clients[topicID]; exists {
-		delete(clients, conn)
-		if len(clients) == 0 {
-			delete(s.clients, topicID)
+		case msg := <-s.broadcast:
+			s.clientsMu.RLock()
+			conns := s.clients[msg.TopicID]
+			for conn := range conns {
+				err := conn.WriteJSON(msg)
+				if err != nil {
+					log.Println("Write error:", err)
+					s.unregister <- subscription{topicID: msg.TopicID, conn: conn}
+				}
+			}
+			s.clientsMu.RUnlock()
 		}
 	}
-	conn.Close()
-}
-
-func (s *VoteCountService) BroadcastUpdate(topicID string) {
-	s.clientsMu.RLock()
-	defer s.clientsMu.RUnlock()
-
-	clients, exists := s.clients[topicID]
-	if !exists {
-		return
-	}
-
-	ctx := context.Background()
-	rankingKey := fmt.Sprintf("ranking:%s", topicID)
-	results, err := s.redis.ZRevRangeWithScores(ctx, rankingKey, 0, 2).Result()
-	if err != nil {
-		return
-	}
-
-	rankingData := s.convertRankingResults(results)
-
-	for client := range clients {
-		go func(c *websocket.Conn) {
-			if err := c.WriteJSON(rankingData); err != nil {
-				s.unregisterClient(topicID, c)
-			}
-		}(client)
-	}
-}
-
-func (s *VoteCountService) sendCurrentRanking(conn *websocket.Conn, topicID string) {
-	ctx := context.Background()
-	rankingKey := fmt.Sprintf("ranking:%s", topicID)
-	results, err := s.redis.ZRevRangeWithScores(ctx, rankingKey, 0, 2).Result()
-	if err != nil {
-		return
-	}
-	conn.WriteJSON(s.convertRankingResults(results))
-}
-
-func (s *VoteCountService) convertRankingResults(results []redis.Z) []map[string]interface{} {
-	rankings := make([]map[string]interface{}, 0, len(results))
-	for _, res := range results {
-		rankings = append(rankings, map[string]interface{}{
-			"option_id": res.Member,
-			"count":     int(res.Score),
-		})
-	}
-	return rankings
 }

@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"net/http"
-	"time"
 
 	"voting-service/configs"
 	"voting-service/internal/ports/models"
@@ -41,10 +40,9 @@ func (h *VoteHandler) CastVote(c *gin.Context) {
 
 	// Prepare Kafka message
 	voteMessage := models.VoteMessage{
-		UserID:    user.ID,
-		TopicID:   req.TopicID,
-		OptionID:  req.OptionID,
-		Timestamp: time.Now().Unix(),
+		UserID:   user.ID,
+		TopicID:  req.TopicID,
+		OptionID: req.OptionID,
 	}
 
 	// Load configuration
