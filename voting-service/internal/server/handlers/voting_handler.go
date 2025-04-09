@@ -56,7 +56,7 @@ func (h *VoteHandler) CastVote(c *gin.Context) {
 	messageBytes, err := json.Marshal(voteMessage)
 	if err != nil {
 
-		c.JSON(http.StatusBadRequest, gin.H{"message": "vote recorded failed"})
+		c.JSON(http.StatusBadRequest, gin.H{"message": "vote recorded failed", "error": err.Error(), "messageBytes": messageBytes})
 		return
 	}
 	idBytes := make([]byte, 8) // Assuming uint64 or uint size
@@ -67,7 +67,7 @@ func (h *VoteHandler) CastVote(c *gin.Context) {
 			Value: messageBytes,
 		})
 	if kafkaErr != nil {
-		c.JSON(http.StatusConflict, gin.H{"message": "vote recorded failed"})
+		c.JSON(http.StatusConflict, gin.H{"message": "vote recorded failed", "error": kafkaErr.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "vote recorded successfully"})

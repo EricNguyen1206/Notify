@@ -38,8 +38,8 @@ func NewVoteConsumerService(
 
 func (s *VoteConsumerService) Start() {
 	reader := kafka.NewReader(kafka.ReaderConfig{
-		Brokers: []string{"localhost:29092"},
-		Topic:   "votes",
+		Brokers: []string{"kafka:9092"},
+		Topic:   "voting-events",
 		GroupID: "vote-group",
 	})
 	defer reader.Close()
@@ -49,6 +49,7 @@ func (s *VoteConsumerService) Start() {
 			msg, err := reader.ReadMessage(context.Background())
 			if err != nil {
 				log.Println("❌ Kafka read error:", err)
+				time.Sleep(1 * time.Second)
 				continue
 			}
 
