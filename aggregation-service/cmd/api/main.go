@@ -37,6 +37,10 @@ func main() {
 
 	// Start API server
 	router := gin.Default()
+	// Health check route
+	router.GET("/health", func(c *gin.Context) {
+		c.JSON(200, gin.H{"status": "ok"})
+	})
 	voteCountSvc.RegisterRoutes(router)
 	log.Fatal(router.Run(":" + cfg.App.Port))
 }

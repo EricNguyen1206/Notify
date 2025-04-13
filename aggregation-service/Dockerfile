@@ -1,53 +1,42 @@
+# ================================================
+# BUILD STAGE (uses full Go image to compile)
+# ================================================
 FROM golang:1.23-alpine AS builder
 
-# Install build dependencies
-RUN apk add --no-cache git make gcc musl-dev
-
+# Set working directory in container
 WORKDIR /app
 
-# Copy go mod files first for better layer caching
+# Copy dependency files first (optimizes Docker layer caching)
 COPY go.mod go.sum ./
 
-# Update go.mod to use correct version and download dependencies
-RUN go mod edit -go=1.23 && \
-  go mod tidy && \
-  go mod download
+# Download all Go module dependencies
+RUN go mod download
 
-# Copy source code
+# Copy the entire project source code
 COPY . .
 
-# Build application with all necessary tags
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
-  -ldflags="-w -s" \
-  -tags musl,netgo \
-  -o /aggregation-service ./cmd/api/main.go
+# Build the application:
+# - CGO_ENABLED=0: Disables CGO for static linking
+# - GOOS=linux: Ensures Linux-compatible binary
+# - -o main: Output filename
+# - ./cmd/api/main.go: Entry point of the application
+RUN CGO_ENABLED=0 GOOS=linux go build -o main ./cmd/api/main.go
 
-FROM alpine:latest
+# ================================================
+# RUNTIME STAGE (uses minimal Alpine image)
+# ================================================
+FROM golang:1.23-alpine
 
-# Install runtime dependencies
-RUN apk add --no-cache \
-  ca-certificates \
-  tzdata \
-  netcat-openbsd \
-  wget
-
+# Set working directory
 WORKDIR /app
 
-# Copy binary and configs
-COPY --from=builder /aggregation-service ./aggregation-service
-COPY --from=builder /app/configs/ ./configs/
+# Copy only the compiled binary from builder stage
+# (reduces final image size by excluding build tools)
+COPY --from=builder /app/main .
 
-# Create non-root user
-RUN adduser -D appuser && \
-  chown -R appuser:appuser /app
+# Expose the default application port
+# (change this if your app uses a different port)
+EXPOSE 8081
 
-USER appuser
-
-# Expose port
-EXPOSE 8080
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD wget -qO- http://localhost:8080/health || exit 1
-
-CMD ["./aggregation-service"]
+# Command to run the application when container starts
+CMD ["./main"]

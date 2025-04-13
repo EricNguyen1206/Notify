@@ -5,7 +5,9 @@ import (
 	"aggregation-service/internal/models"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"log"
 	"strconv"
 	"time"
@@ -38,9 +40,15 @@ func NewVoteConsumerService(
 
 func (s *VoteConsumerService) Start() {
 	reader := kafka.NewReader(kafka.ReaderConfig{
-		Brokers: []string{"kafka:9092"},
-		Topic:   "voting-events",
-		GroupID: "vote-group",
+		Brokers:  s.cfg.Kafka.Brokers,
+		Topic:    s.cfg.Kafka.Topic,
+		GroupID:  "vote-group",
+		MinBytes: 1,    // 1 byte
+		MaxBytes: 10e6, // 10MB
+		MaxWait:  1 * time.Second,
+
+		Logger:      kafka.LoggerFunc(log.Printf),
+		ErrorLogger: kafka.LoggerFunc(log.Printf),
 	})
 	defer reader.Close()
 
@@ -48,11 +56,16 @@ func (s *VoteConsumerService) Start() {
 		for {
 			msg, err := reader.ReadMessage(context.Background())
 			if err != nil {
+				if errors.Is(err, io.EOF) {
+					log.Println("⚠️ No more messages in topic (EOF)")
+					time.Sleep(1 * time.Second)
+					continue
+				}
 				log.Println("❌ Kafka read error:", err)
-				time.Sleep(1 * time.Second)
 				continue
 			}
 
+			log.Printf("Received raw message: %s", string(msg.Value))
 			var message models.VoteMessage
 			if err := json.Unmarshal(msg.Value, &message); err != nil {
 				log.Println("Invalid message format:", err)
@@ -66,6 +79,8 @@ func (s *VoteConsumerService) Start() {
 func (s *VoteConsumerService) processMessage(msg models.VoteMessage) {
 	ctx := context.Background()
 	userKey := fmt.Sprintf("vote:%d:%d", msg.UserID, msg.TopicID)
+
+	log.Println("✅ Processing message:", msg)
 
 	// Check for duplicate vote
 	exists, err := s.redis.Exists(ctx, userKey).Result()
