@@ -56,13 +56,24 @@ func (s *VoteCountService) handleWebSocket(c *gin.Context) {
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
 		CheckOrigin: func(r *http.Request) bool {
-			return true
+			return true // chấp nhận mọi origin (phù hợp khi dev/test)
 		},
 	}
 
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		log.Println("WebSocket upgrade failed:", err)
+		return
+	}
+
+	// Gửi message test ngay khi kết nối thành công
+	testMessage := map[string]string{
+		"message":  "WebSocket connected successfully",
+		"topic_id": topicID,
+	}
+	if err := conn.WriteJSON(testMessage); err != nil {
+		log.Println("WebSocket send failed:", err)
+		conn.Close()
 		return
 	}
 
