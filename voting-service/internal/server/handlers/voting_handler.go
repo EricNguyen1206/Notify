@@ -55,7 +55,6 @@ func (h *VoteHandler) CastVote(c *gin.Context) {
 
 	messageBytes, err := json.Marshal(voteMessage)
 	if err != nil {
-
 		c.JSON(http.StatusBadRequest, gin.H{"message": "vote recorded failed", "error": err.Error(), "messageBytes": messageBytes})
 		return
 	}

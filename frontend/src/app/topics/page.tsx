@@ -1,10 +1,11 @@
-'use server';
+'use client';
 
-import { cookies } from 'next/headers';
+import { useEffect, useState } from 'react';
+
 import Image from 'next/image';
 import Link from 'next/link';
 
-import { BASE_URL } from '@/lib/api';
+import ApiUtils from '@/lib/api';
 
 interface Topic {
     ID: number;
@@ -18,34 +19,38 @@ interface Topic {
     end_time: string | Date;
 }
 
-async function getTopics(token?: string) {
-    if (!token) return [];
+async function getTopics() {
     try {
-        const res = await fetch(`${BASE_URL}/topics`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${token}`
-            },
-            cache: 'no-store' // Ensures fresh data on each request (SSR)
-        });
-        if (!res.ok) throw new Error('Failed to fetch data');
-        return res.json() as Promise<Topic[]>;
+        const res = await ApiUtils.get<Topic[]>('/topics');
+        if (res.status !== 200) throw new Error('Failed to fetch data');
+
+        return res.data;
     } catch (error) {
         console.error('Error fetching topics:', error);
+
         return [];
     }
 }
 
-export default async function TopicsPage() {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('token')?.value;
-    const topics = await getTopics(token);
+export default function TopicsPage() {
+    // const topics = await getTopics();
+    const [topics, setTopics] = useState<Topic[]>([]);
+    useEffect(() => {
+        async function fetchData() {
+            const topics = await getTopics();
+            setTopics(topics);
+        }
+        fetchData();
+    }, []);
+
     // const page = (searchParams && Number(searchParams.page)) || 1;
 
     return (
         <div className='container mx-auto p-4'>
             <h1 className='mb-4 text-2xl font-bold'>Topics</h1>
+            <Link href='/topics/create'>
+                <button className='mb-4 rounded bg-blue-500 px-4 py-2 text-white'>Create Topic</button>
+            </Link>
             <div className='grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3'>
                 {topics.map((topic) => (
                     <Link href={`/topics/${topic.ID}`} key={topic.ID}>
