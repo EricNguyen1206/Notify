@@ -25,8 +25,8 @@ func NewTopicHandler(topicService *service.TopicService) *TopicHandler {
 // @Param title formData string true "Topic Title"
 // @Param description formData string true "Topic Description"
 // @Param image formData file true "Topic Image"
-// @Param start_time formData string true "Start Time (RFC3339)"
-// @Param end_time formData string true "End Time (RFC3339)"
+// @Param start_time formData string true "Start Time (YYYY-MM-DD HH:mm:ss)"
+// @Param end_time formData string true "End Time (YYYY-MM-DD HH:mm:ss)"
 // @Success 201 {object} models.Topic
 // @Failure 400 {object} map[string]string
 // @Failure 500 {object} map[string]string

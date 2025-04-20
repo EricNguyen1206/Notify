@@ -4,14 +4,18 @@ import (
 	"gorm.io/gorm"
 )
 
-// Option represents a voting option within a topic
 type Option struct {
 	gorm.Model
-	TopicID   uint   `gorm:"not null;index" json:"topic_id"`
-	Title     string `gorm:"size:255;not null" json:"title"`
-	ImageURL  string `gorm:"size:512" json:"image_url"`
-	Link      string `gorm:"size:512" json:"link"`
-	VoteCount uint   `gorm:"default:0" json:"vote_count"`
+	TopicID   uint   `gorm:"column:topic_id;not null;index" json:"topic_id"`
+	Title     string `gorm:"column:title;size:255;not null" json:"title"`
+	ImageURL  string `gorm:"column:image_url;size:512" json:"image_url"`
+	Link      string `gorm:"column:link;size:512" json:"link"`
+	VoteCount uint   `gorm:"column:vote_count;default:0" json:"vote_count"`
+}
+
+// TableName specifies the table name for Option
+func (Option) TableName() string {
+	return "options"
 }
 
 // AddOptionRequest defines the input for adding an option

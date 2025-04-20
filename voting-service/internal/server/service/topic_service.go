@@ -24,16 +24,11 @@ func NewTopicService(topicRepo *repository.TopicRepository, minio *database.MinI
 // CreateTopic creates a new topic with an uploaded image
 func (s *TopicService) CreateTopic(ctx context.Context, req models.CreateTopicRequest) (*models.Topic, error) {
 	// Upload image to MinIO
-	imageURL, err := s.minio.UploadImage(ctx, req.Image)
-	if err != nil {
-		return nil, fmt.Errorf("failed to upload image: %w", err)
-	}
 
 	// Create topic
 	topic := &models.Topic{
 		Title:       req.Title,
 		Description: req.Description,
-		ImageURL:    imageURL,
 		StartTime:   req.StartTime,
 		EndTime:     req.EndTime,
 	}

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 
 	"voting-service/internal/ports/models"
 	"voting-service/internal/server/service"
@@ -41,4 +42,24 @@ func (h *OptionHandler) AddOption(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, option)
+}
+
+func (h *OptionHandler) GetOptions(c *gin.Context) {
+	topicID := c.Param("topic_id")
+	if topicID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "topic_id is required"})
+		return
+	}
+
+	topicIDUint, err := strconv.ParseUint(topicID, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid topic_id format"})
+		return
+	}
+	options, err := h.optionService.GetOptionsByTopic(c.Request.Context(), uint(topicIDUint))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, options)
 }

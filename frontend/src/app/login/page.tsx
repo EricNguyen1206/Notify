@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
-import { api } from '@/lib/api';
+import { BASE_URL } from '@/lib/api';
 import { Button } from '@/registry/new-york-v4/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/registry/new-york-v4/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/registry/new-york-v4/ui/form';
@@ -37,11 +37,17 @@ export default function LoginPreview() {
         try {
             // Assuming an async login function
             console.log(values);
-            const res = await api.post('/auth/login', values);
-            if (!res.data) {
+            const res = await fetch(`${BASE_URL}/auth/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(values)
+            });
+            if (!res.ok) {
                 throw new Error('Failed to login');
             }
-            const responseData = res.data;
+            const responseData = await res.json();
             document.cookie = `token=${responseData.token}; path=/; max-age=86400`; // 1 day expiry
             console.log(responseData);
             form.reset();
