@@ -1,23 +1,21 @@
 import { defineConfig } from "vite";
-import legacy from "@vitejs/plugin-legacy";
+import { resolve } from "path";
 
 export default defineConfig({
   build: {
     lib: {
-      entry: "src/PollWidget.ts",
+      entry: resolve(__dirname, "src/components/PollWidget.ts"),
       name: "PollWidget",
       fileName: "poll-widget",
+      formats: ["umd"],
     },
     rollupOptions: {
+      external: ["lit"],
       output: {
-        // Ensure the widget works as a standalone module
-        inlineDynamicImports: true,
+        globals: {
+          lit: "lit",
+        },
       },
     },
   },
-  plugins: [
-    legacy({
-      targets: ["defaults", "not IE 11"],
-    }),
-  ],
 });
