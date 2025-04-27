@@ -79,6 +79,5 @@ func (s *AuthService) Login(ctx context.Context, req models.LoginRequest) (*mode
 
 	return &models.LoginResponse{
 		Token: tokenString,
-		User:  *user,
 	}, nil
 }
