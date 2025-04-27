@@ -111,7 +111,7 @@ export default function TopicDetail() {
             <h1 className='text-2xl font-bold'>Topic Details</h1>
             <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
                 {[...optionMap.values()].map((option) => (
-                    <Card key={option.ID} className='flex flex-col items-center p-4'>
+                    <Card key={option.id} className='flex flex-col items-center p-4'>
                         <h2 className='text-xl font-semibold'>{option.title}</h2>
                         <Image
                             src={(option as any).image_url}
@@ -121,7 +121,7 @@ export default function TopicDetail() {
                             className='my-2'
                         />
                         <p className='text-lg'>Votes: {option.vote_count}</p>
-                        <Button onClick={() => handleVote(option.ID)}>Vote</Button>
+                        <Button onClick={() => handleVote(option.id)}>Vote</Button>
                     </Card>
                 ))}
             </div>

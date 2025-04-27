@@ -56,7 +56,7 @@ export default function LoginPreview() {
                     <code className='text-white'>{JSON.stringify(values, null, 2)}</code>
                 </pre>
             );
-            router.push('/topics'); // Redirect to home page
+            router.push('/'); // Redirect to home page
         } catch (error) {
             console.error('Form submission error', error);
             toast.error('Failed to submit the form. Please try again.');

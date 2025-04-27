@@ -35,6 +35,8 @@ func SetupRoutes(router *gin.Engine, authHandler *handlers.AuthHandler, topicHan
 		}
 
 		public.GET("/topics", topicHandler.GetAllTopics)
+		// Option routes
+		public.GET("/topics/:topic_id/options", optionHandler.GetOptions)
 	}
 
 	// Protected routes (require JWT authentication)
@@ -51,7 +53,6 @@ func SetupRoutes(router *gin.Engine, authHandler *handlers.AuthHandler, topicHan
 		public.POST("/topics", topicHandler.CreateTopic)
 
 		// Option routes
-		protected.GET("/topics/:topic_id/options", optionHandler.GetOptions)
 		protected.POST("/topics/:topic_id/options", optionHandler.AddOption)
 		protected.POST("/topics/:topic_id/options/:option_id/vote", voteHandler.CastVote)
 	}
