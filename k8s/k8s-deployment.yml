@@ -1,24 +1,24 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: votify-config
+  name: notify-config
 data:
-  VOTIFY_ENVIRONMENT: "production"
-  VOTIFY_SERVICE_PORT: "8080"
-  VOTIFY_MYSQL_DATABASE: "voting_db"
-  VOTIFY_MINIO_ENDPOINT: "minio:9000"
+  NOTIFY_ENVIRONMENT: "production"
+  NOTIFY_SERVICE_PORT: "8080"
+  NOTIFY_MYSQL_DATABASE: "voting_db"
+  NOTIFY_MINIO_ENDPOINT: "minio:9000"
 ---
 apiVersion: v1
 kind: Secret
 metadata:
-  name: votify-secrets
+  name: notify-secrets
 stringData:
-  VOTIFY_MYSQL_ROOT_PASSWORD: "rootpass"
-  VOTIFY_MYSQL_USER: "admin"
-  VOTIFY_MYSQL_PASSWORD: "adminpass"
-  VOTIFY_REDIS_PASSWORD: "redispass"
-  VOTIFY_MINIO_ROOT_USER: "minioadmin"
-  VOTIFY_MINIO_ROOT_PASSWORD: "minioadmin"
+  NOTIFY_MYSQL_ROOT_PASSWORD: "rootpass"
+  NOTIFY_MYSQL_USER: "admin"
+  NOTIFY_MYSQL_PASSWORD: "adminpass"
+  NOTIFY_REDIS_PASSWORD: "redispass"
+  NOTIFY_MINIO_ROOT_USER: "minioadmin"
+  NOTIFY_MINIO_ROOT_PASSWORD: "minioadmin"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -38,20 +38,20 @@ spec:
           image: mysql:8.0
           envFrom:
             - secretRef:
-                name: votify-secrets
+                name: notify-secrets
             - configMapRef:
-                name: votify-config
+                name: notify-config
           env:
             - name: MYSQL_ROOT_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: votify-secrets
-                  key: VOTIFY_MYSQL_ROOT_PASSWORD
+                  name: notify-secrets
+                  key: NOTIFY_MYSQL_ROOT_PASSWORD
             - name: MYSQL_DATABASE
               valueFrom:
                 configMapRef:
-                  name: votify-config
-                  key: VOTIFY_MYSQL_DATABASE
+                  name: notify-config
+                  key: NOTIFY_MYSQL_DATABASE
           ports:
             - containerPort: 3306
           volumeMounts:
@@ -84,12 +84,12 @@ spec:
             - name: PMA_USER
               valueFrom:
                 secretKeyRef:
-                  name: votify-secrets
-                  key: VOTIFY_MYSQL_USER
+                  name: notify-secrets
+                  key: NOTIFY_MYSQL_USER
             - name: PMA_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: votify-secrets
-                  key: VOTIFY_MYSQL_PASSWORD
+                  name: notify-secrets
+                  key: NOTIFY_MYSQL_PASSWORD
           ports:
             - containerPort: 80
