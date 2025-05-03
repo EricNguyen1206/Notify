@@ -1,6 +1,6 @@
 <h1 style="width: 100%; text-align: center;">Realtime polling system with GO</h1>
 
-# Project Votify
+# Project Notify
 
 One Paragraph of project description goes here
 
@@ -80,7 +80,7 @@ flowchart TD
 ## Folder Structure
 
 ```plaintext
-Votify/
+Notify/
 ├── README.md
 ├── .gitignore
 ├── docker-compose.yml             # Local orchestration including MySQL, Kafka, Redis, etc.
