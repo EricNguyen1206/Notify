@@ -1,7 +1,7 @@
 package database
 
 import (
-	"chat-service/internal/ports/models"
+	"chat-service/internal/auth"
 	"fmt"
 
 	"gorm.io/gorm"
@@ -11,10 +11,7 @@ import (
 func Migrate(db *gorm.DB) error {
 	// List all models to migrate
 	modelsToMigrate := []interface{}{
-		&models.User{},
-		&models.Topic{},
-		&models.Option{},
-		&models.Vote{},
+		&auth.UserModel{},
 	}
 
 	// Run migrations

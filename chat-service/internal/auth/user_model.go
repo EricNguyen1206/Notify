@@ -1,4 +1,4 @@
-package models
+package auth
 
 import (
 	"time"
@@ -6,7 +6,7 @@ import (
 	"gorm.io/gorm"
 )
 
-type User struct {
+type UserModel struct {
 	gorm.Model
 	Username  string    `gorm:"column:username;size:255;not null;unique" json:"username"`
 	Email     string    `gorm:"column:email;size:255;not null;unique" json:"email"`
@@ -16,7 +16,7 @@ type User struct {
 }
 
 // TableName specifies the table name for User
-func (User) TableName() string {
+func (UserModel) TableName() string {
 	return "users"
 }
 
