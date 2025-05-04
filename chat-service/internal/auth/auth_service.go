@@ -1,24 +1,21 @@
-package service
+package auth
 
 import (
 	"context"
 	"errors"
 	"time"
 
-	"chat-service/internal/ports/models"
-	"chat-service/internal/server/repository"
-
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type AuthService struct {
-	repo      repository.AuthRepository
+	repo      AuthRepository
 	jwtSecret string
 	jwtExpire time.Duration
 }
 
-func NewAuthService(repo repository.AuthRepository, secret string, expire time.Duration) *AuthService {
+func NewAuthService(repo AuthRepository, secret string, expire time.Duration) *AuthService {
 	return &AuthService{
 		repo:      repo,
 		jwtSecret: secret,
@@ -27,13 +24,13 @@ func NewAuthService(repo repository.AuthRepository, secret string, expire time.D
 }
 
 // Register handles user registration
-func (s *AuthService) Register(ctx context.Context, req models.RegisterRequest) (*models.User, error) {
+func (s *AuthService) Register(ctx context.Context, req RegisterRequest) (*UserModel, error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, err
 	}
 
-	user := &models.User{
+	user := &UserModel{
 		Username:  req.Username,
 		Email:     req.Email,
 		Password:  string(hashedPassword),
@@ -49,7 +46,7 @@ func (s *AuthService) Register(ctx context.Context, req models.RegisterRequest) 
 }
 
 // Login handles user authentication
-func (s *AuthService) Login(ctx context.Context, req models.LoginRequest) (*models.LoginResponse, error) {
+func (s *AuthService) Login(ctx context.Context, req LoginRequest) (*LoginResponse, error) {
 	user, err := s.repo.FindByEmail(ctx, req.Email)
 	if err != nil {
 		return nil, errors.New("invalid credentials")
@@ -77,7 +74,7 @@ func (s *AuthService) Login(ctx context.Context, req models.LoginRequest) (*mode
 		return nil, err
 	}
 
-	return &models.LoginResponse{
+	return &LoginResponse{
 		Token: tokenString,
 	}, nil
 }

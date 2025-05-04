@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"chat-service/internal/ports/models"
+	"chat-service/internal/auth"
 	"context"
 	"errors"
 	"fmt"
@@ -43,7 +43,7 @@ func JWTAuth(secret string) gin.HandlerFunc {
 		}
 
 		// Add user to context
-		user := &models.User{
+		user := &auth.UserModel{
 			Model: gorm.Model{
 				ID: uint(claims["sub"].(float64)),
 			},
@@ -57,8 +57,8 @@ func JWTAuth(secret string) gin.HandlerFunc {
 }
 
 // GetUserFromContext retrieves the authenticated user from context
-func GetUserFromContext(ctx context.Context) (*models.User, error) {
-	user, ok := ctx.Value(userContextKey).(*models.User)
+func GetUserFromContext(ctx context.Context) (*auth.UserModel, error) {
+	user, ok := ctx.Value(userContextKey).(*auth.UserModel)
 	if !ok {
 		return nil, errors.New("user not found in context")
 	}

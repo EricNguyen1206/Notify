@@ -44,10 +44,10 @@ type Config struct {
 	}
 
 	// Kafka
-	Kafka struct {
-		Brokers []string
-		Topic   string
-	}
+	// Kafka struct {
+	// 	Brokers []string
+	// 	Topic   string
+	// }
 }
 
 // Load loads configuration from .env file
@@ -88,8 +88,8 @@ func Load() *Config {
 	cfg.MinIO.Bucket = getEnv("NOTIFY_MINIO_BUCKET", "voting-images")
 
 	// Kafka
-	cfg.Kafka.Brokers = []string{"localhost:9092"}
-	cfg.Kafka.Topic = getEnv("NOTIFY_KAFKA_TOPIC", "voting-events")
+	// cfg.Kafka.Brokers = []string{"localhost:9092"}
+	// cfg.Kafka.Topic = getEnv("NOTIFY_KAFKA_TOPIC", "voting-events")
 
 	// Load environment variables from .env file
 	return &cfg

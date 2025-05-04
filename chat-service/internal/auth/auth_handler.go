@@ -1,19 +1,16 @@
-package handlers
+package auth
 
 import (
 	"net/http"
-
-	"chat-service/internal/ports/models"
-	"chat-service/internal/server/service"
 
 	"github.com/gin-gonic/gin"
 )
 
 type AuthHandler struct {
-	authService *service.AuthService
+	authService *AuthService
 }
 
-func NewAuthHandler(authService *service.AuthService) *AuthHandler {
+func NewAuthHandler(authService *AuthService) *AuthHandler {
 	return &AuthHandler{authService: authService}
 }
 
@@ -27,7 +24,7 @@ func NewAuthHandler(authService *service.AuthService) *AuthHandler {
 // @Failure 400 {object} map[string]string
 // @Router /auth/register [post]
 func (h *AuthHandler) Register(c *gin.Context) {
-	var req models.RegisterRequest
+	var req RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -53,7 +50,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 // @Failure 401 {object} map[string]string
 // @Router /auth/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
-	var req models.LoginRequest
+	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
