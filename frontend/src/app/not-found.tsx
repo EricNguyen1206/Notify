@@ -41,7 +41,7 @@ const NotFound = () => {
           </div>
         </div>
         <Image
-          src="/images/not-found-hero.gif"
+          src="/images/not-found-hero.png"
           width={350}
           height={350}
           alt="notfound"
