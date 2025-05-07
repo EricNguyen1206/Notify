@@ -1,25 +1,23 @@
 package ws
 
+import (
+	"sync"
+)
+
 type Hub struct {
-	Clients    map[uint]*Client
+	Clients    map[*Client]bool
+	Broadcast  chan []byte
 	Register   chan *Client
 	Unregister chan *Client
-	Broadcast  chan MessagePayload
-}
-
-type MessagePayload struct {
-	SenderID   uint   `json:"sender_id"`
-	ReceiverID uint   `json:"receiver_id"`
-	Content    string `json:"content"`
-	ImageURL   string `json:"image_url,omitempty"`
+	mu         sync.RWMutex
 }
 
 func NewHub() *Hub {
 	return &Hub{
-		Clients:    make(map[uint]*Client),
+		Clients:    make(map[*Client]bool),
+		Broadcast:  make(chan []byte),
 		Register:   make(chan *Client),
 		Unregister: make(chan *Client),
-		Broadcast:  make(chan MessagePayload),
 	}
 }
 
@@ -27,16 +25,29 @@ func (h *Hub) Run() {
 	for {
 		select {
 		case client := <-h.Register:
-			h.Clients[client.UserID] = client
+			h.mu.Lock()
+			h.Clients[client] = true
+			h.mu.Unlock()
 
 		case client := <-h.Unregister:
-			delete(h.Clients, client.UserID)
-			close(client.Send)
-
-		case msg := <-h.Broadcast:
-			if receiver, ok := h.Clients[msg.ReceiverID]; ok {
-				receiver.Send <- msg
+			h.mu.Lock()
+			if _, ok := h.Clients[client]; ok {
+				delete(h.Clients, client)
+				close(client.Send)
 			}
+			h.mu.Unlock()
+
+		case message := <-h.Broadcast:
+			h.mu.RLock()
+			for client := range h.Clients {
+				select {
+				case client.Send <- message:
+				default:
+					close(client.Send)
+					delete(h.Clients, client)
+				}
+			}
+			h.mu.RUnlock()
 		}
 	}
 }

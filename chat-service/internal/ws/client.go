@@ -1,34 +1,54 @@
 package ws
 
 import (
+	"sync"
+
 	"github.com/gorilla/websocket"
 )
 
 type Client struct {
-	UserID uint
-	Conn   *websocket.Conn
-	Send   chan MessagePayload
+	Hub      *Hub
+	Conn     *websocket.Conn
+	Send     chan []byte
+	UserID   string
+	ServerID string
+	mu       sync.Mutex
 }
 
-func (c *Client) ReadPump(hub *Hub) {
+func (c *Client) ReadPump() {
 	defer func() {
-		hub.Unregister <- c
+		c.Hub.Unregister <- c
 		c.Conn.Close()
 	}()
 
 	for {
-		var msg MessagePayload
-		err := c.Conn.ReadJSON(&msg)
+		_, message, err := c.Conn.ReadMessage()
 		if err != nil {
 			break
 		}
-		msg.SenderID = c.UserID
-		hub.Broadcast <- msg
+		c.Hub.Broadcast <- message
 	}
 }
 
 func (c *Client) WritePump() {
-	for msg := range c.Send {
-		c.Conn.WriteJSON(msg)
+	defer func() {
+		c.Conn.Close()
+	}()
+
+	for {
+		select {
+		case message, ok := <-c.Send:
+			if !ok {
+				c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
+				return
+			}
+
+			c.mu.Lock()
+			err := c.Conn.WriteMessage(websocket.TextMessage, message)
+			c.mu.Unlock()
+			if err != nil {
+				return
+			}
+		}
 	}
 }
