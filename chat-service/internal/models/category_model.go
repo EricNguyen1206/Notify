@@ -1,4 +1,4 @@
-package category
+package models
 
 import (
 	"time"

@@ -13,9 +13,9 @@ import (
 )
 
 type App struct {
-	router       *gin.Engine
-	postgresDB   *gorm.DB
-	mongoDB      *database.MongoDB
+	router     *gin.Engine
+	postgresDB *gorm.DB
+	// mongoDB      *database.MongoDB
 	websocketHub *ws.Hub
 }
 
@@ -27,10 +27,10 @@ func NewApp() (*App, error) {
 		return nil, err
 	}
 
-	mongoDB, err := database.NewMongoConnection()
-	if err != nil {
-		return nil, err
-	}
+	// mongoDB, err := database.NewMongoConnection()
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	// Initialize WebSocket hub
 	websocketHub := ws.NewHub()
@@ -64,9 +64,9 @@ func NewApp() (*App, error) {
 	}
 
 	return &App{
-		router:       router,
-		postgresDB:   postgresDB,
-		mongoDB:      mongoDB,
+		router:     router,
+		postgresDB: postgresDB,
+		// mongoDB:      mongoDB,
 		websocketHub: websocketHub,
 	}, nil
 }

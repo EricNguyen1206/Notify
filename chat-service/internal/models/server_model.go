@@ -1,7 +1,8 @@
-package server
+package models
 
 import (
-	"chat-service/internal/category"
+	// "chat-service/internal/category"
+
 	"time"
 
 	"github.com/google/uuid"
@@ -12,14 +13,14 @@ import (
 // Server represents a server entity
 type Server struct {
 	ID        string         `gorm:"primaryKey;type:uuid;default:uuid_generate_v4()" json:"id"`
-	Name      string         `gorm:"not null" json:"name"`
-	Owner     string         `gorm:"not null" json:"owner"` // userid
-	Avatar    string         `gorm:"nullable" json:"avatar"`
-	Created   time.Time      `gorm:"default:CURRENT_TIMESTAMP" json:"created"`
+	Name      string         `gorm:"not null;type:text" json:"name"`
+	Owner     string         `gorm:"not null;type:uuid" json:"owner"` // userid
+	Avatar    string         `gorm:"nullable;type:varchar(255)" json:"avatar"`
+	Created   time.Time      `gorm:"default:CURRENT_TIMESTAMP;type:timestamp" json:"created"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 
-	Categories []category.Category `gorm:"foreignKey:ServerID;references:ID"`
-	Members    []JoinServer        `gorm:"foreignKey:ServerID;references:ID"`
+	Categories []Category   `gorm:"foreignKey:ServerID;references:ID"`
+	Members    []JoinServer `gorm:"foreignKey:ServerID;references:ID"`
 }
 
 func (s *Server) BeforeCreate(tx *gorm.DB) error {

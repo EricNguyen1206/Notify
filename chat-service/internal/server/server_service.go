@@ -1,6 +1,7 @@
 package server
 
 import (
+	"chat-service/internal/models"
 	"context"
 	"errors"
 	"time"
@@ -16,14 +17,14 @@ var (
 )
 
 type ServerService interface {
-	CreateServer(ctx context.Context, ownerID string, req *CreateServerRequest) (*ServerResponse, error)
-	GetServer(ctx context.Context, id string) (*ServerResponse, error)
-	GetUserServers(ctx context.Context, userID string) ([]*ServerResponse, error)
-	UpdateServer(ctx context.Context, id string, ownerID string, req *UpdateServerRequest) (*ServerResponse, error)
+	CreateServer(ctx context.Context, ownerID string, req *models.CreateServerRequest) (*models.ServerResponse, error)
+	GetServer(ctx context.Context, id string) (*models.ServerResponse, error)
+	GetUserServers(ctx context.Context, userID string) ([]*models.ServerResponse, error)
+	UpdateServer(ctx context.Context, id string, ownerID string, req *models.UpdateServerRequest) (*models.ServerResponse, error)
 	DeleteServer(ctx context.Context, id string, ownerID string) error
-	JoinServer(ctx context.Context, userID string, req *JoinServerRequest) error
+	JoinServer(ctx context.Context, userID string, req *models.JoinServerRequest) error
 	LeaveServer(ctx context.Context, serverID string, userID string) error
-	GetServerMembers(ctx context.Context, serverID string) ([]*JoinServerResponse, error)
+	GetServerMembers(ctx context.Context, serverID string) ([]*models.JoinServerResponse, error)
 }
 
 type serverService struct {
@@ -34,8 +35,8 @@ func NewServerService(repo ServerRepository) ServerService {
 	return &serverService{repo: repo}
 }
 
-func (s *serverService) CreateServer(ctx context.Context, ownerID string, req *CreateServerRequest) (*ServerResponse, error) {
-	server := &Server{
+func (s *serverService) CreateServer(ctx context.Context, ownerID string, req *models.CreateServerRequest) (*models.ServerResponse, error) {
+	server := &models.Server{
 		ID:      uuid.New().String(),
 		Name:    req.Name,
 		Owner:   ownerID,
@@ -48,7 +49,7 @@ func (s *serverService) CreateServer(ctx context.Context, ownerID string, req *C
 	}
 
 	// Auto-join the owner to the server
-	join := &JoinServer{
+	join := &models.JoinServer{
 		ID:         uuid.New().String(),
 		ServerID:   server.ID,
 		UserID:     ownerID,
@@ -59,7 +60,7 @@ func (s *serverService) CreateServer(ctx context.Context, ownerID string, req *C
 		return nil, err
 	}
 
-	return &ServerResponse{
+	return &models.ServerResponse{
 		ID:      server.ID,
 		Name:    server.Name,
 		Owner:   server.Owner,
@@ -68,7 +69,7 @@ func (s *serverService) CreateServer(ctx context.Context, ownerID string, req *C
 	}, nil
 }
 
-func (s *serverService) GetServer(ctx context.Context, id string) (*ServerResponse, error) {
+func (s *serverService) GetServer(ctx context.Context, id string) (*models.ServerResponse, error) {
 	server, err := s.repo.FindByID(ctx, id)
 	if err != nil {
 		return nil, ErrServerNotFound
@@ -79,9 +80,9 @@ func (s *serverService) GetServer(ctx context.Context, id string) (*ServerRespon
 		return nil, err
 	}
 
-	memberResponses := make([]JoinServerResponse, len(members))
+	memberResponses := make([]models.JoinServerResponse, len(members))
 	for i, member := range members {
-		memberResponses[i] = JoinServerResponse{
+		memberResponses[i] = models.JoinServerResponse{
 			ID:         member.ID,
 			ServerID:   member.ServerID,
 			UserID:     member.UserID,
@@ -89,7 +90,7 @@ func (s *serverService) GetServer(ctx context.Context, id string) (*ServerRespon
 		}
 	}
 
-	return &ServerResponse{
+	return &models.ServerResponse{
 		ID:      server.ID,
 		Name:    server.Name,
 		Owner:   server.Owner,
@@ -99,20 +100,20 @@ func (s *serverService) GetServer(ctx context.Context, id string) (*ServerRespon
 	}, nil
 }
 
-func (s *serverService) GetUserServers(ctx context.Context, userID string) ([]*ServerResponse, error) {
+func (s *serverService) GetUserServers(ctx context.Context, userID string) ([]*models.ServerResponse, error) {
 	joins, err := s.repo.GetUserServers(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
 
-	var servers []*ServerResponse
+	var servers []*models.ServerResponse
 	for _, join := range joins {
 		server, err := s.repo.FindByID(ctx, join.ServerID)
 		if err != nil {
 			continue
 		}
 
-		servers = append(servers, &ServerResponse{
+		servers = append(servers, &models.ServerResponse{
 			ID:      server.ID,
 			Name:    server.Name,
 			Owner:   server.Owner,
@@ -124,7 +125,7 @@ func (s *serverService) GetUserServers(ctx context.Context, userID string) ([]*S
 	return servers, nil
 }
 
-func (s *serverService) UpdateServer(ctx context.Context, id string, ownerID string, req *UpdateServerRequest) (*ServerResponse, error) {
+func (s *serverService) UpdateServer(ctx context.Context, id string, ownerID string, req *models.UpdateServerRequest) (*models.ServerResponse, error) {
 	server, err := s.repo.FindByID(ctx, id)
 	if err != nil {
 		return nil, ErrServerNotFound
@@ -141,7 +142,7 @@ func (s *serverService) UpdateServer(ctx context.Context, id string, ownerID str
 		return nil, err
 	}
 
-	return &ServerResponse{
+	return &models.ServerResponse{
 		ID:      server.ID,
 		Name:    server.Name,
 		Owner:   server.Owner,
@@ -163,7 +164,7 @@ func (s *serverService) DeleteServer(ctx context.Context, id string, ownerID str
 	return s.repo.Delete(ctx, id)
 }
 
-func (s *serverService) JoinServer(ctx context.Context, userID string, req *JoinServerRequest) error {
+func (s *serverService) JoinServer(ctx context.Context, userID string, req *models.JoinServerRequest) error {
 	// Check if server exists
 	_, err := s.repo.FindByID(ctx, req.ServerID)
 	if err != nil {
@@ -179,7 +180,7 @@ func (s *serverService) JoinServer(ctx context.Context, userID string, req *Join
 		return ErrAlreadyMember
 	}
 
-	join := &JoinServer{
+	join := &models.JoinServer{
 		ID:         uuid.New().String(),
 		ServerID:   req.ServerID,
 		UserID:     userID,
@@ -213,15 +214,15 @@ func (s *serverService) LeaveServer(ctx context.Context, serverID string, userID
 	return s.repo.LeaveServer(ctx, serverID, userID)
 }
 
-func (s *serverService) GetServerMembers(ctx context.Context, serverID string) ([]*JoinServerResponse, error) {
+func (s *serverService) GetServerMembers(ctx context.Context, serverID string) ([]*models.JoinServerResponse, error) {
 	members, err := s.repo.GetServerMembers(ctx, serverID)
 	if err != nil {
 		return nil, err
 	}
 
-	var responses []*JoinServerResponse
+	var responses []*models.JoinServerResponse
 	for _, member := range members {
-		responses = append(responses, &JoinServerResponse{
+		responses = append(responses, &models.JoinServerResponse{
 			ID:         member.ID,
 			ServerID:   member.ServerID,
 			UserID:     member.UserID,

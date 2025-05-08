@@ -2,49 +2,73 @@ package database
 
 import (
 	"fmt"
+	"log"
+	"strings"
+	"time"
 
-	"chat-service/internal/category"
-	"chat-service/internal/chat"
-	"chat-service/internal/server"
-	"chat-service/internal/user"
+	"chat-service/internal/models"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 func NewPostgresConnection() (*gorm.DB, error) {
-	// dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=require",
-	// 	os.Getenv("POSTGRES_HOST"),
-	// 	os.Getenv("POSTGRES_USER"),
-	// 	os.Getenv("POSTGRES_PASSWORD"),
-	// 	os.Getenv("POSTGRES_DB"),
-	// 	os.Getenv("POSTGRES_PORT"),
-	// )
+	user := "postgres.fnpwltjofxlcwvqqzgak"
+	password := "1206Trongtin!"
+	host := "aws-0-ap-southeast-1.pooler.supabase.com"
+	port := "6543"
+	dbname := "postgres"
 
-	dsn := "postgresql://postgres:1206Trongtin!@db.fnpwltjofxlcwvqqzgak.supabase.co:5432/postgres"
+	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=require",
+		host, user, password, dbname, port)
 
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	// Configure GORM with proper settings
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
+		DisableForeignKeyConstraintWhenMigrating: true,
+		PrepareStmt:                              false, // Disable prepared statements
+		Logger:                                   logger.Default.LogMode(logger.Info),
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %v", err)
 	}
 
-	// Enable UUID extension
-	db.Exec("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"")
+	// Get underlying *sql.DB
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get database instance: %v", err)
+	}
 
-	// Auto migrate the schema
+	// Set connection pool settings
+	sqlDB.SetMaxIdleConns(10)
+	sqlDB.SetMaxOpenConns(100)
+	sqlDB.SetConnMaxLifetime(time.Hour)
+
+	// Enable UUID extension
+	if err := db.Exec("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"").Error; err != nil {
+		return nil, fmt.Errorf("failed to create uuid extension: %v", err)
+	}
+
+	// Auto migrate the schema with proper error handling
 	err = db.AutoMigrate(
-		&user.User{},
-		&server.Server{},
-		&category.Category{},
-		&category.Channel{},
-		&chat.Chat{},
-		&user.Friend{},
-		&user.FriendPending{},
-		&user.DirectMessage{},
-		&server.JoinServer{},
+		&models.User{},
+		&models.Server{},
+		&models.Category{},
+		&models.Channel{},
+		&models.Chat{},
+		&models.Friend{},
+		&models.FriendPending{},
+		&models.DirectMessage{},
+		&models.JoinServer{},
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to migrate database: %v", err)
+		// Check if the error is about existing tables
+		if strings.Contains(err.Error(), "already exists") {
+			// If tables exist, we can continue as the schema is already set up
+			log.Println("Tables already exist, continuing with existing schema")
+		} else {
+			return nil, fmt.Errorf("failed to migrate database: %v", err)
+		}
 	}
 
 	// Add indexes

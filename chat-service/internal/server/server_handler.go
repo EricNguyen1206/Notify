@@ -1,6 +1,7 @@
 package server
 
 import (
+	"chat-service/internal/models"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -21,7 +22,7 @@ func (h *ServerHandler) CreateServer(c *gin.Context) {
 		return
 	}
 
-	var req CreateServerRequest
+	var req models.CreateServerRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -71,7 +72,7 @@ func (h *ServerHandler) UpdateServer(c *gin.Context) {
 	}
 
 	id := c.Param("id")
-	var req UpdateServerRequest
+	var req models.UpdateServerRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -109,7 +110,7 @@ func (h *ServerHandler) JoinServer(c *gin.Context) {
 		return
 	}
 
-	var req JoinServerRequest
+	var req models.JoinServerRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

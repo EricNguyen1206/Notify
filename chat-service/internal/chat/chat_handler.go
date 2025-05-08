@@ -3,6 +3,7 @@ package chat
 import (
 	"net/http"
 
+	"chat-service/internal/models"
 	"chat-service/internal/ws"
 
 	"github.com/gin-gonic/gin"
@@ -38,7 +39,7 @@ func (h *ChatHandler) CreateChat(c *gin.Context) {
 		return
 	}
 
-	var req CreateChatRequest
+	var req models.CreateChatRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -51,7 +52,7 @@ func (h *ChatHandler) CreateChat(c *gin.Context) {
 	}
 
 	// Broadcast the message
-	message := &ChatMessage{
+	message := &models.ChatMessage{
 		ID:        chat.ID,
 		UserID:    chat.UserID,
 		Type:      chat.Type,

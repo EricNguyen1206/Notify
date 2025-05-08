@@ -1,6 +1,7 @@
 package category
 
 import (
+	"chat-service/internal/models"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -15,7 +16,7 @@ func NewCategoryHandler(categoryService CategoryService) *CategoryHandler {
 }
 
 func (h *CategoryHandler) CreateCategory(c *gin.Context) {
-	var req CreateCategoryRequest
+	var req models.CreateCategoryRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -54,7 +55,7 @@ func (h *CategoryHandler) GetCategoriesByServer(c *gin.Context) {
 
 func (h *CategoryHandler) UpdateCategory(c *gin.Context) {
 	id := c.Param("id")
-	var req UpdateCategoryRequest
+	var req models.UpdateCategoryRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -80,7 +81,7 @@ func (h *CategoryHandler) DeleteCategory(c *gin.Context) {
 }
 
 func (h *CategoryHandler) CreateChannel(c *gin.Context) {
-	var req CreateChannelRequest
+	var req models.CreateChannelRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -96,7 +97,7 @@ func (h *CategoryHandler) CreateChannel(c *gin.Context) {
 }
 
 func (h *CategoryHandler) GetChannel(c *gin.Context) {
-	id := c.Param("id")
+	id := c.Param("channelId")
 	channel, err := h.categoryService.GetChannel(c.Request.Context(), id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
@@ -107,7 +108,7 @@ func (h *CategoryHandler) GetChannel(c *gin.Context) {
 }
 
 func (h *CategoryHandler) GetChannelsByCategory(c *gin.Context) {
-	categoryID := c.Param("categoryId")
+	categoryID := c.Param("id")
 	channels, err := h.categoryService.GetChannelsByCategory(c.Request.Context(), categoryID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -118,8 +119,8 @@ func (h *CategoryHandler) GetChannelsByCategory(c *gin.Context) {
 }
 
 func (h *CategoryHandler) UpdateChannel(c *gin.Context) {
-	id := c.Param("id")
-	var req UpdateChannelRequest
+	id := c.Param("channelId")
+	var req models.UpdateChannelRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -135,7 +136,7 @@ func (h *CategoryHandler) UpdateChannel(c *gin.Context) {
 }
 
 func (h *CategoryHandler) DeleteChannel(c *gin.Context) {
-	id := c.Param("id")
+	id := c.Param("channelId")
 	if err := h.categoryService.DeleteChannel(c.Request.Context(), id); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -152,14 +153,12 @@ func (h *CategoryHandler) RegisterRoutes(r *gin.RouterGroup) {
 		categories.GET("/server/:serverId", h.GetCategoriesByServer)
 		categories.PUT("/:id", h.UpdateCategory)
 		categories.DELETE("/:id", h.DeleteCategory)
-
-		channels := categories.Group("/:categoryId/channels")
-		{
-			channels.POST("", h.CreateChannel)
-			channels.GET("", h.GetChannelsByCategory)
-			channels.GET("/:id", h.GetChannel)
-			channels.PUT("/:id", h.UpdateChannel)
-			channels.DELETE("/:id", h.DeleteChannel)
-		}
+		
+		// Channel routes with consistent parameter naming
+		categories.POST("/:id/channels", h.CreateChannel)
+		categories.GET("/:id/channels", h.GetChannelsByCategory)
+		categories.GET("/:id/channels/:channelId", h.GetChannel)
+		categories.PUT("/:id/channels/:channelId", h.UpdateChannel)
+		categories.DELETE("/:id/channels/:channelId", h.DeleteChannel)
 	}
 }

@@ -1,8 +1,6 @@
-package user
+package models
 
 import (
-	"chat-service/internal/chat"
-	"chat-service/internal/server"
 	"time"
 
 	"github.com/google/uuid"
@@ -14,18 +12,18 @@ import (
 type User struct {
 	ID        string         `gorm:"primaryKey;type:uuid;default:uuid_generate_v4()" json:"id"`
 	Provider  string         `gorm:"not null" json:"provider"`
-	Email     string         `gorm:"unique;not null" json:"email"`
-	Name      string         `gorm:"not null" json:"name"`
-	Password  string         `gorm:"nullable" json:"-"`
-	Avatar    string         `gorm:"nullable" json:"avatar"`
-	IsAdmin   bool           `gorm:"default:false" json:"isAdmin"`
-	Created   time.Time      `gorm:"default:CURRENT_TIMESTAMP" json:"created"`
+	Email     string         `gorm:"unique;type:varchar(255);not null" json:"email"`
+	Name      string         `gorm:"not null;type:varchar(255)" json:"name"`
+	Password  string         `gorm:"nullable;type:varchar(255)" json:"-"`
+	Avatar    string         `gorm:"nullable;type:varchar(255)" json:"avatar"`
+	IsAdmin   bool           `gorm:"default:false;type:boolean" json:"isAdmin"`
+	Created   time.Time      `gorm:"default:CURRENT_TIMESTAMP;type:timestamp" json:"created"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 
-	Friends        []Friend            `gorm:"foreignKey:SenderEmail;references:Email"`
-	FriendRequests []FriendPending     `gorm:"foreignKey:SenderEmail;references:Email"`
-	Servers        []server.JoinServer `gorm:"foreignKey:UserID;references:ID"`
-	Chats          []chat.Chat         `gorm:"foreignKey:UserID;references:ID"`
+	Friends        []Friend        `gorm:"foreignKey:SenderEmail;references:Email"`
+	FriendRequests []FriendPending `gorm:"foreignKey:SenderEmail;references:Email"`
+	Servers        []JoinServer    `gorm:"foreignKey:UserID;references:ID"`
+	Chats          []Chat          `gorm:"foreignKey:UserID;references:ID"`
 }
 
 func (u *User) BeforeCreate(tx *gorm.DB) error {
