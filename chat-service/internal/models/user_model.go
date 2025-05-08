@@ -36,8 +36,8 @@ func (u *User) BeforeCreate(tx *gorm.DB) error {
 // FriendPending represents pending friend requests
 type FriendPending struct {
 	ID            string         `gorm:"primaryKey;type:uuid;default:uuid_generate_v4()" json:"id"`
-	SenderEmail   string         `gorm:"not null" json:"senderEmail"`
-	ReceiverEmail string         `gorm:"not null" json:"receiverEmail"`
+	SenderEmail   string         `gorm:"not null;type:varchar(255)" json:"senderEmail"`
+	ReceiverEmail string         `gorm:"not null;type:varchar(255)" json:"receiverEmail"`
 	DateSended    time.Time      `gorm:"default:CURRENT_TIMESTAMP" json:"dateSended"`
 	DeletedAt     gorm.DeletedAt `gorm:"index" json:"-"`
 }
@@ -45,8 +45,8 @@ type FriendPending struct {
 // Friend represents accepted friend relationships
 type Friend struct {
 	ID            string         `gorm:"primaryKey;type:uuid;default:uuid_generate_v4()" json:"id"`
-	SenderEmail   string         `gorm:"not null" json:"senderEmail"`
-	ReceiverEmail string         `gorm:"not null" json:"receiverEmail"`
+	SenderEmail   string         `gorm:"not null;type:varchar(255)" json:"senderEmail"`
+	ReceiverEmail string         `gorm:"not null;type:varchar(255)" json:"receiverEmail"`
 	Created       time.Time      `gorm:"default:CURRENT_TIMESTAMP" json:"created"`
 	DeletedAt     gorm.DeletedAt `gorm:"index" json:"-"`
 }
@@ -54,8 +54,8 @@ type Friend struct {
 // DirectMessage represents direct message relationships
 type DirectMessage struct {
 	ID          string         `gorm:"primaryKey;type:uuid;default:uuid_generate_v4()" json:"id"`
-	OwnerEmail  string         `gorm:"not null" json:"ownerEmail"`
-	FriendEmail string         `gorm:"not null" json:"friendEmail"`
+	OwnerEmail  string         `gorm:"not null;type:varchar(255)" json:"ownerEmail"`
+	FriendEmail string         `gorm:"not null;type:varchar(255)" json:"friendEmail"`
 	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
