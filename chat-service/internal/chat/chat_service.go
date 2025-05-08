@@ -1,6 +1,7 @@
 package chat
 
 import (
+	"chat-service/internal/models"
 	"chat-service/internal/ws"
 	"context"
 	"encoding/json"
@@ -18,14 +19,14 @@ var (
 )
 
 type ChatService interface {
-	CreateChat(ctx context.Context, userID string, req *CreateChatRequest) (*ChatResponse, error)
-	GetChat(ctx context.Context, id string) (*ChatResponse, error)
-	GetUserChats(ctx context.Context, userID string) ([]*ChatResponse, error)
-	GetServerChats(ctx context.Context, serverID string) ([]*ChatResponse, error)
-	GetChannelChats(ctx context.Context, channelID string) ([]*ChatResponse, error)
-	GetFriendChats(ctx context.Context, friendID string) ([]*ChatResponse, error)
+	CreateChat(ctx context.Context, userID string, req *models.CreateChatRequest) (*models.ChatResponse, error)
+	GetChat(ctx context.Context, id string) (*models.ChatResponse, error)
+	GetUserChats(ctx context.Context, userID string) ([]*models.ChatResponse, error)
+	GetServerChats(ctx context.Context, serverID string) ([]*models.ChatResponse, error)
+	GetChannelChats(ctx context.Context, channelID string) ([]*models.ChatResponse, error)
+	GetFriendChats(ctx context.Context, friendID string) ([]*models.ChatResponse, error)
 	DeleteChat(ctx context.Context, id string, userID string) error
-	BroadcastMessage(hub *ws.Hub, message *ChatMessage) error
+	BroadcastMessage(hub *ws.Hub, message *models.ChatMessage) error
 }
 
 type chatService struct {
@@ -36,7 +37,7 @@ func NewChatService(repo ChatRepository) ChatService {
 	return &chatService{repo: repo}
 }
 
-func (s *chatService) CreateChat(ctx context.Context, userID string, req *CreateChatRequest) (*ChatResponse, error) {
+func (s *chatService) CreateChat(ctx context.Context, userID string, req *models.CreateChatRequest) (*models.ChatResponse, error) {
 	// Validate chat type and provider
 	if req.Type != "direct_messages" && req.Type != "server_messages" {
 		return nil, ErrInvalidType
@@ -63,7 +64,7 @@ func (s *chatService) CreateChat(ctx context.Context, userID string, req *Create
 		return nil, errors.New("url is required for image/file provider")
 	}
 
-	chat := &Chat{
+	chat := &models.Chat{
 		ID:        uuid.New().String(),
 		UserID:    userID,
 		Type:      req.Type,
@@ -81,7 +82,7 @@ func (s *chatService) CreateChat(ctx context.Context, userID string, req *Create
 		return nil, err
 	}
 
-	return &ChatResponse{
+	return &models.ChatResponse{
 		ID:        chat.ID,
 		UserID:    chat.UserID,
 		Type:      chat.Type,
@@ -96,13 +97,13 @@ func (s *chatService) CreateChat(ctx context.Context, userID string, req *Create
 	}, nil
 }
 
-func (s *chatService) GetChat(ctx context.Context, id string) (*ChatResponse, error) {
+func (s *chatService) GetChat(ctx context.Context, id string) (*models.ChatResponse, error) {
 	chat, err := s.repo.FindByID(ctx, id)
 	if err != nil {
 		return nil, ErrChatNotFound
 	}
 
-	return &ChatResponse{
+	return &models.ChatResponse{
 		ID:        chat.ID,
 		UserID:    chat.UserID,
 		Type:      chat.Type,
@@ -117,15 +118,15 @@ func (s *chatService) GetChat(ctx context.Context, id string) (*ChatResponse, er
 	}, nil
 }
 
-func (s *chatService) GetUserChats(ctx context.Context, userID string) ([]*ChatResponse, error) {
+func (s *chatService) GetUserChats(ctx context.Context, userID string) ([]*models.ChatResponse, error) {
 	chats, err := s.repo.FindByUserID(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
 
-	var responses []*ChatResponse
+	var responses []*models.ChatResponse
 	for _, chat := range chats {
-		responses = append(responses, &ChatResponse{
+		responses = append(responses, &models.ChatResponse{
 			ID:        chat.ID,
 			UserID:    chat.UserID,
 			Type:      chat.Type,
@@ -143,15 +144,15 @@ func (s *chatService) GetUserChats(ctx context.Context, userID string) ([]*ChatR
 	return responses, nil
 }
 
-func (s *chatService) GetServerChats(ctx context.Context, serverID string) ([]*ChatResponse, error) {
+func (s *chatService) GetServerChats(ctx context.Context, serverID string) ([]*models.ChatResponse, error) {
 	chats, err := s.repo.FindByServerID(ctx, serverID)
 	if err != nil {
 		return nil, err
 	}
 
-	var responses []*ChatResponse
+	var responses []*models.ChatResponse
 	for _, chat := range chats {
-		responses = append(responses, &ChatResponse{
+		responses = append(responses, &models.ChatResponse{
 			ID:        chat.ID,
 			UserID:    chat.UserID,
 			Type:      chat.Type,
@@ -169,15 +170,15 @@ func (s *chatService) GetServerChats(ctx context.Context, serverID string) ([]*C
 	return responses, nil
 }
 
-func (s *chatService) GetChannelChats(ctx context.Context, channelID string) ([]*ChatResponse, error) {
+func (s *chatService) GetChannelChats(ctx context.Context, channelID string) ([]*models.ChatResponse, error) {
 	chats, err := s.repo.FindByChannelID(ctx, channelID)
 	if err != nil {
 		return nil, err
 	}
 
-	var responses []*ChatResponse
+	var responses []*models.ChatResponse
 	for _, chat := range chats {
-		responses = append(responses, &ChatResponse{
+		responses = append(responses, &models.ChatResponse{
 			ID:        chat.ID,
 			UserID:    chat.UserID,
 			Type:      chat.Type,
@@ -195,15 +196,15 @@ func (s *chatService) GetChannelChats(ctx context.Context, channelID string) ([]
 	return responses, nil
 }
 
-func (s *chatService) GetFriendChats(ctx context.Context, friendID string) ([]*ChatResponse, error) {
+func (s *chatService) GetFriendChats(ctx context.Context, friendID string) ([]*models.ChatResponse, error) {
 	chats, err := s.repo.FindByFriendID(ctx, friendID)
 	if err != nil {
 		return nil, err
 	}
 
-	var responses []*ChatResponse
+	var responses []*models.ChatResponse
 	for _, chat := range chats {
-		responses = append(responses, &ChatResponse{
+		responses = append(responses, &models.ChatResponse{
 			ID:        chat.ID,
 			UserID:    chat.UserID,
 			Type:      chat.Type,
@@ -234,7 +235,7 @@ func (s *chatService) DeleteChat(ctx context.Context, id string, userID string) 
 	return s.repo.Delete(ctx, id)
 }
 
-func (s *chatService) BroadcastMessage(hub *ws.Hub, message *ChatMessage) error {
+func (s *chatService) BroadcastMessage(hub *ws.Hub, message *models.ChatMessage) error {
 	// Convert message to JSON
 	data, err := json.Marshal(message)
 	if err != nil {

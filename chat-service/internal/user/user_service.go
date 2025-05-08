@@ -1,6 +1,7 @@
 package user
 
 import (
+	"chat-service/internal/models"
 	"context"
 	"errors"
 	"time"
@@ -22,15 +23,15 @@ var (
 )
 
 type UserService interface {
-	Register(ctx context.Context, req *RegisterRequest) (*UserResponse, error)
-	Login(ctx context.Context, req *LoginRequest) (string, error)
-	GetProfile(ctx context.Context, userID string) (*UserResponse, error)
-	UpdateProfile(ctx context.Context, userID string, req *RegisterRequest) (*UserResponse, error)
-	SendFriendRequest(ctx context.Context, senderEmail string, req *FriendRequest) error
+	Register(ctx context.Context, req *models.RegisterRequest) (*models.UserResponse, error)
+	Login(ctx context.Context, req *models.LoginRequest) (string, error)
+	GetProfile(ctx context.Context, userID string) (*models.UserResponse, error)
+	UpdateProfile(ctx context.Context, userID string, req *models.RegisterRequest) (*models.UserResponse, error)
+	SendFriendRequest(ctx context.Context, senderEmail string, req *models.FriendRequest) error
 	AcceptFriendRequest(ctx context.Context, requestID string) error
 	RejectFriendRequest(ctx context.Context, requestID string) error
-	GetFriends(ctx context.Context, email string) ([]*FriendResponse, error)
-	GetPendingFriends(ctx context.Context, email string) ([]*FriendResponse, error)
+	GetFriends(ctx context.Context, email string) ([]*models.FriendResponse, error)
+	GetPendingFriends(ctx context.Context, email string) ([]*models.FriendResponse, error)
 	RemoveFriend(ctx context.Context, friendID string) error
 }
 
@@ -47,7 +48,7 @@ func NewUserService(repo UserRepository, jwtSecret string) UserService {
 }
 
 // generateJWT creates a new JWT token for the user
-func (s *userService) generateJWT(user *User) (string, error) {
+func (s *userService) generateJWT(user *models.User) (string, error) {
 	claims := jwt.MapClaims{
 		"user_id": user.ID,
 		"email":   user.Email,
@@ -60,7 +61,7 @@ func (s *userService) generateJWT(user *User) (string, error) {
 	return token.SignedString([]byte(s.jwtSecret))
 }
 
-func (s *userService) Register(ctx context.Context, req *RegisterRequest) (*UserResponse, error) {
+func (s *userService) Register(ctx context.Context, req *models.RegisterRequest) (*models.UserResponse, error) {
 	// Check if user exists
 	existingUser, _ := s.repo.FindByEmail(ctx, req.Email)
 	if existingUser != nil {
@@ -74,7 +75,7 @@ func (s *userService) Register(ctx context.Context, req *RegisterRequest) (*User
 	}
 
 	// Create user
-	user := &User{
+	user := &models.User{
 		ID:       uuid.New().String(),
 		Provider: req.Provider,
 		Email:    req.Email,
@@ -87,7 +88,7 @@ func (s *userService) Register(ctx context.Context, req *RegisterRequest) (*User
 		return nil, err
 	}
 
-	return &UserResponse{
+	return &models.UserResponse{
 		ID:      user.ID,
 		Email:   user.Email,
 		Name:    user.Name,
@@ -97,7 +98,7 @@ func (s *userService) Register(ctx context.Context, req *RegisterRequest) (*User
 	}, nil
 }
 
-func (s *userService) Login(ctx context.Context, req *LoginRequest) (string, error) {
+func (s *userService) Login(ctx context.Context, req *models.LoginRequest) (string, error) {
 	user, err := s.repo.FindByEmail(ctx, req.Email)
 	if err != nil {
 		return "", ErrInvalidCredentials
@@ -110,13 +111,13 @@ func (s *userService) Login(ctx context.Context, req *LoginRequest) (string, err
 	return s.generateJWT(user)
 }
 
-func (s *userService) GetProfile(ctx context.Context, userID string) (*UserResponse, error) {
+func (s *userService) GetProfile(ctx context.Context, userID string) (*models.UserResponse, error) {
 	user, err := s.repo.FindByID(ctx, userID)
 	if err != nil {
 		return nil, ErrUserNotFound
 	}
 
-	return &UserResponse{
+	return &models.UserResponse{
 		ID:      user.ID,
 		Email:   user.Email,
 		Name:    user.Name,
@@ -126,7 +127,7 @@ func (s *userService) GetProfile(ctx context.Context, userID string) (*UserRespo
 	}, nil
 }
 
-func (s *userService) UpdateProfile(ctx context.Context, userID string, req *RegisterRequest) (*UserResponse, error) {
+func (s *userService) UpdateProfile(ctx context.Context, userID string, req *models.RegisterRequest) (*models.UserResponse, error) {
 	user, err := s.repo.FindByID(ctx, userID)
 	if err != nil {
 		return nil, ErrUserNotFound
@@ -146,7 +147,7 @@ func (s *userService) UpdateProfile(ctx context.Context, userID string, req *Reg
 		return nil, err
 	}
 
-	return &UserResponse{
+	return &models.UserResponse{
 		ID:      user.ID,
 		Email:   user.Email,
 		Name:    user.Name,
@@ -156,7 +157,7 @@ func (s *userService) UpdateProfile(ctx context.Context, userID string, req *Reg
 	}, nil
 }
 
-func (s *userService) SendFriendRequest(ctx context.Context, senderEmail string, req *FriendRequest) error {
+func (s *userService) SendFriendRequest(ctx context.Context, senderEmail string, req *models.FriendRequest) error {
 	// Check if users exist
 	sender, err := s.repo.FindByEmail(ctx, senderEmail)
 	if err != nil {
@@ -191,7 +192,7 @@ func (s *userService) SendFriendRequest(ctx context.Context, senderEmail string,
 	}
 
 	// Create friend request
-	friendPending := &FriendPending{
+	friendPending := &models.FriendPending{
 		ID:            uuid.New().String(),
 		SenderEmail:   sender.Email,
 		ReceiverEmail: receiver.Email,
@@ -208,7 +209,7 @@ func (s *userService) AcceptFriendRequest(ctx context.Context, requestID string)
 		return err
 	}
 
-	var targetPending *FriendPending
+	var targetPending *models.FriendPending
 	for _, p := range pending {
 		if p.ID == requestID {
 			targetPending = p
@@ -221,7 +222,7 @@ func (s *userService) AcceptFriendRequest(ctx context.Context, requestID string)
 	}
 
 	// Create friend relationship
-	friend := &Friend{
+	friend := &models.Friend{
 		ID:            uuid.New().String(),
 		SenderEmail:   targetPending.SenderEmail,
 		ReceiverEmail: targetPending.ReceiverEmail,
@@ -259,15 +260,15 @@ func (s *userService) RejectFriendRequest(ctx context.Context, requestID string)
 	return s.repo.RemoveFriendPending(ctx, requestID)
 }
 
-func (s *userService) GetFriends(ctx context.Context, email string) ([]*FriendResponse, error) {
+func (s *userService) GetFriends(ctx context.Context, email string) ([]*models.FriendResponse, error) {
 	friends, err := s.repo.GetFriends(ctx, email)
 	if err != nil {
 		return nil, err
 	}
 
-	var response []*FriendResponse
+	var response []*models.FriendResponse
 	for _, f := range friends {
-		response = append(response, &FriendResponse{
+		response = append(response, &models.FriendResponse{
 			ID:            f.ID,
 			SenderEmail:   f.SenderEmail,
 			ReceiverEmail: f.ReceiverEmail,
@@ -278,15 +279,15 @@ func (s *userService) GetFriends(ctx context.Context, email string) ([]*FriendRe
 	return response, nil
 }
 
-func (s *userService) GetPendingFriends(ctx context.Context, email string) ([]*FriendResponse, error) {
+func (s *userService) GetPendingFriends(ctx context.Context, email string) ([]*models.FriendResponse, error) {
 	pending, err := s.repo.GetPendingFriends(ctx, email)
 	if err != nil {
 		return nil, err
 	}
 
-	var response []*FriendResponse
+	var response []*models.FriendResponse
 	for _, p := range pending {
-		response = append(response, &FriendResponse{
+		response = append(response, &models.FriendResponse{
 			ID:            p.ID,
 			SenderEmail:   p.SenderEmail,
 			ReceiverEmail: p.ReceiverEmail,

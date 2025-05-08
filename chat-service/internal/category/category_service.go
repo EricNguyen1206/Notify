@@ -1,6 +1,7 @@
 package category
 
 import (
+	"chat-service/internal/models"
 	"context"
 	"errors"
 	"time"
@@ -16,15 +17,15 @@ var (
 )
 
 type CategoryService interface {
-	CreateCategory(ctx context.Context, req *CreateCategoryRequest) (*CategoryResponse, error)
-	GetCategory(ctx context.Context, id string) (*CategoryResponse, error)
-	GetCategoriesByServer(ctx context.Context, serverID string) ([]*CategoryResponse, error)
-	UpdateCategory(ctx context.Context, id string, req *UpdateCategoryRequest) (*CategoryResponse, error)
+	CreateCategory(ctx context.Context, req *models.CreateCategoryRequest) (*models.CategoryResponse, error)
+	GetCategory(ctx context.Context, id string) (*models.CategoryResponse, error)
+	GetCategoriesByServer(ctx context.Context, serverID string) ([]*models.CategoryResponse, error)
+	UpdateCategory(ctx context.Context, id string, req *models.UpdateCategoryRequest) (*models.CategoryResponse, error)
 	DeleteCategory(ctx context.Context, id string) error
-	CreateChannel(ctx context.Context, req *CreateChannelRequest) (*ChannelResponse, error)
-	GetChannel(ctx context.Context, id string) (*ChannelResponse, error)
-	GetChannelsByCategory(ctx context.Context, categoryID string) ([]*ChannelResponse, error)
-	UpdateChannel(ctx context.Context, id string, req *UpdateChannelRequest) (*ChannelResponse, error)
+	CreateChannel(ctx context.Context, req *models.CreateChannelRequest) (*models.ChannelResponse, error)
+	GetChannel(ctx context.Context, id string) (*models.ChannelResponse, error)
+	GetChannelsByCategory(ctx context.Context, categoryID string) ([]*models.ChannelResponse, error)
+	UpdateChannel(ctx context.Context, id string, req *models.UpdateChannelRequest) (*models.ChannelResponse, error)
 	DeleteChannel(ctx context.Context, id string) error
 }
 
@@ -36,8 +37,8 @@ func NewCategoryService(repo CategoryRepository) CategoryService {
 	return &categoryService{repo: repo}
 }
 
-func (s *categoryService) CreateCategory(ctx context.Context, req *CreateCategoryRequest) (*CategoryResponse, error) {
-	category := &Category{
+func (s *categoryService) CreateCategory(ctx context.Context, req *models.CreateCategoryRequest) (*models.CategoryResponse, error) {
+	category := &models.Category{
 		ID:        uuid.New().String(),
 		ServerID:  req.ServerID,
 		Name:      req.Name,
@@ -49,7 +50,7 @@ func (s *categoryService) CreateCategory(ctx context.Context, req *CreateCategor
 		return nil, err
 	}
 
-	return &CategoryResponse{
+	return &models.CategoryResponse{
 		ID:        category.ID,
 		ServerID:  category.ServerID,
 		Name:      category.Name,
@@ -58,7 +59,7 @@ func (s *categoryService) CreateCategory(ctx context.Context, req *CreateCategor
 	}, nil
 }
 
-func (s *categoryService) GetCategory(ctx context.Context, id string) (*CategoryResponse, error) {
+func (s *categoryService) GetCategory(ctx context.Context, id string) (*models.CategoryResponse, error) {
 	category, err := s.repo.FindByID(ctx, id)
 	if err != nil {
 		return nil, ErrCategoryNotFound
@@ -69,9 +70,9 @@ func (s *categoryService) GetCategory(ctx context.Context, id string) (*Category
 		return nil, err
 	}
 
-	channelResponses := make([]ChannelResponse, len(channels))
+	channelResponses := make([]models.ChannelResponse, len(channels))
 	for i, channel := range channels {
-		channelResponses[i] = ChannelResponse{
+		channelResponses[i] = models.ChannelResponse{
 			ID:         channel.ID,
 			CategoryID: channel.CategoryID,
 			Name:       channel.Name,
@@ -80,7 +81,7 @@ func (s *categoryService) GetCategory(ctx context.Context, id string) (*Category
 		}
 	}
 
-	return &CategoryResponse{
+	return &models.CategoryResponse{
 		ID:        category.ID,
 		ServerID:  category.ServerID,
 		Name:      category.Name,
@@ -90,22 +91,22 @@ func (s *categoryService) GetCategory(ctx context.Context, id string) (*Category
 	}, nil
 }
 
-func (s *categoryService) GetCategoriesByServer(ctx context.Context, serverID string) ([]*CategoryResponse, error) {
+func (s *categoryService) GetCategoriesByServer(ctx context.Context, serverID string) ([]*models.CategoryResponse, error) {
 	categories, err := s.repo.FindByServerID(ctx, serverID)
 	if err != nil {
 		return nil, err
 	}
 
-	var responses []*CategoryResponse
+	var responses []*models.CategoryResponse
 	for _, category := range categories {
 		channels, err := s.repo.FindChannelsByCategoryID(ctx, category.ID)
 		if err != nil {
 			return nil, err
 		}
 
-		channelResponses := make([]ChannelResponse, len(channels))
+		channelResponses := make([]models.ChannelResponse, len(channels))
 		for i, channel := range channels {
-			channelResponses[i] = ChannelResponse{
+			channelResponses[i] = models.ChannelResponse{
 				ID:         channel.ID,
 				CategoryID: channel.CategoryID,
 				Name:       channel.Name,
@@ -114,7 +115,7 @@ func (s *categoryService) GetCategoriesByServer(ctx context.Context, serverID st
 			}
 		}
 
-		responses = append(responses, &CategoryResponse{
+		responses = append(responses, &models.CategoryResponse{
 			ID:        category.ID,
 			ServerID:  category.ServerID,
 			Name:      category.Name,
@@ -127,7 +128,7 @@ func (s *categoryService) GetCategoriesByServer(ctx context.Context, serverID st
 	return responses, nil
 }
 
-func (s *categoryService) UpdateCategory(ctx context.Context, id string, req *UpdateCategoryRequest) (*CategoryResponse, error) {
+func (s *categoryService) UpdateCategory(ctx context.Context, id string, req *models.UpdateCategoryRequest) (*models.CategoryResponse, error) {
 	category, err := s.repo.FindByID(ctx, id)
 	if err != nil {
 		return nil, ErrCategoryNotFound
@@ -140,7 +141,7 @@ func (s *categoryService) UpdateCategory(ctx context.Context, id string, req *Up
 		return nil, err
 	}
 
-	return &CategoryResponse{
+	return &models.CategoryResponse{
 		ID:        category.ID,
 		ServerID:  category.ServerID,
 		Name:      category.Name,
@@ -153,12 +154,12 @@ func (s *categoryService) DeleteCategory(ctx context.Context, id string) error {
 	return s.repo.Delete(ctx, id)
 }
 
-func (s *categoryService) CreateChannel(ctx context.Context, req *CreateChannelRequest) (*ChannelResponse, error) {
+func (s *categoryService) CreateChannel(ctx context.Context, req *models.CreateChannelRequest) (*models.ChannelResponse, error) {
 	if req.Type != "text" && req.Type != "voice" {
 		return nil, ErrInvalidChannelType
 	}
 
-	channel := &Channel{
+	channel := &models.Channel{
 		ID:         uuid.New().String(),
 		CategoryID: req.CategoryID,
 		Name:       req.Name,
@@ -170,7 +171,7 @@ func (s *categoryService) CreateChannel(ctx context.Context, req *CreateChannelR
 		return nil, err
 	}
 
-	return &ChannelResponse{
+	return &models.ChannelResponse{
 		ID:         channel.ID,
 		CategoryID: channel.CategoryID,
 		Name:       channel.Name,
@@ -179,13 +180,13 @@ func (s *categoryService) CreateChannel(ctx context.Context, req *CreateChannelR
 	}, nil
 }
 
-func (s *categoryService) GetChannel(ctx context.Context, id string) (*ChannelResponse, error) {
+func (s *categoryService) GetChannel(ctx context.Context, id string) (*models.ChannelResponse, error) {
 	channel, err := s.repo.FindChannelByID(ctx, id)
 	if err != nil {
 		return nil, ErrChannelNotFound
 	}
 
-	return &ChannelResponse{
+	return &models.ChannelResponse{
 		ID:         channel.ID,
 		CategoryID: channel.CategoryID,
 		Name:       channel.Name,
@@ -194,15 +195,15 @@ func (s *categoryService) GetChannel(ctx context.Context, id string) (*ChannelRe
 	}, nil
 }
 
-func (s *categoryService) GetChannelsByCategory(ctx context.Context, categoryID string) ([]*ChannelResponse, error) {
+func (s *categoryService) GetChannelsByCategory(ctx context.Context, categoryID string) ([]*models.ChannelResponse, error) {
 	channels, err := s.repo.FindChannelsByCategoryID(ctx, categoryID)
 	if err != nil {
 		return nil, err
 	}
 
-	var responses []*ChannelResponse
+	var responses []*models.ChannelResponse
 	for _, channel := range channels {
-		responses = append(responses, &ChannelResponse{
+		responses = append(responses, &models.ChannelResponse{
 			ID:         channel.ID,
 			CategoryID: channel.CategoryID,
 			Name:       channel.Name,
@@ -214,7 +215,7 @@ func (s *categoryService) GetChannelsByCategory(ctx context.Context, categoryID 
 	return responses, nil
 }
 
-func (s *categoryService) UpdateChannel(ctx context.Context, id string, req *UpdateChannelRequest) (*ChannelResponse, error) {
+func (s *categoryService) UpdateChannel(ctx context.Context, id string, req *models.UpdateChannelRequest) (*models.ChannelResponse, error) {
 	if req.Type != "text" && req.Type != "voice" {
 		return nil, ErrInvalidChannelType
 	}
@@ -231,7 +232,7 @@ func (s *categoryService) UpdateChannel(ctx context.Context, id string, req *Upd
 		return nil, err
 	}
 
-	return &ChannelResponse{
+	return &models.ChannelResponse{
 		ID:         channel.ID,
 		CategoryID: channel.CategoryID,
 		Name:       channel.Name,
