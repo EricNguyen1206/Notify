@@ -29,12 +29,12 @@ export const getUserByEmail = async (email: string) => {
 export const createNewUser = async (user: UserType) => {
   try {
     const res = await axios.post(
-      `${process.env.NEXT_PUBLIC_API_URL}/user/create`,
+      `${process.env.NEXT_PUBLIC_API_URL}/users/register`,
       {
         name: user.name,
         email: user.email,
         password: user.password,
-        avatar: user.avatar,
+        // avatar: user.avatar,
         provider: user.provider,
         isAdmin: user.isAdmin,
       }
@@ -49,12 +49,13 @@ export const createNewUser = async (user: UserType) => {
 export const loginByEmail = async (user: UserType) => {
   try {
     const res = await axios.post(
-      `${process.env.NEXT_PUBLIC_API_URL}/user/login`,
+      `${process.env.NEXT_PUBLIC_API_URL}/users/login`,
       {
         email: user.email,
         password: user.password,
       }
     );
+    console.log("TEST", res.data);
     return res.data;
   } catch (err: any) {
     console.log("API CALL ERROR:", err?.response?.data);

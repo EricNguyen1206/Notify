@@ -7,7 +7,7 @@ import { useServerStore } from "@/lib/store";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-import { getDetailServerById } from "@/lib/action.api";
+import { getDetailServerById } from "@/utils/actions/api";
 import { getSummaryName } from "@/lib/helper";
 
 const DetailServerPage = () => {

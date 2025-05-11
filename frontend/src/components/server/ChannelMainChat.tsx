@@ -40,9 +40,9 @@ import {
   getChannelById,
   getDetailServerById,
   getUserById,
-} from "@/lib/action.api";
+} from "@/utils/actions/api";
 import { formatDateStr, getSummaryName } from "@/lib/helper";
-import { handleFileExtUpload, handleFileUpload } from "@/lib/supabase";
+import { handleFileExtUpload, handleFileUpload } from "@/utils/supabase/client";
 import { ApplicationFileType } from "@/lib/utils";
 
 export interface FormDataState {

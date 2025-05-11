@@ -3,7 +3,7 @@ import GithubProvider from "next-auth/providers/github";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { authConfig } from "./auth.config";
 import { UserType } from "@/types";
-import { createNewUser, loginByEmail } from "./action.api";
+import { createNewUser, loginByEmail } from "@/utils/actions/api";
 
 // https://stackoverflow.com/questions/70897330/return-error-information-from-api-when-using-next-auth
 

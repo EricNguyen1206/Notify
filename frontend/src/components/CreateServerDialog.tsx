@@ -18,8 +18,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { createNewServer } from "@/lib/action.api";
-import { handleFileUpload } from "@/lib/supabase";
+import { createNewServer } from "@/utils/actions/api";
+import { handleFileUpload } from "@/utils/supabase/client";
 import { ServerType } from "@/types";
 import { Session } from "next-auth";
 import { usePathname } from "next/navigation";

@@ -1,7 +1,7 @@
 import StorageBarChart from "@/components/admin/StorageBarChart";
 import StorageBieChart from "@/components/admin/StorageBieChart";
 
-import { listAllFiles } from "@/lib/supabase";
+import { listAllFiles } from "@/utils/supabase/client";
 
 const StoragePage = async () => {
   const userRes = await listAllFiles("uploads", "user_avatars");

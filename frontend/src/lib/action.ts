@@ -1,7 +1,7 @@
 "use server";
 
-import { auth, signIn, signOut } from "@/lib/auth";
-import { createNewUser, getUserByEmail } from "./action.api";
+import { auth, signIn, signOut } from "./auth";
+import { createNewUser, getUserByEmail, loginByEmail } from "../utils/actions/api";
 import { UserType } from "@/types";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -13,10 +13,11 @@ export const handleRegister = async (prevState: any, form: FormData) => {
 
     if (agree === undefined) return { error: "Please agree terms & policy" };
 
-    const res = await getUserByEmail(email);
-    const { user } = res;
+    // const res = await getUserByEmail(email);
+    // const { user } = res;
+    // console.log("TEST", user);
 
-    if (user !== null) return { error: "Email is already exist" };
+    // if (user !== null) return { error: "Email is already exist" };
 
     if (adminCode !== "" && adminCode !== process.env.NEXT_ADMIN_CODE)
       return { error: "Admin code incorrect" };
@@ -47,14 +48,25 @@ export const handleRegister = async (prevState: any, form: FormData) => {
 
 export const handleEmailLogin = async (prevState: any, form: FormData) => {
   try {
-    const { email, password } = Object.fromEntries(form);
-    await signIn("credentials", { email, password });
+    const { email, password }: any = Object.fromEntries(form);
+    const newUser: UserType = {
+      email: email,
+      password: password,
+    };
+    const res = await loginByEmail(newUser);
+    const { message } = res;
+
+    if (message !== "Login successfully") {
+      return { error: message };
+    }
+    
+    return { message: "Login successfully" };
   } catch (err: any) {
+    console.error("Login error:", err);
     if (err.message.includes("CredentialsSignin")) {
       return { error: "Invalid username or password" };
     }
-
-    throw err;
+    return { error: "An error occurred during login" };
   }
 };
 
