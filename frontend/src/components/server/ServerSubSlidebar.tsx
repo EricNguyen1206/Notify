@@ -18,7 +18,7 @@ import CreateNewCategoryBtn from "./CreateNewCategoryBtn";
 import { CategoryType, ChannelType } from "@/types";
 
 // import { CategoriesData } from "@/lib/utils";
-import { getDetailServerById } from "@/lib/action.api";
+import { getDetailServerById } from "@/utils/actions/api";
 import { handleLeaveServerAction } from "@/lib/action";
 
 const ServerSubSlidebar = () => {

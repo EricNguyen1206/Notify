@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useServerStore } from "@/lib/store";
 
-import { getDetailServerById } from "@/lib/action.api";
+import { getDetailServerById } from "@/utils/actions/api";
 
 import ChannelMainChat from "@/components/server/ChannelMainChat";
 

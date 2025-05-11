@@ -22,7 +22,7 @@ import { MdClear } from "react-icons/md";
 
 import { ChannelType, ServerType, UserType } from "@/types";
 
-import { getAllFriendsByEmail, getServerInviteLink } from "@/lib/action.api";
+import { getAllFriendsByEmail, getServerInviteLink } from "@/utils/actions/api";
 import { getSummaryName } from "@/lib/helper";
 
 interface PropType {

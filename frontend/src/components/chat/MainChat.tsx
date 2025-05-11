@@ -33,9 +33,9 @@ import { PiPhoneCallFill } from "react-icons/pi";
 import { FaCircleUser } from "react-icons/fa6";
 import { toast } from "react-toastify";
 
-import { getAllChatsByUserId, getUserById } from "@/lib/action.api";
+import { getAllChatsByUserId, getUserById } from "@/utils/actions/api";
 import { formatDateStr, getSummaryName } from "@/lib/helper";
-import { handleFileExtUpload, handleFileUpload } from "@/lib/supabase";
+import { handleFileExtUpload, handleFileUpload } from "@/utils/supabase/client";
 import { ApplicationFileType } from "@/lib/utils";
 
 export interface FormDataState {

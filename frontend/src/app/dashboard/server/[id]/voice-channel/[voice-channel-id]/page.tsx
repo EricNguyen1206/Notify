@@ -7,7 +7,7 @@ import { useServerStore } from "@/lib/store";
 
 import { JitsiMeeting } from "@jitsi/react-sdk";
 
-import { getChannelById, getDetailServerById } from "@/lib/action.api";
+import { getChannelById, getDetailServerById } from "@/utils/actions/api";
 
 const ChannelVoicePage = () => {
   const { data: session }: any = useSession();

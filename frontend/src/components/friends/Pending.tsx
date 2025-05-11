@@ -16,7 +16,7 @@ import {
 import { FaCheck } from "react-icons/fa";
 import { MdClear } from "react-icons/md";
 
-import { getPendingByEmail } from "@/lib/action.api";
+import { getPendingByEmail } from "@/utils/actions/api";
 import { acceptFriendRequest, ignoreFriendRequest } from "@/lib/socket";
 import { getSummaryName } from "@/lib/helper";
 

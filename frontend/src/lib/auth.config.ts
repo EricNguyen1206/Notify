@@ -1,4 +1,4 @@
-import { getUserByEmail } from "./action.api";
+import { getUserByEmail } from "../utils/actions/api";
 
 export const authConfig = {
   pages: {

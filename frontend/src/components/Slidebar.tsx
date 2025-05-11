@@ -1,17 +1,16 @@
 import { ServerType } from "@/types";
 
-import { auth } from "@/lib/auth";
 
-import { getJoinServerByUserId } from "@/lib/action.api";
+import { getJoinServerByUserId } from "@/utils/actions/api";
 
 import SlidebarItem from "@/components/SlidebarItem";
 import CreateServerDialog from "./CreateServerDialog";
 
 const Slidebar = async () => {
-  const session = await auth();
-  const { user }: any = session;
+  // const session = await auth();
+  // const { user }: any = session;
 
-  const serverJoins = await getJoinServerByUserId(user.id);
+  // const serverJoins = await getJoinServerByUserId(user.id);
 
   const DirectMessage: ServerType = {
     id: null,
@@ -23,11 +22,11 @@ const Slidebar = async () => {
       <SlidebarItem server={DirectMessage} />
       <div className="w-[80%] h-[2px] bg-primary-gray dark:bg-secondary-gray"></div>
       <div className="w-[100%] overflow-y-auto">
-        {serverJoins?.joins?.map((server: ServerType) => {
+        {/* {serverJoins?.joins?.map((server: ServerType) => {
           return <SlidebarItem key={server.id} server={server} />;
-        })}
+        })} */}
       </div>
-      <CreateServerDialog session={session} />
+      {/* <CreateServerDialog session={session} /> */}
     </div>
   );
 };

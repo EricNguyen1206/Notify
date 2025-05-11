@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 
 import { UserType } from "@/types";
 
-import { getUserById } from "@/lib/action.api";
+import { getUserById } from "@/utils/actions/api";
 import { formatDateStr, getSummaryName } from "@/lib/helper";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";

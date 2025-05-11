@@ -4,8 +4,8 @@ import React, { ReactNode, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 
 import { handleSignOut } from "@/lib/action";
-import { handleFileUpload } from "@/lib/supabase";
-import { editUserByUserId, getUserByEmail } from "@/lib/action.api";
+import { handleFileUpload } from "@/utils/supabase/client";
+import { editUserByUserId, getUserByEmail } from "@/utils/actions/api";
 import { censorPassword, getSummaryName } from "@/lib/helper";
 
 import { IoIosLogOut } from "react-icons/io";
