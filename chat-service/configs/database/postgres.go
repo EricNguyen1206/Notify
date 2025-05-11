@@ -1,6 +1,7 @@
 package database
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"strings"
@@ -20,14 +21,17 @@ func NewPostgresConnection() (*gorm.DB, error) {
 	port := "6543"
 	dbname := "postgres"
 
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=require",
+	// Add statement_cache_mode=describe to disable prepared statement caching
+	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=require statement_cache_mode=describe",
 		host, user, password, dbname, port)
 
-	// Configure GORM with proper settings
+	// Configure GORM with even more strict settings for statement handling
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
 		DisableForeignKeyConstraintWhenMigrating: true,
-		PrepareStmt:                              false, // Disable prepared statements
+		PrepareStmt:                              false, // Explicitly disable prepared statements
+		SkipDefaultTransaction:                   true,  // Skip default transaction for better performance
 		Logger:                                   logger.Default.LogMode(logger.Info),
+		AllowGlobalUpdate:                        false, // Safety measure
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %v", err)
@@ -39,10 +43,21 @@ func NewPostgresConnection() (*gorm.DB, error) {
 		return nil, fmt.Errorf("failed to get database instance: %v", err)
 	}
 
-	// Set connection pool settings
+	// Aggressively clean connections first
+	sqlDB.SetMaxIdleConns(0)  // Force close all idle connections
+	sqlDB.SetMaxOpenConns(10) // Reduce maximum connections temporarily
+	time.Sleep(100 * time.Millisecond)  // Give connections time to close
+
+	// Set optimized connection pool settings
 	sqlDB.SetMaxIdleConns(10)
-	sqlDB.SetMaxOpenConns(100)
+	sqlDB.SetMaxOpenConns(50)  // Reduced to prevent too many connections
 	sqlDB.SetConnMaxLifetime(time.Hour)
+	sqlDB.SetConnMaxIdleTime(30 * time.Minute)  // Close idle connections after 30 minutes
+
+	// Additional cleanup of stale connections
+	if err := cleanupStaleConnections(sqlDB); err != nil {
+		log.Printf("Warning: failed to cleanup stale connections: %v", err)
+	}
 
 	// Enable UUID extension
 	if err := db.Exec("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"").Error; err != nil {
@@ -77,6 +92,20 @@ func NewPostgresConnection() (*gorm.DB, error) {
 	}
 
 	return db, nil
+}
+
+// cleanupStaleConnections helps prevent statement cache issues
+func cleanupStaleConnections(db *sql.DB) error {
+	// Force close all connections
+	db.SetMaxIdleConns(0)
+	db.SetMaxOpenConns(0)
+	time.Sleep(100 * time.Millisecond)
+	
+	// Restore normal limits
+	db.SetMaxIdleConns(10)
+	db.SetMaxOpenConns(50)
+	
+	return nil
 }
 
 func addIndexes(db *gorm.DB) error {
