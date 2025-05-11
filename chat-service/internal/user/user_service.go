@@ -4,10 +4,12 @@ import (
 	"chat-service/internal/models"
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -62,40 +64,49 @@ func (s *userService) generateJWT(user *models.User) (string, error) {
 }
 
 func (s *userService) Register(ctx context.Context, req *models.RegisterRequest) (*models.UserResponse, error) {
-	// Check if user exists
-	existingUser, _ := s.repo.FindByEmail(ctx, req.Email)
-	if existingUser != nil {
-		return nil, ErrUserAlreadyExists
-	}
+    // Validate request
+    if req.Email == "" || req.Password == "" {
+        return nil, ErrInvalidRequest
+    }
 
-	// Hash password
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
-	if err != nil {
-		return nil, err
-	}
+    // Use a session to prevent prepared statement issues
+    existingUser, err := s.repo.FindByEmail(ctx, req.Email)
+    if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+        return nil, fmt.Errorf("failed to check existing user: %w", err)
+    }
+    if existingUser != nil {
+        return nil, ErrUserAlreadyExists
+    }
 
-	// Create user
-	user := &models.User{
-		ID:       uuid.New().String(),
-		Provider: req.Provider,
-		Email:    req.Email,
-		Name:     req.Name,
-		Password: string(hashedPassword),
-		Created:  time.Now(),
-	}
+    // Hash password
+    hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+    if err != nil {
+        return nil, fmt.Errorf("failed to hash password: %w", err)
+    }
 
-	if err := s.repo.Create(ctx, user); err != nil {
-		return nil, err
-	}
+    // Create user with UUID
+    user := &models.User{
+        ID:       uuid.New().String(),
+        Provider: req.Provider,
+        Email:    req.Email,
+        Name:     req.Name,
+        Password: string(hashedPassword),
+        Created:  time.Now(),
+    }
 
-	return &models.UserResponse{
-		ID:      user.ID,
-		Email:   user.Email,
-		Name:    user.Name,
-		Avatar:  user.Avatar,
-		IsAdmin: user.IsAdmin,
-		Created: user.Created,
-	}, nil
+    // Create user in database
+    if err := s.repo.Create(ctx, user); err != nil {
+        return nil, fmt.Errorf("failed to create user: %w", err)
+    }
+
+    return &models.UserResponse{
+        ID:      user.ID,
+        Email:   user.Email,
+        Name:    user.Name,
+        Avatar:  user.Avatar,
+        IsAdmin: user.IsAdmin,
+        Created: user.Created,
+    }, nil
 }
 
 func (s *userService) Login(ctx context.Context, req *models.LoginRequest) (string, error) {
