@@ -49,12 +49,19 @@ export const handleRegister = async (prevState: any, form: FormData) => {
 export const handleEmailLogin = async (prevState: any, form: FormData) => {
   try {
     const { email, password }: any = Object.fromEntries(form);
-    const newUser: UserType = {
-      email: email,
-      password: password,
-    };
-    const res = await loginByEmail(newUser);
-    const { message } = res;
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({
+        email,
+        password
+      }),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+    })
+    const data = await res.json();
+    const { message } = data;
 
     if (message !== "Login successfully") {
       return { error: message };
