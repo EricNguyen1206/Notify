@@ -7,6 +7,8 @@ toolchain go1.23.4
 require github.com/gin-gonic/gin v1.10.0
 
 require (
+	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
@@ -57,6 +59,7 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.3 // indirect
+	github.com/redis/go-redis/v9 v9.9.0
 	github.com/rs/xid v1.6.0 // indirect
 	github.com/swaggo/swag v1.16.4
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect

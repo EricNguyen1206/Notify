@@ -1,12 +1,13 @@
 package main
 
 import (
-	"chat-service/internal/controllers"
+	"chat-service/internal/router"
+
 	"log"
 )
 
 func main() {
-	application, err := controllers.NewApp()
+	application, err := router.NewApp()
 	if err != nil {
 		log.Fatalf("Failed to initialize application: %v", err)
 	}

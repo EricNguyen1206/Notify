@@ -3,33 +3,27 @@ package models
 import (
 	"time"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 /** --------------------ENTITIES-------------------- */
 // User represents the user entity
 type User struct {
-	ID        string         `gorm:"primaryKey;type:uuid;default:uuid_generate_v4()" json:"id"`
-	Provider  string         `gorm:"not null" json:"provider"`
-	Email     string         `gorm:"unique;type:varchar(255);not null" json:"email"`
-	Name      string         `gorm:"not null;type:varchar(255)" json:"name"`
-	Password  string         `gorm:"nullable;type:varchar(255)" json:"-"`
-	Avatar    string         `gorm:"nullable;type:varchar(255)" json:"avatar"`
-	IsAdmin   bool           `gorm:"default:false;type:boolean" json:"isAdmin"`
-	Created   time.Time      `gorm:"default:CURRENT_TIMESTAMP;type:timestamp" json:"created"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+	gorm.Model
+	Username string `gorm:"uniqueIndex;not null" json:"username"`
+	Email    string `gorm:"uniqueIndex;not null" json:"email"`
+	Password string `json:"-"`
 
-	Friends        []Friend        `gorm:"foreignKey:SenderEmail;references:Email"`
-	FriendRequests []FriendPending `gorm:"foreignKey:SenderEmail;references:Email"`
-	Servers        []JoinServer    `gorm:"foreignKey:UserID;references:ID"`
-	Chats          []Chat          `gorm:"foreignKey:UserID;references:ID"`
+	Friends []Friend `gorm:"foreignKey:SenderEmail;references:Email"`
+	// FriendRequests []FriendPending `gorm:"foreignKey:SenderEmail;references:Email"`
+	// Servers        []JoinServer    `gorm:"foreignKey:UserID;references:ID"`
+	// Chats          []Chat          `gorm:"foreignKey:UserID;references:ID"`
 }
 
 func (u *User) BeforeCreate(tx *gorm.DB) error {
-	if u.ID == "" {
-		u.ID = uuid.New().String()
-	}
+	// if u.Role == "" {
+	// 	u.Role = "user" // Set default role is user
+	// }
 	return nil
 }
 
@@ -44,11 +38,9 @@ type FriendPending struct {
 
 // Friend represents accepted friend relationships
 type Friend struct {
-	ID            string         `gorm:"primaryKey;type:uuid;default:uuid_generate_v4()" json:"id"`
-	SenderEmail   string         `gorm:"not null;type:varchar(255)" json:"senderEmail"`
-	ReceiverEmail string         `gorm:"not null;type:varchar(255)" json:"receiverEmail"`
-	Created       time.Time      `gorm:"default:CURRENT_TIMESTAMP" json:"created"`
-	DeletedAt     gorm.DeletedAt `gorm:"index" json:"-"`
+	UserID   uint   `gorm:"not null;type:uuid" json:"userId"`
+	FriendID uint   `gorm:"not null;type:uuid" json:"friendId"`
+	Status   string `gorm:"not null;type:varchar(255)" json:"status"`
 }
 
 // DirectMessage represents direct message relationships
@@ -62,10 +54,9 @@ type DirectMessage struct {
 /** -------------------- DTOs -------------------- */
 // Request
 type RegisterRequest struct {
-	Provider string `json:"provider" binding:"required"`
-	Email    string `json:"email" binding:"required,email"`
-	Name     string `json:"name" binding:"required"`
-	Password string `json:"password" binding:"required,min=6"`
+	Username string `json:"username"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
 
 type LoginRequest struct {
@@ -74,17 +65,15 @@ type LoginRequest struct {
 }
 
 type FriendRequest struct {
-	ReceiverEmail string `json:"receiverEmail" binding:"required,email"`
+	ReceiverId uint `json:"receiverId" binding:"required,id"`
 }
 
 // Response
 type UserResponse struct {
-	ID      string    `json:"id"`
-	Email   string    `json:"email"`
-	Name    string    `json:"name"`
-	Avatar  string    `json:"avatar"`
-	IsAdmin bool      `json:"isAdmin"`
-	Created time.Time `json:"created"`
+	ID        uint      `json:"id"`
+	Email     string    `json:"email"`
+	Username  string    `json:"username"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 type FriendResponse struct {
