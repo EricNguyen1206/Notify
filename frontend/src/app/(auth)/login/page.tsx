@@ -1,7 +1,9 @@
 import Image from "next/image";
+import { FaGithub } from "react-icons/fa";
+
+import { handleGithubLogin } from "@/lib/action";
 
 import LoginEmailForm from "@/components/LoginEmailForm";
-import GithubLoginButton from "@/components/GithubLoginButton";
 
 const LoginPage = () => {
   return (
@@ -27,7 +29,15 @@ const LoginPage = () => {
             </p>
           </div>
           <div className="flex flex-col gap-3 w-[100%]">
-            <GithubLoginButton />
+            <form action={handleGithubLogin}>
+              <button
+                className="bg-white text-black font-bold rounded-md px-6 py-2 w-[100%] flex items-center gap-3
+                                  hover:text-primary-purple"
+              >
+                <FaGithub size={25} />
+                <p>Login with Github</p>
+              </button>
+            </form>
           </div>
         </div>
       </div>

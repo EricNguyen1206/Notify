@@ -1,20 +1,23 @@
-// internal/domain/user/handler/user_handler.go
-package user
+package handler
 
 import (
-	"chat-service/internal/middleware"
+	"chat-service/configs/middleware"
 	"chat-service/internal/models"
+	"chat-service/internal/service"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 )
 
 type UserHandler struct {
-	userService UserService
+	userService service.UserService
+	redisClient *redis.Client
 }
 
-func NewUserHandler(userService UserService) *UserHandler {
-	return &UserHandler{userService: userService}
+func NewUserHandler(userService service.UserService, redisClient *redis.Client) *UserHandler {
+	return &UserHandler{userService: userService, redisClient: redisClient}
 }
 
 func (h *UserHandler) Register(c *gin.Context) {
@@ -49,54 +52,46 @@ func (h *UserHandler) Login(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"token": token})
 }
 
-// func (h *UserHandler) GetProfile(c *gin.Context) {
-// 	userID := c.GetString("userID")
-// 	if userID == "" {
-// 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
-// 		return
-// 	}
-
-// 	profile, err := h.userService.repo.GetProfile(c.Request.Context(), userID)
-// 	if err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-// 		return
-// 	}
-
-// 	c.JSON(http.StatusOK, profile)
-// }
-
-func (h *UserHandler) SendFriendRequest(c *gin.Context) {
-	userEmail := c.GetString("userEmail")
-	if userEmail == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+func (h *UserHandler) GetProfile(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	log.Printf("TEST user ID: ", userID)
+	getError := c.GetString("error")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": getError})
 		return
 	}
-
-	var req models.FriendRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	userIDUint, ok := userID.(uint)
+	if !ok {
+		log.Printf("TEST Invalid user ID type in context: %T", userID)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "invalid user ID type",
+			"details": "user_id in context is not of type uint",
+		})
 		return
 	}
-
-	if err := h.userService.SendFriendRequest(c.Request.Context(), userEmail, &req); err != nil {
+	profile, err := h.userService.GetProfile(c.Request.Context(), userIDUint)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "friend request sent"})
+	c.JSON(http.StatusOK, profile)
 }
 
 // Register routes
 func (h *UserHandler) RegisterRoutes(r *gin.RouterGroup) {
+	auth := r.Group("/auth")
+	{
+		auth.POST("/register", h.Register)
+		auth.POST("/login", h.Login)
+	}
 	user := r.Group("/users")
 	{
-		user.POST("/register", h.Register)
-		user.POST("/login", h.Login)
-
 		// Protected routes
 		user.Use(middleware.Auth())
-		// user.GET("/profile", h.GetProfile)
-		user.POST("/friends", h.SendFriendRequest)
+		user.GET("/profile", h.GetProfile)
+		// WebSocket
+		// user.POST("/friends", h.SendFriendRequest)
 		// user.GET("/friends", h.GetFriends)
 		// user.GET("/friends/pending", h.GetPendingFriends)
 		// user.POST("/friends/accept/:id", h.AcceptFriendRequest)

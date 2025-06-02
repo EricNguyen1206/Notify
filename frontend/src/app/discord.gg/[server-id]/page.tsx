@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useParams, usePathname, useRouter } from "next/navigation";
 
-import { joinServerByInviteLink } from "@/utils/actions/api";
+import { joinServerByInviteLink } from "@/lib/action.api";
 
 const ServerInviteLinkPage = () => {
   const { data: session }: any = useSession();

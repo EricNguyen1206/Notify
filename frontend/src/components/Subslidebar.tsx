@@ -9,7 +9,7 @@ import { useSession } from "next-auth/react";
 import {
   getAllDirectMessagesByEmail,
   getAllFriendsByEmail,
-} from "@/utils/actions/api";
+} from "@/lib/action.api";
 import { getSummaryName } from "@/lib/helper";
 
 import { DirectMessageChatType, UserType } from "@/types";

@@ -9,7 +9,7 @@ import {
   adminGetAllServers,
   adminGetAllUsers,
   adminGetServersAnalysis,
-} from "@/utils/actions/api";
+} from "@/lib/action.api";
 import AdminUsersTable from "@/components/admin/AdminUsersTable";
 import AdminServersTable from "@/components/admin/AdminServersTable";
 import AdminServerAnalysis from "@/components/admin/AdminServersAnalysis";

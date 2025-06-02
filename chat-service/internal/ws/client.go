@@ -1,54 +1,61 @@
 package ws
 
 import (
-	"sync"
+	"fmt"
 
 	"github.com/gorilla/websocket"
 )
 
-type Client struct {
-	Hub      *Hub
-	Conn     *websocket.Conn
-	Send     chan []byte
-	UserID   string
-	ServerID string
-	mu       sync.Mutex
+type Message struct {
+	Content   string `json:"content"`
+	ChannelID string `json:"channelId"`
+	Username  string `json:"username"`
 }
 
-func (c *Client) ReadPump() {
+type Client struct {
+	Conn      *websocket.Conn
+	Message   chan *Message
+	ID        string `json:"id"`
+	ChannelID string `json:"channelId"`
+	Username  string `json:"username"`
+}
+
+func (c *Client) ReadMessage(hub *Hub) {
 	defer func() {
-		c.Hub.Unregister <- c
+		hub.Unregister <- c
 		c.Conn.Close()
 	}()
 
 	for {
 		_, message, err := c.Conn.ReadMessage()
 		if err != nil {
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+				fmt.Printf("error: %v", err)
+			}
+
 			break
 		}
-		c.Hub.Broadcast <- message
+
+		msg := &Message{
+			Content:   string(message),
+			ChannelID: c.ChannelID,
+			Username:  c.Username,
+		}
+		hub.Broadcast <- msg
 	}
 }
 
-func (c *Client) WritePump() {
+func (c *Client) WriteMessage() {
 	defer func() {
 		c.Conn.Close()
 	}()
 
 	for {
-		select {
-		case message, ok := <-c.Send:
-			if !ok {
-				c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
-				return
-			}
-
-			c.mu.Lock()
-			err := c.Conn.WriteMessage(websocket.TextMessage, message)
-			c.mu.Unlock()
-			if err != nil {
-				return
-			}
+		message, ok := <-c.Message
+		if !ok {
+			return
 		}
+
+		c.Conn.WriteJSON(message)
 	}
 }

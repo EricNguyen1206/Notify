@@ -14,7 +14,7 @@ const ActionFormBtn = (props: PropType) => {
   const { pending } = useFormStatus();
 
   return (
-    <Button variant="purple" disabled={pending ? true : false} type="submit">
+    <Button variant="purple" disabled={pending ? true : false}>
       {pending ? "Loading..." : defaultText}
     </Button>
   );

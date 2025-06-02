@@ -1,7 +1,7 @@
 "use server";
 
-import { auth, signIn, signOut } from "./auth";
-import { createNewUser, getUserByEmail, loginByEmail } from "../utils/actions/api";
+import { auth, signIn, signOut } from "@/lib/auth";
+import { createNewUser, getUserByEmail } from "./action.api";
 import { UserType } from "@/types";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -13,11 +13,10 @@ export const handleRegister = async (prevState: any, form: FormData) => {
 
     if (agree === undefined) return { error: "Please agree terms & policy" };
 
-    // const res = await getUserByEmail(email);
-    // const { user } = res;
-    // console.log("TEST", user);
+    const res = await getUserByEmail(email);
+    const { user } = res;
 
-    // if (user !== null) return { error: "Email is already exist" };
+    if (user !== null) return { error: "Email is already exist" };
 
     if (adminCode !== "" && adminCode !== process.env.NEXT_ADMIN_CODE)
       return { error: "Admin code incorrect" };
@@ -48,32 +47,14 @@ export const handleRegister = async (prevState: any, form: FormData) => {
 
 export const handleEmailLogin = async (prevState: any, form: FormData) => {
   try {
-    const { email, password }: any = Object.fromEntries(form);
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({
-        email,
-        password
-      }),
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-    })
-    const data = await res.json();
-    const { message } = data;
-
-    if (message !== "Login successfully") {
-      return { error: message };
-    }
-    
-    return { message: "Login successfully" };
+    const { email, password } = Object.fromEntries(form);
+    await signIn("credentials", { email, password });
   } catch (err: any) {
-    console.error("Login error:", err);
     if (err.message.includes("CredentialsSignin")) {
       return { error: "Invalid username or password" };
     }
-    return { error: "An error occurred during login" };
+
+    throw err;
   }
 };
 

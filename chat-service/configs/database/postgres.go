@@ -11,18 +11,24 @@ import (
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
+	// "gorm.io/gorm/logger"
 )
 
 func NewPostgresConnection() (*gorm.DB, error) {
-	user := "postgres.fnpwltjofxlcwvqqzgak"
-	password := "1206Trongtin!"
-	host := "aws-0-ap-southeast-1.pooler.supabase.com"
-	port := "6543"
+	// user := "postgres.fnpwltjofxlcwvqqzgak"
+	user := "postgres"
+	// password := "1206Trongtin!"
+	password := "password"
+	// host := "aws-0-ap-southeast-1.pooler.supabase.com"
+	host := "localhost"
+	// port := "6543"
+	port := "5432"
 	dbname := "postgres"
 
 	// Add statement_cache_mode=describe to disable prepared statement caching
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=require statement_cache_mode=describe",
+	// dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=require statement_cache_mode=describe",
+	// 	host, user, password, dbname, port)
+	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
 		host, user, password, dbname, port)
 
 	// Configure GORM with even more strict settings for statement handling
@@ -30,8 +36,8 @@ func NewPostgresConnection() (*gorm.DB, error) {
 		DisableForeignKeyConstraintWhenMigrating: true,
 		PrepareStmt:                              false, // Explicitly disable prepared statements
 		SkipDefaultTransaction:                   true,  // Skip default transaction for better performance
-		Logger:                                   logger.Default.LogMode(logger.Info),
-		AllowGlobalUpdate:                        false, // Safety measure
+		// Logger:                                   logger.Default.LogMode(logger.Info),
+		AllowGlobalUpdate: false, // Safety measure
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %v", err)
@@ -44,19 +50,19 @@ func NewPostgresConnection() (*gorm.DB, error) {
 	}
 
 	// Aggressively clean connections first
-	sqlDB.SetMaxIdleConns(0)  // Force close all idle connections
-	sqlDB.SetMaxOpenConns(10) // Reduce maximum connections temporarily
-	time.Sleep(100 * time.Millisecond)  // Give connections time to close
+	sqlDB.SetMaxIdleConns(0)           // Force close all idle connections
+	sqlDB.SetMaxOpenConns(10)          // Reduce maximum connections temporarily
+	time.Sleep(100 * time.Millisecond) // Give connections time to close
 
 	// Set optimized connection pool settings
 	sqlDB.SetMaxIdleConns(10)
-	sqlDB.SetMaxOpenConns(50)  // Reduced to prevent too many connections
+	sqlDB.SetMaxOpenConns(50) // Reduced to prevent too many connections
 	sqlDB.SetConnMaxLifetime(time.Hour)
-	sqlDB.SetConnMaxIdleTime(30 * time.Minute)  // Close idle connections after 30 minutes
+	sqlDB.SetConnMaxIdleTime(30 * time.Minute) // Close idle connections after 30 minutes
 
 	// Additional cleanup of stale connections
 	if err := cleanupStaleConnections(sqlDB); err != nil {
-		log.Printf("Warning: failed to cleanup stale connections: %v", err)
+		log.Printf("TEST Warning: failed to cleanup stale connections: %v", err)
 	}
 
 	// Enable UUID extension
@@ -67,14 +73,14 @@ func NewPostgresConnection() (*gorm.DB, error) {
 	// Auto migrate the schema with proper error handling
 	err = db.AutoMigrate(
 		&models.User{},
-		&models.Server{},
-		&models.Category{},
-		&models.Channel{},
-		&models.Chat{},
-		&models.Friend{},
-		&models.FriendPending{},
-		&models.DirectMessage{},
-		&models.JoinServer{},
+		// &models.Server{},
+		// &models.Category{},
+		// &models.Channel{},
+		// &models.Chat{},
+		// &models.Friend{},
+		// &models.FriendPending{},
+		// &models.DirectMessage{},
+		// &models.JoinServer{},
 	)
 	if err != nil {
 		// Check if the error is about existing tables
@@ -100,11 +106,11 @@ func cleanupStaleConnections(db *sql.DB) error {
 	db.SetMaxIdleConns(0)
 	db.SetMaxOpenConns(0)
 	time.Sleep(100 * time.Millisecond)
-	
+
 	// Restore normal limits
 	db.SetMaxIdleConns(10)
 	db.SetMaxOpenConns(50)
-	
+
 	return nil
 }
 
@@ -115,15 +121,15 @@ func addIndexes(db *gorm.DB) error {
 		columns []string
 	}{
 		{"users", []string{"email"}},
-		{"servers", []string{"owner"}},
-		{"categories", []string{"server_id"}},
-		{"channels", []string{"category_id"}},
-		{"friend_pending", []string{"sender_email", "receiver_email"}},
-		{"friends", []string{"sender_email", "receiver_email"}},
-		{"direct_messages", []string{"owner_email", "friend_email"}},
-		{"join_server", []string{"server_id", "user_id"}},
-		{"chats", []string{"user_id"}},
-		{"chats", []string{"server_id", "channel_id"}},
+		// {"servers", []string{"owner"}},
+		// {"categories", []string{"server_id"}},
+		// {"channels", []string{"category_id"}},
+		// {"friend_pending", []string{"sender_email", "receiver_email"}},
+		// {"friends", []string{"sender_email", "receiver_email"}},
+		// {"direct_messages", []string{"owner_email", "friend_email"}},
+		// {"join_server", []string{"server_id", "user_id"}},
+		// {"chats", []string{"user_id"}},
+		// {"chats", []string{"server_id", "channel_id"}},
 	}
 
 	for _, idx := range indexes {

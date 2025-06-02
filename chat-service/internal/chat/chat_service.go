@@ -4,7 +4,6 @@ import (
 	"chat-service/internal/models"
 	"chat-service/internal/ws"
 	"context"
-	"encoding/json"
 	"errors"
 	"time"
 
@@ -237,12 +236,12 @@ func (s *chatService) DeleteChat(ctx context.Context, id string, userID string) 
 
 func (s *chatService) BroadcastMessage(hub *ws.Hub, message *models.ChatMessage) error {
 	// Convert message to JSON
-	data, err := json.Marshal(message)
-	if err != nil {
-		return err
-	}
+	// data, err := json.Marshal(message)
+	// if err != nil {
+	// 	return err
+	// }
 
 	// Broadcast to all clients
-	hub.Broadcast <- data
+	// hub.Broadcast <- data
 	return nil
 }

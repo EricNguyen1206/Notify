@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { usePathname, useRouter } from "next/navigation";
 import { useFriendStore } from "@/lib/store";
-import { getAllDirectMessagesByEmail } from "@/utils/actions/api";
+import { getAllDirectMessagesByEmail } from "@/lib/action.api";
 
 type Props = {
   children?: React.ReactNode;
