@@ -11,25 +11,14 @@ const nextConfig = {
       },
       {
         protocol: "https",
-        hostname: process.env.NEXT_PUBLIC_SUPABASE_URL,
-      },
-      {
-        protocol: "https",
         hostname: "avatars.githubusercontent.com",
       },
     ],
   },
 
-  // Disable telemetry in production
-  telemetry: false,
-
-  // Optimize for production
-  swcMinify: true,
-
-  // Enable experimental features for better performance
+  // Experimental features (if needed)
   experimental: {
-    // Enable server components
-    serverComponentsExternalPackages: [],
+    // Add any experimental features here if needed
   },
 };
 

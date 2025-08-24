@@ -1,0 +1,72 @@
+# Environment Variables
+# ======================
+# Never commit actual environment files with secrets
+.env
+.env.local
+.env.*.local
+
+# But allow example/template files
+!.env.example
+!.env.development
+!.env.production
+!.env.local.example
+
+# Docker
+# ======
+docker-compose.override.yml
+
+# Logs
+# ====
+*.log
+logs/
+
+# OS generated files
+# ==================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+# =========
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+# ===============
+*.tmp
+*.temp
+.cache/
+
+# Build artifacts
+# ===============
+dist/
+build/
+*.tar.gz
+*.zip
+
+# Database
+# ========
+*.db
+*.sqlite
+*.sqlite3
+
+# Certificates and keys
+# =====================
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# Backup files
+# ============
+*.bak
+*.backup
+*.old
