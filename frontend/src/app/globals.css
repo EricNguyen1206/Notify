@@ -4,75 +4,245 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 20 14.3% 4.1%;
+    --font-size: 16px;
+    --background: #ffffff;
+    --foreground: oklch(0.145 0 0);
+    --card: #ffffff;
+    --card-foreground: oklch(0.145 0 0);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.145 0 0);
+    --primary: #6366F1;
+    --primary-foreground: #ffffff;
+    --secondary: #8B5CF6;
+    --secondary-foreground: #ffffff;
+    --muted: #ececf0;
+    --muted-foreground: #717182;
+    --accent: #06B6D4;
+    --accent-foreground: #ffffff;
+    --destructive: #DF3F40;
+    --destructive-foreground: #ffffff;
+    --border: #E3E6EA;
+    --input: transparent;
+    --input-background: #f3f3f5;
+    --switch-background: #cbced4;
+    --font-weight-medium: 500;
+    --font-weight-normal: 400;
+    --ring: #6366F1;
+    --chart-1: oklch(0.646 0.222 41.116);
+    --chart-2: oklch(0.6 0.118 184.704);
+    --chart-3: oklch(0.398 0.07 227.392);
+    --chart-4: oklch(0.828 0.189 84.429);
+    --chart-5: oklch(0.769 0.188 70.08);
+    --radius: 0.375rem;
+    --sidebar: #ffffff;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: #6366F1;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #06B6D4;
+    --sidebar-accent-foreground: #ffffff;
+    --sidebar-border: #E3E6EA;
+    --sidebar-ring: #6366F1;
 
-    --card: 0 0% 100%;
-    --card-foreground: 20 14.3% 4.1%;
+    /* Design System Colors */
+    --chat-primary: #6366F1;
+    --chat-secondary: #8B5CF6;
+    --chat-accent: #06B6D4;
+    --chat-error: #DF3F40;
+    --chat-border: #E3E6EA;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 20 14.3% 4.1%;
+    /* Design System Spacing */
+    --chat-spacing: 20px;
+    --chat-gutter: 16px;
+    --chat-border-radius: 6px;
 
-    --primary: 24 9.8% 10%;
-    --primary-foreground: 60 9.1% 97.8%;
+    /* Typography Scale */
+    --text-xs: 0.75rem;
+    --text-sm: 0.875rem;
+    --text-base: 1rem;
+    --text-lg: 1.125rem;
+    --text-xl: 1.25rem;
+    --text-2xl: 1.5rem;
+    --text-3xl: 1.875rem;
+    --text-4xl: 2.25rem;
 
-    --secondary: 60 4.8% 95.9%;
-    --secondary-foreground: 24 9.8% 10%;
-
-    --muted: 60 4.8% 95.9%;
-    --muted-foreground: 25 5.3% 44.7%;
-
-    --accent: 60 4.8% 95.9%;
-    --accent-foreground: 24 9.8% 10%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 60 9.1% 97.8%;
-
-    --border: 20 5.9% 90%;
-    --input: 20 5.9% 90%;
-    --ring: 20 14.3% 4.1%;
-
-    --radius: 0.5rem;
+    /* Sidebar */
+    --sidebar-background: #ffffff;
   }
-
+  
   .dark {
-    --background: 20 14.3% 4.1%;
-    --foreground: 60 9.1% 97.8%;
+    /* Dark mode backgrounds */
+    --background: #1a1a1a;
+    --foreground: #ffffff;
+    --card: #2a2a2a;
+    --card-foreground: #ffffff;
+    --popover: #2a2a2a;
+    --popover-foreground: #ffffff;
 
-    --card: 20 14.3% 4.1%;
-    --card-foreground: 60 9.1% 97.8%;
+    /* Design system colors remain consistent in dark mode */
+    --primary: #6366F1;
+    --primary-foreground: #ffffff;
+    --secondary: #8B5CF6;
+    --secondary-foreground: #ffffff;
+    --accent: #06B6D4;
+    --accent-foreground: #ffffff;
+    --destructive: #DF3F40;
+    --destructive-foreground: #ffffff;
 
-    --popover: 20 14.3% 4.1%;
-    --popover-foreground: 60 9.1% 97.8%;
+    /* Dark mode specific UI colors */
+    --muted: #3a3a3a;
+    --muted-foreground: #a1a1aa;
+    --border: #404040;
+    --input: #2a2a2a;
+    --input-background: #2a2a2a;
+    --switch-background: #404040;
+    --ring: #6366F1;
 
-    --primary: 60 9.1% 97.8%;
-    --primary-foreground: 24 9.8% 10%;
+    /* Typography weights remain consistent */
+    --font-weight-medium: 500;
+    --font-weight-normal: 400;
 
-    --secondary: 12 6.5% 15.1%;
-    --secondary-foreground: 60 9.1% 97.8%;
+    /* Chart colors for dark mode */
+    --chart-1: #6366F1;
+    --chart-2: #8B5CF6;
+    --chart-3: #06B6D4;
+    --chart-4: #DF3F40;
+    --chart-5: #f59e0b;
 
-    --muted: 12 6.5% 15.1%;
-    --muted-foreground: 24 5.4% 63.9%;
+    /* Dark mode sidebar */
+    --sidebar: #1a1a1a;
+    --sidebar-foreground: #ffffff;
+    --sidebar-primary: #6366F1;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #06B6D4;
+    --sidebar-accent-foreground: #ffffff;
+    --sidebar-border: #404040;
+    --sidebar-ring: #6366F1;
+    --sidebar-background: #1a1a1a;
 
-    --accent: 12 6.5% 15.1%;
-    --accent-foreground: 60 9.1% 97.8%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 60 9.1% 97.8%;
-
-    --border: 12 6.5% 15.1%;
-    --input: 12 6.5% 15.1%;
-    --ring: 24 5.7% 82.9%;
+    /* Dark mode design system colors */
+    --chat-primary: #6366F1;
+    --chat-secondary: #8B5CF6;
+    --chat-accent: #06B6D4;
+    --chat-error: #DF3F40;
+    --chat-border: #404040;
   }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-input-background: var(--input-background);
+  --color-switch-background: var(--switch-background);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  
+  /* Custom chat app colors for Tailwind */
+  --color-chat-primary: var(--chat-primary);
+  --color-chat-secondary: var(--chat-secondary);
+  --color-chat-accent: var(--chat-accent);
+  --color-chat-error: var(--chat-error);
+  --color-chat-border: var(--chat-border);
 }
 
 @layer base {
   * {
-    @apply border-border;
+    @apply border-border border-gray-500;
   }
+
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/**
+ * Base typography. This is not applied to elements which have an ancestor with a Tailwind text class.
+ */
+@layer base {
+  :where(:not(:has([class*=" text-"]), :not(:has([class^="text-"])))) {
+    h1 {
+      font-size: var(--text-2xl);
+      font-weight: var(--font-weight-medium);
+      line-height: 1.5;
+    }
+
+    h2 {
+      font-size: var(--text-xl);
+      font-weight: var(--font-weight-medium);
+      line-height: 1.5;
+    }
+
+    h3 {
+      font-size: var(--text-lg);
+      font-weight: var(--font-weight-medium);
+      line-height: 1.5;
+    }
+
+    h4 {
+      font-size: var(--text-base);
+      font-weight: var(--font-weight-medium);
+      line-height: 1.5;
+    }
+
+    p {
+      font-size: var(--text-base);
+      font-weight: var(--font-weight-normal);
+      line-height: 1.5;
+    }
+
+    label {
+      font-size: var(--text-base);
+      font-weight: var(--font-weight-medium);
+      line-height: 1.5;
+    }
+
+    button {
+      font-size: var(--text-base);
+      font-weight: var(--font-weight-medium);
+      line-height: 1.5;
+    }
+
+    input {
+      font-size: var(--text-base);
+      font-weight: var(--font-weight-normal);
+      line-height: 1.5;
+    }
+  }
+}
+
+html {
+  font-size: var(--font-size);
 }
 
 /* width */
@@ -89,10 +259,19 @@
 /* Handle */
 ::-webkit-scrollbar-thumb {
   border-radius: 5px;
-  @apply bg-primary-purple;
+  @apply bg-chat-primary;
 }
 
 /* Handle on hover */
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-secondary-purple;
+  @apply bg-chat-secondary;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
 }

@@ -1,4 +1,4 @@
-import { CategoryType, ChannelType } from "@/types";
+import { ChannelType } from "@/types";
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -184,64 +184,33 @@ export const ChannelsData: ChannelType[] = [
   {
     id: "1",
     name: "chat-room-1",
-    categoryId: "1",
+    
     type: "text",
   },
   {
     id: "2",
     name: "chat-room-2",
-    categoryId: "1",
+    
     type: "text",
   },
   {
     id: "3",
     name: "study-chat-1",
-    categoryId: "2",
     type: "text",
   },
   {
     id: "4",
     name: "study-chat-2",
-    categoryId: "2",
     type: "text",
   },
   {
     id: "5",
     name: "coding-challenge-1",
     type: "text",
-    categoryId: "3",
   },
   {
     id: "6",
     name: "coding-challenge-2",
-    categoryId: "3",
     type: "voice",
-  },
-];
-
-export const CategoriesData: CategoryType[] = [
-  {
-    id: "1",
-    serverId: "7bfe7f98-d24a-41ec-ad99-41f314f2ffed",
-    name: "chatting-1",
-    channels: ChannelsData.filter((channel) => {
-      return channel.categoryId === "1";
-    }),
-  },
-  {
-    id: "2",
-    serverId: "7bfe7f98-d24a-41ec-ad99-41f314f2ffed",
-    name: "chatting-2",
-    channels: ChannelsData.filter((channel) => {
-      return channel.categoryId === "2";
-    }),
-  },
-  {
-    id: "3",
-    serverId: "3f663847-8504-4e8a-a882-3ef4d8aaac6b",
-    name: "welcome-channel",
-    channels: ChannelsData.filter((channel) => {
-      return channel.categoryId === "3";
-    }),
   },
 ];

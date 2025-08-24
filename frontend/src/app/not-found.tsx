@@ -1,8 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 
-import HomePageFooter from "@/components/HomePageFooter";
-import HomePageNavbar from "@/components/HomePageNavbar";
+import HomePageFooter from "@/components/molecules/HomePageFooter";
+import HomePageNavbar from "@/components/molecules/HomePageNavbar";
 
 const NotFound = () => {
   return (
@@ -13,10 +13,10 @@ const NotFound = () => {
                       flex gap-10 justify-center flex-wrap-reverse mx-auto py-[100px] px-4"
       >
         <div className="flex flex-col gap-5">
-          <p className="text-[30px] md:text-[50px] font-black text-primary-purple">
+          <p className="text-[30px] md:text-[50px] font-medium text-chat-primary">
             WRONG TURN?
           </p>
-          <p className="text-justify md:max-w-[600px]">
+          <p className="text-justify md:max-w-[600px] font-normal">
             You look lost, stranger. You know what helps when you’re lost? A
             piping hot bowl of noodles. Take a seat, we’re frantically at work
             here cooking up something good. Oh, you need something to read?
@@ -24,7 +24,7 @@ const NotFound = () => {
           </p>
           <div className="flex flex-col gap-1">
             <Link href={"https://discordstatus.com"}>
-              <p className="text-[20px] text-blue-400 hover:text-blue-500">
+              <p className="text-[20px] text-chat-accent hover:text-chat-primary font-normal">
                 Status Page
               </p>
             </Link>

@@ -77,7 +77,7 @@ func NewPostgresConnection() (*gorm.DB, error) {
 		// &models.Category{},
 		// &models.Channel{},
 		// &models.Chat{},
-		// &models.Friend{},
+		&models.Friend{},
 		// &models.FriendPending{},
 		// &models.DirectMessage{},
 		// &models.JoinServer{},

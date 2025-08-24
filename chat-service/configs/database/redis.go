@@ -10,12 +10,8 @@ import (
 var RedisClient *redis.Client
 
 func InitRedis() (*redis.Client, error) {
-	RedisClient := redis.NewClient(&redis.Options{
-		Addr:     "redis-11093.crce194.ap-seast-1-1.ec2.redns.redis-cloud.com:11093",
-		Username: "default",
-		Password: "MQcTvVwl22grkjQpASBwmILUiIkXYGFy",
-		DB:       0,
-	})
+	opt, _ := redis.ParseURL("rediss://default:AVGBAAIjcDE5MzM5ZmQ4NTMwYWQ0OGM5OTRiZDk0NDk0MjFiZTA4OXAxMA@generous-pipefish-20865.upstash.io:6379")
+	RedisClient := redis.NewClient(opt)
 
 	// Health check
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
