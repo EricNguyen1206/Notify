@@ -309,7 +309,15 @@ make migrate
 make seed
 ```
 
-### 5. Access the Application
+### 5. Generate API Documentation (Optional)
+
+```bash
+# Generate and sync API documentation between backend and frontend
+cd frontend
+npm run sync:api
+```
+
+### 6. Access the Application
 
 - **Frontend**: http://localhost:3000
 - **Backend API**: http://localhost:8080
@@ -359,18 +367,169 @@ make build
 make swagger
 ```
 
-## Available Services
+## API Documentation Workflow
 
-| Service      | Port      | Description                  |
-| ------------ | --------- | ---------------------------- |
-| Frontend     | 3000      | Next.js React application    |
-| Chat Service | 8080      | Go backend API and WebSocket |
-| PostgreSQL   | 5432      | Primary database             |
-| Redis        | 6379      | Cache and session store      |
-| Kafka        | 9092      | Message broker               |
-| MinIO        | 9000/9001 | Object storage               |
-| phpMyAdmin   | 8000      | Database management          |
-| Kafka UI     | 8082      | Kafka cluster management     |
+This project maintains synchronized API documentation between the Go backend and TypeScript frontend using an automated workflow that ensures version consistency.
+
+### Overview
+
+The workflow converts backend Swagger 2.0 documentation to OpenAPI 3.0.1 format for frontend consumption:
+
+1. **Backend**: Generates Swagger 2.0 from Go code annotations
+2. **Conversion**: Automatically converts to OpenAPI 3.0.1 format
+3. **Frontend**: Generates TypeScript API clients from OpenAPI 3.0.1
+
+### Quick Commands
+
+#### Complete Workflow (Recommended)
+
+```bash
+# From frontend directory - runs entire workflow
+cd frontend
+npm run sync:api
+```
+
+This single command will:
+
+- Generate backend Swagger documentation
+- Convert to OpenAPI 3.0.1 format
+- Sync to frontend docs directory
+- Generate TypeScript API clients
+
+#### Manual Steps
+
+```bash
+# 1. Generate backend documentation
+cd chat-service
+make swagger-sync
+
+# 2. Generate frontend API clients
+cd ../frontend
+npm run gen:api
+```
+
+### Prerequisites
+
+**Backend Requirements:**
+
+- Go 1.23+ installed
+- `swag` tool installed (run `make dev-tools` in chat-service)
+
+**Frontend Requirements:**
+
+- Node.js 18+ installed
+- Dependencies installed (`npm install`)
+
+### File Locations
+
+| Component             | Location                           | Format        |
+| --------------------- | ---------------------------------- | ------------- |
+| Backend Swagger       | `chat-service/docs/swagger.json`   | Swagger 2.0   |
+| Frontend OpenAPI      | `frontend/docs/swagger.json`       | OpenAPI 3.0.1 |
+| Generated API Clients | `frontend/src/services/endpoints/` | TypeScript    |
+
+### Available Commands
+
+#### Backend Commands
+
+```bash
+cd chat-service
+
+# Generate Swagger 2.0 documentation only
+make swagger
+
+# Generate docs and sync to frontend (recommended)
+make swagger-sync
+```
+
+#### Frontend Commands
+
+```bash
+cd frontend
+
+# Generate TypeScript API clients from existing OpenAPI spec
+npm run gen:api
+
+# Complete workflow: backend generation + frontend sync + client generation
+npm run sync:api
+```
+
+### Generated API Clients
+
+The workflow generates TypeScript API clients with:
+
+- **Type-safe interfaces** for all API endpoints
+- **React Query hooks** using @tanstack/react-query
+- **Automatic request/response typing** based on OpenAPI schemas
+- **Error handling** with proper TypeScript types
+
+Example generated hook usage:
+
+```typescript
+import { useAuthLogin } from "@/services/endpoints/auth/auth";
+
+const LoginComponent = () => {
+  const loginMutation = useAuthLogin();
+
+  const handleLogin = (credentials) => {
+    loginMutation.mutate(credentials, {
+      onSuccess: (data) => {
+        // Handle successful login
+      },
+      onError: (error) => {
+        // Handle login error
+      },
+    });
+  };
+
+  return (
+    <button onClick={handleLogin} disabled={loginMutation.isPending}>
+      {loginMutation.isPending ? "Logging in..." : "Login"}
+    </button>
+  );
+};
+```
+
+### Troubleshooting
+
+#### Common Issues
+
+**"swag command not found"**
+
+```bash
+cd chat-service
+make dev-tools  # Installs swag and other development tools
+```
+
+**"Invalid OpenAPI specification"**
+
+- Check Go code annotations in handler files
+- Verify main.go has proper swagger comments
+- Run `make swagger` to see generation errors
+
+**"orval generation failed"**
+
+- Ensure `frontend/docs/swagger.json` exists and is valid
+- Check `orval.config.ts` configuration
+- Verify OpenAPI 3.0 format in the frontend docs file
+
+**"API client types are outdated"**
+
+```bash
+# Regenerate everything from scratch
+cd frontend
+npm run sync:api
+```
+
+### When to Run the Workflow
+
+Run the API documentation workflow when:
+
+- Adding new API endpoints in the backend
+- Modifying existing API request/response schemas
+- Updating API documentation or comments
+- Setting up the project for the first time
+- After pulling changes that affect the API
 
 ## API Documentation
 
@@ -378,6 +537,8 @@ The backend provides comprehensive API documentation through Swagger/OpenAPI:
 
 - **Swagger UI**: http://localhost:8080/swagger/index.html
 - **OpenAPI JSON**: http://localhost:8080/swagger/doc.json
+
+> 📋 **For API development workflow**: See the [API Documentation Workflow](#api-documentation-workflow) section above for instructions on generating and syncing API documentation between backend and frontend.
 
 Key API endpoints include:
 

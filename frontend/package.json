@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "gen:api": "orval --config orval.config.ts"
+    "gen:api": "orval --config orval.config.ts",
+    "sync:api": "cd ../chat-service && make swagger-sync && cd ../frontend && npm run gen:api"
   },
   "dependencies": {
     "@jitsi/react-sdk": "^1.4.0",
