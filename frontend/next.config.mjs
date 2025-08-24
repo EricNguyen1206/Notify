@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Enable standalone output for Docker optimization
+  output: "standalone",
+
   images: {
     remotePatterns: [
       {
@@ -15,6 +18,18 @@ const nextConfig = {
         hostname: "avatars.githubusercontent.com",
       },
     ],
+  },
+
+  // Disable telemetry in production
+  telemetry: false,
+
+  // Optimize for production
+  swcMinify: true,
+
+  // Enable experimental features for better performance
+  experimental: {
+    // Enable server components
+    serverComponentsExternalPackages: [],
   },
 };
 
