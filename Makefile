@@ -59,6 +59,8 @@ help:
 	@echo "  $(GREEN)docker-down$(NC)          - Stop all services"
 	@echo "  $(GREEN)docker-logs$(NC)          - View logs from all services"
 	@echo "  $(GREEN)docker-clean$(NC)         - Clean up containers and volumes"
+	@echo "  $(GREEN)docker-test$(NC)          - Test frontend-backend connectivity"
+	@echo "  $(GREEN)docker-test-auth$(NC)     - Test authentication flow"
 	@echo ""
 	@echo "$(YELLOW)Development Workflow:$(NC)"
 	@echo "  $(GREEN)install$(NC)              - Install all dependencies (frontend + backend)"
@@ -195,6 +197,16 @@ docker-clean:
 	@cd $(DOCKER_DIR) && docker compose down -v --remove-orphans
 	@docker system prune -f
 	@echo "$(GREEN)✅ Docker cleanup completed$(NC)"
+
+## Test frontend-backend connectivity
+docker-test:
+	@echo "$(BLUE)🔍 Testing frontend-backend connectivity...$(NC)"
+	@cd $(DOCKER_DIR) && ./test-connection.sh
+
+## Test authentication flow
+docker-test-auth:
+	@echo "$(BLUE)🔐 Testing authentication flow...$(NC)"
+	@cd $(DOCKER_DIR) && ./test-auth.sh
 
 # =============================================================================
 # DEVELOPMENT WORKFLOW COMMANDS

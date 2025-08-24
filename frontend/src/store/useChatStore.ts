@@ -1,5 +1,4 @@
-import { create } from 'zustand';
-
+import { create } from "zustand";
 
 export interface Message {
   id: number;
@@ -28,10 +27,12 @@ export interface Message {
 export interface ChatState {
   channels: Record<string, Message[]>;
   addMessageToChannel: (channelId: string, msg: Message) => void;
+  upsertMessageToChannel: (channelId: string, msg: Message) => void;
 }
 
 export const useChatStore = create<ChatState>((set) => ({
   channels: {},
+
   addMessageToChannel: (channelId: string, msg: Message) =>
     set((state) => ({
       channels: {
@@ -39,4 +40,39 @@ export const useChatStore = create<ChatState>((set) => ({
         [channelId]: [...(state.channels[channelId] || []), msg],
       },
     })),
+
+  // Insert new or replace near-duplicate (optimistic) messages to prevent duplicates
+  upsertMessageToChannel: (channelId: string, msg: Message) =>
+    set((state) => {
+      const list = state.channels[channelId] || [];
+      const incomingTime = new Date(msg.createdAt).getTime();
+
+      // Find exact id match first
+      let idx = list.findIndex((m) => m.id === msg.id);
+
+      // If not found, try to match optimistic messages by sender + text within 5s window
+      if (idx === -1 && msg.text) {
+        idx = list.findIndex(
+          (m) =>
+            m.senderId === msg.senderId &&
+            m.text === msg.text &&
+            Math.abs(new Date(m.createdAt).getTime() - incomingTime) < 5000
+        );
+      }
+
+      let next: Message[];
+      if (idx >= 0) {
+        next = [...list];
+        next[idx] = msg;
+      } else {
+        next = [...list, msg];
+      }
+
+      return {
+        channels: {
+          ...state.channels,
+          [channelId]: next,
+        },
+      };
+    }),
 }));

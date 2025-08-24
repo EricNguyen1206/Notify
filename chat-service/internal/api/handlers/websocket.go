@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"chat-service/internal/models"
 	"chat-service/internal/websocket"
 	"log/slog"
 	"net/http"

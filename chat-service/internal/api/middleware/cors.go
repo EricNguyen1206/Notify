@@ -13,10 +13,13 @@ func CORS() gin.HandlerFunc {
 		origin := c.Request.Header.Get("Origin")
 		// Define allowed origins
 		allowedOrigins := []string{
-			"http://localhost:3000",
-			"https://localhost:3000",
-			"https://notify-chat.netlify.app",
-			"http://127.0.0.1:3000",
+			"http://localhost:3000",           // Frontend dev server
+			"https://localhost:3000",          // Frontend dev server (HTTPS)
+			"http://localhost",                // Nginx proxy (Docker)
+			"https://localhost",               // Nginx proxy (HTTPS)
+			"http://127.0.0.1:3000",           // Alternative localhost
+			"http://127.0.0.1",                // Alternative localhost (Nginx)
+			"https://notify-chat.netlify.app", // Production deployment
 		}
 		// Add custom origins from environment variable if set
 		if customOrigins := os.Getenv("ALLOWED_ORIGINS"); customOrigins != "" {
