@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "gen:api": "orval --config orval.config.ts"
+    "gen:api": "orval --config orval.config.ts",
+    "sync:api": "cd ../chat-service && make swagger-sync && cd ../frontend && npm run gen:api"
   },
   "dependencies": {
     "@jitsi/react-sdk": "^1.4.0",
@@ -29,6 +30,7 @@
     "@radix-ui/react-tooltip": "^1.2.7",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.43.1",
+    "@tanstack/react-query": "^5.85.5",
     "ajv": "^8.17.1",
     "ajv-errors": "^3.0.0",
     "axios": "^1.6.7",
@@ -45,7 +47,6 @@
     "react": "^19.1.1",
     "react-chartjs-2": "^5.2.0",
     "react-dom": "^19.1.1",
-    "react-query": "^3.39.3",
     "react-toastify": "^10.0.4",
     "socket.io-client": "^4.7.4",
     "tailwind-merge": "^2.2.1",

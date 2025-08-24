@@ -52,7 +52,7 @@ EXPOSE 8080
 
 # Health check for container orchestration
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:8080/api/health || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://localhost:8080/kaithhealthcheck || exit 1
 
 # Command to run the application when container starts
 CMD ["./main"]

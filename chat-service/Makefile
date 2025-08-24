@@ -97,19 +97,31 @@ watch:
 
 # Documentation
 swagger: check-swag
-	@echo "Generating Swagger documentation..."
-	@swag init \
+	@echo "Generating Swagger 2.0 documentation..."
+	@$(shell go env GOPATH)/bin/swag init \
 		--dir . \
 		--generalInfo cmd/server/main.go \
 		--output ./docs \
 		--parseDependency \
 		--parseInternal \
 		--parseDepth 2
-	@echo "✅ Swagger documentation generated in docs/"
+	@echo "✅ Swagger 2.0 documentation generated in docs/"
+
+# Convert Swagger 2.0 to OpenAPI 3.0 and sync to frontend
+swagger-sync: swagger
+	@echo "Converting Swagger 2.0 to OpenAPI 3.0.1 and syncing to frontend..."
+	@if [ -f ./docs/swagger.json ]; then \
+		mkdir -p ../frontend/docs; \
+		cd ../frontend && npx swagger2openapi ../chat-service/docs/swagger.json --outfile docs/swagger.json --patch; \
+		echo "✅ OpenAPI 3.0.1 documentation generated and synced to frontend/docs/"; \
+	else \
+		echo "❌ swagger.json not found in docs/"; \
+		exit 1; \
+	fi
 
 # Check if swag is installed
 check-swag:
-	@if ! command -v swag > /dev/null; then \
+	@if ! [ -f "$(shell go env GOPATH)/bin/swag" ]; then \
 		echo "Swag is not installed. Run 'make dev-tools' to install it."; \
 		exit 1; \
 	fi
@@ -148,7 +160,8 @@ help:
 	@echo "  dev-tools    - Install development tools (air, swag)"
 	@echo "  clean        - Clean build artifacts"
 	@echo "  watch        - Run with live reload (using air)"
-	@echo "  swagger      - Generate Swagger documentation"
+	@echo "  swagger      - Generate Swagger 2.0 documentation"
+	@echo "  swagger-sync - Convert to OpenAPI 3.0.1 and sync to frontend"
 	@echo "  migrate-up   - Run database migrations"
 	@echo "  seed-db      - Seed database with test data"
 	@echo "  migrate-seed - Run migrations and seed data"
@@ -156,4 +169,4 @@ help:
 	@echo "  help         - Show this help message"
 
 # Declare all targets as PHONY
-.PHONY: all deps build build-linux build-all run test itest clean watch swagger check-swag docker-run docker-down dev-tools migrate-up seed-db migrate-seed db-reset help
+.PHONY: all deps build build-linux build-all run test itest clean watch swagger swagger-sync check-swag docker-run docker-down dev-tools migrate-up seed-db migrate-seed db-reset help

@@ -752,6 +752,9 @@ paths:
       summary: WebSocket connection for real-time messaging
       tags:
       - websocket
+schemes:
+- http
+- https
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and JWT token.

@@ -1040,7 +1040,7 @@ var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
 	Host:             "localhost:8080",
 	BasePath:         "/api/v1",
-	Schemes:          []string{},
+	Schemes:          []string{"http", "https"},
 	Title:            "Notify Chat Service API",
 	Description:      "A RESTful API service for chat functionality",
 	InfoInstanceName: "swagger",

@@ -82,17 +82,19 @@ flowchart TD
 ```plaintext
 Notify/
 ├── README.md                      # Project documentation
-├── docker-compose.yml             # Local development orchestration
-├── nginx.conf                     # NGINX reverse proxy configuration
-├── kafka-init.sh                  # Kafka initialization script
-├── docs/                          # Project documentation
-├── k8s/                           # Kubernetes deployment configurations
-│   ├── k8s-deployment.yml         # Main Kubernetes deployment
-│   └── minio-deployment.yml       # MinIO object storage deployment
+├── deployments/                   # Deployment configurations
+│   ├── README.md                  # Deployment guide and documentation
+│   ├── nginx.conf                 # NGINX reverse proxy configuration
+│   ├── docker/                    # Docker deployment files
+│   │   ├── docker-compose.yml     # Complete service orchestration
+│   │   └── .env.example           # Environment variables template
+│   └── k8s/                       # Kubernetes deployment configurations
+│       ├── deployment.yml         # Kubernetes deployment manifest
+│       └── service.yml            # Kubernetes service manifest
 ├── frontend/                      # Next.js React frontend application
-│   ├── Dockerfile                 # Frontend container configuration
+│   ├── Dockerfile                 # Multi-stage optimized container build
 │   ├── package.json               # Node.js dependencies and scripts
-│   ├── next.config.mjs            # Next.js configuration
+│   ├── next.config.mjs            # Next.js configuration (standalone output)
 │   ├── tailwind.config.ts         # Tailwind CSS configuration
 │   ├── tsconfig.json              # TypeScript configuration
 │   ├── components.json            # UI components configuration
@@ -103,6 +105,8 @@ Notify/
 │   ├── src/                       # Source code
 │   │   ├── app/                   # Next.js App Router pages
 │   │   │   ├── (auth)/            # Authentication pages (login, register)
+│   │   │   ├── api/               # API routes
+│   │   │   │   └── health/        # Health check endpoint
 │   │   │   ├── messages/          # Chat messages pages
 │   │   │   ├── layout.tsx         # Root layout component
 │   │   │   └── page.tsx           # Home page
@@ -157,9 +161,7 @@ Notify/
 │   ├── tests/                     # Test files
 │   │   └── unit/                  # Unit tests
 │   ├── docs/                      # API documentation (Swagger)
-│   └── deployments/               # Deployment configurations
-│       ├── docker/                # Docker configurations
-│       └── k8s/                   # Kubernetes manifests
+│   └── Dockerfile                 # Optimized multi-stage container build
 ```
 
 ## Architecture Overview
@@ -176,73 +178,62 @@ Notify/
 ### API Gateway Layer
 
 - **NGINX Reverse Proxy:**
-  - Routes HTTP requests and WebSocket connections to backend services
-  - Handles load balancing and SSL termination
-  - Serves static assets and provides caching
+  - Routes HTTP requests and WebSocket connections between frontend and backend
+  - Handles CORS and security headers
+  - Serves static assets with caching optimization
+  - Provides health check endpoints and error handling
 
 ### Backend Services
 
-- **Chat API Service (Golang):**
-
+- **Chat Service (Golang):**
+  - **Container**: `notify-chat-service` (Port 8080)
   - RESTful API built with Gin framework
+  - Integrated WebSocket service for real-time messaging
   - Handles user authentication with JWT tokens
   - Manages channels, messages, and user profiles
   - Integrates with PostgreSQL for data persistence
+  - Uses Redis for caching and session management
   - Provides Swagger/OpenAPI documentation
-
-- **WebSocket Service (Golang):**
-
-  - Real-time messaging using Gorilla WebSocket
-  - Manages client connections and message broadcasting
-  - Implements channel-based message routing
-  - Handles user presence and typing indicators
-
-- **Message Broker (Apache Kafka):**
-
-  - Handles asynchronous message processing and event streaming
-  - Enables scalable message distribution across services
-
-- **Aggregation Service (Golang):**
-  - Processes message events from Kafka
-  - Generates analytics and message statistics
-  - Handles data aggregation for reporting
+  - Health checks and graceful shutdown support
 
 ### Infrastructure Services
 
 - **PostgreSQL Database:**
 
+  - **Container**: `notify-chat-db` (Port 5432)
   - Primary data store for users, channels, messages, and metadata
   - Supports ACID transactions and complex queries
-  - Includes database migrations and seeding tools
+  - Persistent volume for data storage
+  - Automatic initialization and migrations
 
 - **Redis Cache:**
-
+  - **Container**: `notify-chat-redis` (Port 6379)
   - Caches user sessions and authentication tokens
   - Stores real-time data for active users and channels
   - Provides fast access to frequently accessed data
-
-- **MinIO Object Storage:**
-  - S3-compatible object storage for file attachments
-  - Handles image uploads, documents, and media files
-  - Provides secure file access with presigned URLs
+  - Supports WebSocket scaling across multiple instances
 
 ### Development & Deployment
 
 - **Containerization:**
 
-  - All services are containerized with Docker
-  - Multi-stage builds for optimized production images
+  - All services containerized with optimized multi-stage Docker builds
+  - Frontend: Standalone Next.js build with minimal runtime image
+  - Backend: Static Go binary in Alpine Linux for security and size
+  - Non-root users and health checks for production readiness
 
 - **Local Development:**
 
-  - Docker Compose orchestrates all services locally
-  - Includes development databases, Redis, and Kafka
-  - Hot reload for both frontend and backend development
+  - Complete Docker Compose orchestration in `deployments/docker/`
+  - Automatic service discovery and networking
+  - Environment variable templates for easy setup
+  - Comprehensive logging and monitoring
 
 - **Production Deployment:**
-  - Kubernetes manifests for scalable deployment
-  - Separate configurations for different environments
-  - Health checks and service discovery
+  - Kubernetes manifests available in `deployments/k8s/`
+  - Nginx reverse proxy with security headers and CORS
+  - Health checks and graceful shutdown for all services
+  - Scalable architecture with Redis-backed session management
 
 ## Prerequisites
 
@@ -264,59 +255,105 @@ cd Notify
 
 ### 2. Environment Setup
 
-Create a `.env` file in the root directory with the following variables:
+Navigate to the deployment directory and set up environment variables:
+
+```bash
+cd deployments/docker
+
+# Copy the example environment file
+cp .env.example .env
+
+# Edit the .env file with your configuration
+# IMPORTANT: Change default passwords and secrets in production!
+nano .env
+```
+
+The `.env` file should contain:
 
 ```env
-# Database Configuration
-NOTIFY_MYSQL_ROOT_PASSWORD=rootpassword
-NOTIFY_MYSQL_DATABASE=notify_db
-NOTIFY_MYSQL_USER=notify_user
-NOTIFY_MYSQL_PASSWORD=notify_password
+# Application Configuration
+NODE_ENV=production
+NEXT_TELEMETRY_DISABLED=1
+
+# Frontend Configuration
+NEXT_PUBLIC_API_URL=http://localhost:8080
+NEXT_PUBLIC_WS_URL=ws://localhost:8080
+
+# Backend Configuration
+NOTIFY_HOST=0.0.0.0
+NOTIFY_PORT=8080
+NOTIFY_JWT_SECRET=your-super-secure-jwt-secret-key-change-in-production
+NOTIFY_JWT_EXPIRE=24h
+
+# Database Configuration (PostgreSQL)
+POSTGRES_URL=postgres://postgres:postgres@db:5432/postgres?sslmode=disable
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_DB=postgres
 
 # Redis Configuration
-NOTIFY_REDIS_PASSWORD=redis_password
-
-# MinIO Configuration
-NOTIFY_MINIO_ROOT_USER=minioadmin
-NOTIFY_MINIO_ROOT_PASSWORD=minioadmin123
-
-# Service Configuration
-NOTIFY_SERVICE_PORT=8080
-NOTIFY_PHPMYADMIN_PORT=8000
-
-# JWT Configuration
-NOTIFY_JWT_SECRET=your-super-secret-jwt-key-here
+REDIS_URL=redis://redis:6379/0
 ```
 
 ### 3. Start All Services
 
 ```bash
-# Start all services with Docker Compose
-docker-compose up -d
+# Start all services with Docker Compose (from deployments/docker directory)
+docker compose up -d
 
 # Check service status
-docker-compose ps
+docker compose ps
+
+# View logs
+docker compose logs -f
 ```
 
 ### 4. Initialize Database
 
+The database will be automatically initialized when the services start. If you need to run migrations manually:
+
 ```bash
+# Navigate to chat-service directory
+cd ../../chat-service
+
 # Run database migrations
-cd chat-service
 make migrate
 
 # Seed initial data (optional)
 make seed
 ```
 
-### 5. Access the Application
+### 5. Generate API Documentation (Optional)
 
-- **Frontend**: http://localhost:3000
+```bash
+# Generate and sync API documentation between backend and frontend
+cd frontend
+npm run sync:api
+```
+
+### 6. Access the Application
+
+- **Main Application (via Nginx)**: http://localhost:80
+- **Frontend (Direct)**: http://localhost:3000
 - **Backend API**: http://localhost:8080
 - **API Documentation**: http://localhost:8080/swagger/index.html
-- **phpMyAdmin**: http://localhost:8000
-- **Kafka UI**: http://localhost:8082
-- **MinIO Console**: http://localhost:9001
+- **Database**: localhost:5432 (postgres/postgres)
+- **Redis**: localhost:6379
+
+> 💡 **Recommended**: Use the main application URL (port 80) which routes through Nginx for the complete experience with proper load balancing and static asset serving.
+
+## Deployment Documentation
+
+For detailed deployment instructions, troubleshooting, and production considerations, see:
+
+📖 **[Deployment Guide](deployments/README.md)** - Comprehensive guide covering:
+
+- Detailed setup instructions
+- Environment configuration
+- Service architecture
+- Troubleshooting common issues
+- Production deployment best practices
+- Scaling and monitoring
 
 ## Development Setup
 
@@ -359,18 +396,169 @@ make build
 make swagger
 ```
 
-## Available Services
+## API Documentation Workflow
 
-| Service      | Port      | Description                  |
-| ------------ | --------- | ---------------------------- |
-| Frontend     | 3000      | Next.js React application    |
-| Chat Service | 8080      | Go backend API and WebSocket |
-| PostgreSQL   | 5432      | Primary database             |
-| Redis        | 6379      | Cache and session store      |
-| Kafka        | 9092      | Message broker               |
-| MinIO        | 9000/9001 | Object storage               |
-| phpMyAdmin   | 8000      | Database management          |
-| Kafka UI     | 8082      | Kafka cluster management     |
+This project maintains synchronized API documentation between the Go backend and TypeScript frontend using an automated workflow that ensures version consistency.
+
+### Overview
+
+The workflow converts backend Swagger 2.0 documentation to OpenAPI 3.0.1 format for frontend consumption:
+
+1. **Backend**: Generates Swagger 2.0 from Go code annotations
+2. **Conversion**: Automatically converts to OpenAPI 3.0.1 format
+3. **Frontend**: Generates TypeScript API clients from OpenAPI 3.0.1
+
+### Quick Commands
+
+#### Complete Workflow (Recommended)
+
+```bash
+# From frontend directory - runs entire workflow
+cd frontend
+npm run sync:api
+```
+
+This single command will:
+
+- Generate backend Swagger documentation
+- Convert to OpenAPI 3.0.1 format
+- Sync to frontend docs directory
+- Generate TypeScript API clients
+
+#### Manual Steps
+
+```bash
+# 1. Generate backend documentation
+cd chat-service
+make swagger-sync
+
+# 2. Generate frontend API clients
+cd ../frontend
+npm run gen:api
+```
+
+### Prerequisites
+
+**Backend Requirements:**
+
+- Go 1.23+ installed
+- `swag` tool installed (run `make dev-tools` in chat-service)
+
+**Frontend Requirements:**
+
+- Node.js 18+ installed
+- Dependencies installed (`npm install`)
+
+### File Locations
+
+| Component             | Location                           | Format        |
+| --------------------- | ---------------------------------- | ------------- |
+| Backend Swagger       | `chat-service/docs/swagger.json`   | Swagger 2.0   |
+| Frontend OpenAPI      | `frontend/docs/swagger.json`       | OpenAPI 3.0.1 |
+| Generated API Clients | `frontend/src/services/endpoints/` | TypeScript    |
+
+### Available Commands
+
+#### Backend Commands
+
+```bash
+cd chat-service
+
+# Generate Swagger 2.0 documentation only
+make swagger
+
+# Generate docs and sync to frontend (recommended)
+make swagger-sync
+```
+
+#### Frontend Commands
+
+```bash
+cd frontend
+
+# Generate TypeScript API clients from existing OpenAPI spec
+npm run gen:api
+
+# Complete workflow: backend generation + frontend sync + client generation
+npm run sync:api
+```
+
+### Generated API Clients
+
+The workflow generates TypeScript API clients with:
+
+- **Type-safe interfaces** for all API endpoints
+- **React Query hooks** using @tanstack/react-query
+- **Automatic request/response typing** based on OpenAPI schemas
+- **Error handling** with proper TypeScript types
+
+Example generated hook usage:
+
+```typescript
+import { useAuthLogin } from "@/services/endpoints/auth/auth";
+
+const LoginComponent = () => {
+  const loginMutation = useAuthLogin();
+
+  const handleLogin = (credentials) => {
+    loginMutation.mutate(credentials, {
+      onSuccess: (data) => {
+        // Handle successful login
+      },
+      onError: (error) => {
+        // Handle login error
+      },
+    });
+  };
+
+  return (
+    <button onClick={handleLogin} disabled={loginMutation.isPending}>
+      {loginMutation.isPending ? "Logging in..." : "Login"}
+    </button>
+  );
+};
+```
+
+### Troubleshooting
+
+#### Common Issues
+
+**"swag command not found"**
+
+```bash
+cd chat-service
+make dev-tools  # Installs swag and other development tools
+```
+
+**"Invalid OpenAPI specification"**
+
+- Check Go code annotations in handler files
+- Verify main.go has proper swagger comments
+- Run `make swagger` to see generation errors
+
+**"orval generation failed"**
+
+- Ensure `frontend/docs/swagger.json` exists and is valid
+- Check `orval.config.ts` configuration
+- Verify OpenAPI 3.0 format in the frontend docs file
+
+**"API client types are outdated"**
+
+```bash
+# Regenerate everything from scratch
+cd frontend
+npm run sync:api
+```
+
+### When to Run the Workflow
+
+Run the API documentation workflow when:
+
+- Adding new API endpoints in the backend
+- Modifying existing API request/response schemas
+- Updating API documentation or comments
+- Setting up the project for the first time
+- After pulling changes that affect the API
 
 ## API Documentation
 
@@ -378,6 +566,8 @@ The backend provides comprehensive API documentation through Swagger/OpenAPI:
 
 - **Swagger UI**: http://localhost:8080/swagger/index.html
 - **OpenAPI JSON**: http://localhost:8080/swagger/doc.json
+
+> 📋 **For API development workflow**: See the [API Documentation Workflow](#api-documentation-workflow) section above for instructions on generating and syncing API documentation between backend and frontend.
 
 Key API endpoints include:
 
@@ -408,25 +598,26 @@ Key API endpoints include:
 
 ### 🏗️ Scalable Architecture
 
-- Microservices architecture with Go
-- Event-driven messaging with Kafka
-- Horizontal scaling capabilities
-- Load balancing with NGINX
+- Containerized microservices with Docker
+- Nginx reverse proxy for load balancing and routing
+- Redis-backed session management for horizontal scaling
+- WebSocket support with real-time message broadcasting
+- Health checks and graceful shutdown for reliability
 
 ### 🎨 Modern Frontend
 
 - Responsive design with Tailwind CSS
 - Component-based architecture (Atomic Design)
-- Real-time UI updates
-- Dark/light theme support
-- Mobile-friendly interface
+- Real-time UI updates with WebSocket integration
+- Optimized production builds with standalone output
+- Health monitoring and error handling
 
 ### 📊 Data Management
 
 - PostgreSQL for reliable data persistence
-- Redis for high-performance caching
-- MinIO for scalable file storage
-- Database migrations and seeding
+- Redis for high-performance caching and session storage
+- Automatic database migrations and initialization
+- Persistent volumes for data durability
 
 ## Technology Stack
 
@@ -453,13 +644,13 @@ Key API endpoints include:
 
 ### Infrastructure
 
-- **Database**: PostgreSQL 15
-- **Cache**: Redis 7
-- **Message Broker**: Apache Kafka
-- **Object Storage**: MinIO
-- **Reverse Proxy**: NGINX
+- **Database**: PostgreSQL 15 Alpine
+- **Cache**: Redis 7 Alpine
+- **Reverse Proxy**: Nginx Alpine
 - **Containerization**: Docker & Docker Compose
-- **Orchestration**: Kubernetes
+- **Orchestration**: Kubernetes (manifests available)
+- **Networking**: Custom Docker bridge network
+- **Storage**: Named volumes for data persistence
 
 ### Development Tools
 

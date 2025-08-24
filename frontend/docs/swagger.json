@@ -1,26 +1,20 @@
 {
-    "openapi": "3.0.1",
+    "openapi": "3.0.0",
     "info": {
-        "title": "Notify Chat Service API",
         "description": "A RESTful API service for chat functionality",
+        "title": "Notify Chat Service API",
         "contact": {},
         "version": "1.0"
     },
-    "servers": [
-        {
-            "url": "//localhost:8080/api/v1"
-        }
-    ],
     "paths": {
         "/auth/login": {
             "post": {
+                "description": "Authenticate user with email and password",
                 "tags": [
                     "auth"
                 ],
                 "summary": "User login",
-                "description": "Authenticate user with email and password",
                 "requestBody": {
-                    "description": "User login credentials",
                     "content": {
                         "application/json": {
                             "schema": {
@@ -28,6 +22,7 @@
                             }
                         }
                     },
+                    "description": "User login credentials",
                     "required": true
                 },
                 "responses": {
@@ -71,19 +66,17 @@
                             }
                         }
                     }
-                },
-                "x-codegen-request-body-name": "request"
+                }
             }
         },
         "/auth/register": {
             "post": {
+                "description": "Register a new user with username, email, and password",
                 "tags": [
                     "auth"
                 ],
                 "summary": "Register a new user",
-                "description": "Register a new user with username, email, and password",
                 "requestBody": {
-                    "description": "User registration data",
                     "content": {
                         "application/json": {
                             "schema": {
@@ -91,6 +84,7 @@
                             }
                         }
                     },
+                    "description": "User registration data",
                     "required": true
                 },
                 "responses": {
@@ -124,17 +118,21 @@
                             }
                         }
                     }
-                },
-                "x-codegen-request-body-name": "request"
+                }
             }
         },
         "/channels/": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get all channels that the current user is a member of, separated by type",
                 "tags": [
                     "channels"
                 ],
                 "summary": "Get user's channels",
-                "description": "Get all channels that the current user is a member of, separated by type",
                 "responses": {
                     "200": {
                         "description": "Object with direct and group channel lists",
@@ -166,21 +164,20 @@
                             }
                         }
                     }
-                },
+                }
+            },
+            "post": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
-                ]
-            },
-            "post": {
+                ],
+                "description": "Create a new channel with the specified name",
                 "tags": [
                     "channels"
                 ],
                 "summary": "Create a new channel",
-                "description": "Create a new channel with the specified name",
                 "requestBody": {
-                    "description": "Channel creation data",
                     "content": {
                         "application/json": {
                             "schema": {
@@ -191,6 +188,7 @@
                             }
                         }
                     },
+                    "description": "Channel creation data",
                     "required": true
                 },
                 "responses": {
@@ -234,27 +232,26 @@
                             }
                         }
                     }
-                },
+                }
+            }
+        },
+        "/channels/{id}": {
+            "get": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "x-codegen-request-body-name": "request"
-            }
-        },
-        "/channels/{id}": {
-            "get": {
+                "description": "Get detailed information about a specific channel",
                 "tags": [
                     "channels"
                 ],
                 "summary": "Get channel by ID",
-                "description": "Get detailed information about a specific channel",
                 "parameters": [
                     {
+                        "description": "Channel ID",
                         "name": "id",
                         "in": "path",
-                        "description": "Channel ID",
                         "required": true,
                         "schema": {
                             "type": "integer"
@@ -292,24 +289,24 @@
                             }
                         }
                     }
-                },
+                }
+            },
+            "put": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
-                ]
-            },
-            "put": {
+                ],
+                "description": "Update the name of an existing channel",
                 "tags": [
                     "channels"
                 ],
                 "summary": "Update channel",
-                "description": "Update the name of an existing channel",
                 "parameters": [
                     {
+                        "description": "Channel ID",
                         "name": "id",
                         "in": "path",
-                        "description": "Channel ID",
                         "required": true,
                         "schema": {
                             "type": "integer"
@@ -317,7 +314,6 @@
                     }
                 ],
                 "requestBody": {
-                    "description": "Channel update data",
                     "content": {
                         "application/json": {
                             "schema": {
@@ -328,6 +324,7 @@
                             }
                         }
                     },
+                    "description": "Channel update data",
                     "required": true
                 },
                 "responses": {
@@ -374,25 +371,24 @@
                             }
                         }
                     }
-                },
+                }
+            },
+            "delete": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "x-codegen-request-body-name": "request"
-            },
-            "delete": {
+                "description": "Delete a channel (only channel owner can delete)",
                 "tags": [
                     "channels"
                 ],
                 "summary": "Delete channel",
-                "description": "Delete a channel (only channel owner can delete)",
                 "parameters": [
                     {
+                        "description": "Channel ID",
                         "name": "id",
                         "in": "path",
-                        "description": "Channel ID",
                         "required": true,
                         "schema": {
                             "type": "integer"
@@ -433,26 +429,26 @@
                             }
                         }
                     }
-                },
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ]
+                }
             }
         },
         "/channels/{id}/user": {
             "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Remove the current user from a channel",
                 "tags": [
                     "channels"
                 ],
                 "summary": "Leave channel",
-                "description": "Remove the current user from a channel",
                 "parameters": [
                     {
+                        "description": "Channel ID",
                         "name": "id",
                         "in": "path",
-                        "description": "Channel ID",
                         "required": true,
                         "schema": {
                             "type": "integer"
@@ -493,24 +489,24 @@
                             }
                         }
                     }
-                },
+                }
+            },
+            "post": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
-                ]
-            },
-            "post": {
+                ],
+                "description": "Add a user to a channel (only channel owner can add users)",
                 "tags": [
                     "channels"
                 ],
                 "summary": "Add user to channel",
-                "description": "Add a user to a channel (only channel owner can add users)",
                 "parameters": [
                     {
+                        "description": "Channel ID",
                         "name": "id",
                         "in": "path",
-                        "description": "Channel ID",
                         "required": true,
                         "schema": {
                             "type": "integer"
@@ -518,7 +514,6 @@
                     }
                 ],
                 "requestBody": {
-                    "description": "User addition data",
                     "content": {
                         "application/json": {
                             "schema": {
@@ -529,6 +524,7 @@
                             }
                         }
                     },
+                    "description": "User addition data",
                     "required": true
                 },
                 "responses": {
@@ -575,25 +571,24 @@
                             }
                         }
                     }
-                },
+                }
+            },
+            "delete": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "x-codegen-request-body-name": "request"
-            },
-            "delete": {
+                "description": "Remove a user from a channel (only channel owner can remove users)",
                 "tags": [
                     "channels"
                 ],
                 "summary": "Remove user from channel",
-                "description": "Remove a user from a channel (only channel owner can remove users)",
                 "parameters": [
                     {
+                        "description": "Channel ID",
                         "name": "id",
                         "in": "path",
-                        "description": "Channel ID",
                         "required": true,
                         "schema": {
                             "type": "integer"
@@ -601,7 +596,6 @@
                     }
                 ],
                 "requestBody": {
-                    "description": "User removal data",
                     "content": {
                         "application/json": {
                             "schema": {
@@ -612,6 +606,7 @@
                             }
                         }
                     },
+                    "description": "User removal data",
                     "required": true
                 },
                 "responses": {
@@ -658,44 +653,43 @@
                             }
                         }
                     }
-                },
+                }
+            }
+        },
+        "/messages/channel/{id}": {
+            "get": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "x-codegen-request-body-name": "request"
-            }
-        },
-        "/messages/channel/{id}": {
-            "get": {
+                "description": "Get all chat messages for a specific channel (paginated)",
                 "tags": [
                     "chats"
                 ],
                 "summary": "Get chat messages in a channel",
-                "description": "Get all chat messages for a specific channel (paginated)",
                 "parameters": [
                     {
+                        "description": "Channel ID",
                         "name": "id",
                         "in": "path",
-                        "description": "Channel ID",
                         "required": true,
                         "schema": {
                             "type": "integer"
                         }
                     },
                     {
+                        "description": "Page size",
                         "name": "limit",
                         "in": "query",
-                        "description": "Page size",
                         "schema": {
                             "type": "integer"
                         }
                     },
                     {
+                        "description": "Cursor for infinite scroll (timestamp)",
                         "name": "before",
                         "in": "query",
-                        "description": "Cursor for infinite scroll (timestamp)",
                         "schema": {
                             "type": "integer"
                         }
@@ -742,21 +736,21 @@
                             }
                         }
                     }
-                },
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ]
+                }
             }
         },
         "/users/profile": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get the current user's profile information",
                 "tags": [
                     "users"
                 ],
                 "summary": "Get user profile",
-                "description": "Get the current user's profile information",
                 "responses": {
                     "200": {
                         "description": "User profile retrieved successfully",
@@ -788,26 +782,21 @@
                             }
                         }
                     }
-                },
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ]
+                }
             }
         },
         "/ws": {
             "get": {
+                "description": "Establish a WebSocket connection for real-time messaging with typed message support.\n\n## Message Types\nThe WebSocket API uses typed messages with the following enum values:\n\n### Connection Events\n- `connection.connect` - Connection established (server -> client)\n- `connection.disconnect` - Connection closed (server -> client)\n- `connection.ping` - Ping message (client -> server)\n- `connection.pong` - Pong response (server -> client)\n\n### Channel Events\n- `channel.join` - Join a channel (client -> server)\n- `channel.leave` - Leave a channel (client -> server)\n- `channel.message` - Send/receive channel message (bidirectional)\n- `channel.typing` - Typing indicator (client -> server)\n- `channel.stop_typing` - Stop typing indicator (client -> server)\n\n### Channel Member Events\n- `channel.member.join` - Member joined channel (server -> client)\n- `channel.member.leave` - Member left channel (server -> client)\n\n### User Events\n- `user.status` - User status update (server -> client)\n- `user.notification` - User notification (server -> client)\n\n### Error Events\n- `error` - Error message (server -> client)\n\n## Message Format\nAll messages follow this JSON structure:\n```json\n{\n\"id\": \"unique-message-id\",\n\"type\": \"message-type-enum\",\n\"data\": { /* type-specific data */ },\n\"timestamp\": 1234567890,\n\"user_id\": \"user-id\"\n}\n```\n\n## Example Messages\n\n### Join Channel\n```json\n{\n\"id\": \"msg-123\",\n\"type\": \"channel.join\",\n\"data\": { \"channel_id\": \"channel-123\" },\n\"timestamp\": 1234567890,\n\"user_id\": \"user-456\"\n}\n```\n\n### Send Message\n```json\n{\n\"id\": \"msg-456\",\n\"type\": \"channel.message\",\n\"data\": {\n\"channel_id\": \"channel-123\",\n\"text\": \"Hello world!\",\n\"url\": null,\n\"fileName\": null\n},\n\"timestamp\": 1234567890,\n\"user_id\": \"user-456\"\n}\n```\n\n### Error Response\n```json\n{\n\"id\": \"error-789\",\n\"type\": \"error\",\n\"data\": {\n\"code\": \"INVALID_MESSAGE\",\n\"message\": \"Invalid message format\"\n},\n\"timestamp\": 1234567890,\n\"user_id\": \"user-456\"\n}\n```",
                 "tags": [
                     "websocket"
                 ],
                 "summary": "WebSocket connection for real-time messaging",
-                "description": "Establish a WebSocket connection for real-time messaging with typed message support.\n\n## Message Types\nThe WebSocket API uses typed messages with the following enum values:\n\n### Connection Events\n- `connection.connect` - Connection established (server -> client)\n- `connection.disconnect` - Connection closed (server -> client)\n- `connection.ping` - Ping message (client -> server)\n- `connection.pong` - Pong response (server -> client)\n\n### Channel Events\n- `channel.join` - Join a channel (client -> server)\n- `channel.leave` - Leave a channel (client -> server)\n- `channel.message` - Send/receive channel message (bidirectional)\n- `channel.typing` - Typing indicator (client -> server)\n- `channel.stop_typing` - Stop typing indicator (client -> server)\n\n### Channel Member Events\n- `channel.member.join` - Member joined channel (server -> client)\n- `channel.member.leave` - Member left channel (server -> client)\n\n### User Events\n- `user.status` - User status update (server -> client)\n- `user.notification` - User notification (server -> client)\n\n### Error Events\n- `error` - Error message (server -> client)\n\n## Message Format\nAll messages follow this JSON structure:\n```json\n{\n\"id\": \"unique-message-id\",\n\"type\": \"message-type-enum\",\n\"data\": { /* type-specific data */ },\n\"timestamp\": 1234567890,\n\"user_id\": \"user-id\"\n}\n```\n\n## Example Messages\n\n### Join Channel\n```json\n{\n\"id\": \"msg-123\",\n\"type\": \"channel.join\",\n\"data\": { \"channel_id\": \"channel-123\" },\n\"timestamp\": 1234567890,\n\"user_id\": \"user-456\"\n}\n```\n\n### Send Message\n```json\n{\n\"id\": \"msg-456\",\n\"type\": \"channel.message\",\n\"data\": {\n\"channel_id\": \"channel-123\",\n\"text\": \"Hello world!\",\n\"url\": null,\n\"fileName\": null\n},\n\"timestamp\": 1234567890,\n\"user_id\": \"user-456\"\n}\n```\n\n### Error Response\n```json\n{\n\"id\": \"error-789\",\n\"type\": \"error\",\n\"data\": {\n\"code\": \"INVALID_MESSAGE\",\n\"message\": \"Invalid message format\"\n},\n\"timestamp\": 1234567890,\n\"user_id\": \"user-456\"\n}\n```",
                 "parameters": [
                     {
+                        "description": "User ID for WebSocket connection",
                         "name": "userId",
                         "in": "query",
-                        "description": "User ID for WebSocket connection",
                         "required": true,
                         "schema": {
                             "type": "string"
@@ -816,8 +805,7 @@
                 ],
                 "responses": {
                     "101": {
-                        "description": "Switching Protocols - WebSocket connection established",
-                        "content": {}
+                        "description": "Switching Protocols - WebSocket connection established"
                     },
                     "400": {
                         "description": "Bad request - missing or invalid userId parameter",
@@ -834,7 +822,23 @@
             }
         }
     },
+    "servers": [
+        {
+            "url": "http://localhost:8080/api/v1"
+        },
+        {
+            "url": "https://localhost:8080/api/v1"
+        }
+    ],
     "components": {
+        "securitySchemes": {
+            "BearerAuth": {
+                "description": "Type \"Bearer\" followed by a space and JWT token.",
+                "type": "apiKey",
+                "name": "Authorization",
+                "in": "header"
+            }
+        },
         "schemas": {
             "chat-service_internal_models.Channel": {
                 "type": "object",
@@ -855,16 +859,16 @@
                         }
                     },
                     "name": {
-                        "type": "string",
-                        "description": "Name of the channel"
+                        "description": "Name of the channel",
+                        "type": "string"
                     },
                     "ownerId": {
-                        "type": "integer",
-                        "description": "ID of the channel owner"
+                        "description": "ID of the channel owner",
+                        "type": "integer"
                     },
                     "type": {
-                        "type": "string",
-                        "description": "Type of channel, either 'direct' or 'group'"
+                        "description": "Type of channel, either 'direct' or 'group'",
+                        "type": "string"
                     },
                     "updated_at": {
                         "type": "string"
@@ -881,8 +885,8 @@
                         "type": "integer"
                     },
                     "members": {
-                        "type": "array",
                         "description": "List of members in the channel",
+                        "type": "array",
                         "items": {
                             "$ref": "#/components/schemas/chat-service_internal_models.User"
                         }
@@ -919,47 +923,47 @@
                 "type": "object",
                 "properties": {
                     "channelId": {
-                        "type": "integer",
-                        "description": "channel"
+                        "description": "channel",
+                        "type": "integer"
                     },
                     "createdAt": {
-                        "type": "string",
-                        "description": "timestamp of when the message was created"
+                        "description": "timestamp of when the message was created",
+                        "type": "string"
                     },
                     "fileName": {
-                        "type": "string",
-                        "description": "optional file name for media"
+                        "description": "optional file name for media",
+                        "type": "string"
                     },
                     "id": {
                         "type": "integer"
                     },
                     "receiverId": {
-                        "type": "integer",
-                        "description": "Relate to type message"
+                        "description": "Relate to type message",
+                        "type": "integer"
                     },
                     "senderAvatar": {
-                        "type": "string",
-                        "description": "url string for avatar"
+                        "description": "url string for avatar",
+                        "type": "string"
                     },
                     "senderId": {
-                        "type": "integer",
-                        "description": "ID of the user who sent the message"
+                        "description": "ID of the user who sent the message",
+                        "type": "integer"
                     },
                     "senderName": {
-                        "type": "string",
-                        "description": "Username of the sender"
+                        "description": "Username of the sender",
+                        "type": "string"
                     },
                     "text": {
-                        "type": "string",
-                        "description": "free text message"
+                        "description": "free text message",
+                        "type": "string"
                     },
                     "type": {
-                        "type": "string",
-                        "description": "\"direct\" | \"group\""
+                        "description": "\"direct\" | \"group\"",
+                        "type": "string"
                     },
                     "url": {
-                        "type": "string",
-                        "description": "optional URL for media"
+                        "description": "optional URL for media",
+                        "type": "string"
                     }
                 }
             },
@@ -967,8 +971,8 @@
                 "type": "object",
                 "properties": {
                     "avatar": {
-                        "type": "string",
-                        "description": "Optional avatar for direct channels"
+                        "description": "Optional avatar for direct channels",
+                        "type": "string"
                     },
                     "id": {
                         "type": "integer"
@@ -999,11 +1003,11 @@
                 }
             },
             "chat-service_internal_models.LoginRequest": {
+                "type": "object",
                 "required": [
                     "email",
                     "password"
                 ],
-                "type": "object",
                 "properties": {
                     "email": {
                         "type": "string"
@@ -1042,24 +1046,24 @@
                 }
             },
             "chat-service_internal_models.RegisterRequest": {
+                "type": "object",
                 "required": [
                     "email",
                     "password",
                     "username"
                 ],
-                "type": "object",
                 "properties": {
                     "email": {
                         "type": "string"
                     },
                     "password": {
-                        "minLength": 6,
-                        "type": "string"
+                        "type": "string",
+                        "minLength": 6
                     },
                     "username": {
+                        "type": "string",
                         "maxLength": 50,
-                        "minLength": 3,
-                        "type": "string"
+                        "minLength": 3
                     }
                 }
             },
@@ -1067,8 +1071,8 @@
                 "type": "object",
                 "properties": {
                     "avatar": {
-                        "type": "string",
-                        "description": "Avatar is optional and can be used to store a profile picture URL\nIt is not mandatory for the user to have an avatar."
+                        "description": "Avatar is optional and can be used to store a profile picture URL\nIt is not mandatory for the user to have an avatar.",
+                        "type": "string"
                     },
                     "channels": {
                         "type": "array",
@@ -1083,8 +1087,8 @@
                         "$ref": "#/components/schemas/gorm.DeletedAt"
                     },
                     "email": {
-                        "type": "string",
-                        "description": "Unique email for the user"
+                        "description": "Unique email for the user",
+                        "type": "string"
                     },
                     "id": {
                         "type": "integer"
@@ -1093,8 +1097,8 @@
                         "type": "string"
                     },
                     "username": {
-                        "type": "string",
-                        "description": "Username for the user"
+                        "description": "Username for the user",
+                        "type": "string"
                     }
                 }
             },
@@ -1102,15 +1106,15 @@
                 "type": "object",
                 "properties": {
                     "direct": {
-                        "type": "array",
                         "description": "List of channels of type 'direct'",
+                        "type": "array",
                         "items": {
                             "$ref": "#/components/schemas/chat-service_internal_models.DirectChannelResponse"
                         }
                     },
                     "group": {
-                        "type": "array",
                         "description": "List of channels of type 'group'",
+                        "type": "array",
                         "items": {
                             "$ref": "#/components/schemas/chat-service_internal_models.ChannelResponse"
                         }
@@ -1144,20 +1148,11 @@
                         "type": "string"
                     },
                     "valid": {
-                        "type": "boolean",
-                        "description": "Valid is true if Time is not NULL"
+                        "description": "Valid is true if Time is not NULL",
+                        "type": "boolean"
                     }
                 }
             }
-        },
-        "securitySchemes": {
-            "BearerAuth": {
-                "type": "apiKey",
-                "description": "Type \"Bearer\" followed by a space and JWT token.",
-                "name": "Authorization",
-                "in": "header"
-            }
         }
-    },
-    "x-original-swagger-version": "2.0"
+    }
 }

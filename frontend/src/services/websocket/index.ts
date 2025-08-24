@@ -7,12 +7,12 @@
  */
 
 // WebSocket Type-Safe Client
-import { MessageType, WsBaseMessage } from '../types/wsTypes';
-import { ConnectionState, createWebSocketClient } from '../wsMutator';
+import { TypeSafeWebSocketClient, ConnectionState, createWebSocketClient } from "../wsMutator";
+import { MessageType, WsBaseMessage, ChannelMessageData, TypingIndicatorData, ErrorData } from "../types/wsTypes";
 
 // Re-export types for convenience
-export { ConnectionState, MessageType };
-export type { WsBaseMessage };
+export { MessageType, ConnectionState };
+export type { WsBaseMessage, ChannelMessageData, TypingIndicatorData, ErrorData };
 export interface ChatServiceInternalModelsChannel {
   created_at?: string;
   deleted_at?: GormDeletedAt;
@@ -149,23 +149,23 @@ export interface GormDeletedAt {
 /**
  * Message type enum
  */
-export type WebSocketMessageType = typeof WebSocketMessageType[keyof typeof WebSocketMessageType];
+export type WebSocketMessageType = (typeof WebSocketMessageType)[keyof typeof WebSocketMessageType];
 
 export const WebSocketMessageType = {
-  connectionconnect: 'connection.connect',
-  connectiondisconnect: 'connection.disconnect',
-  connectionping: 'connection.ping',
-  connectionpong: 'connection.pong',
-  channeljoin: 'channel.join',
-  channelleave: 'channel.leave',
-  channelmessage: 'channel.message',
-  channeltyping: 'channel.typing',
-  channelstop_typing: 'channel.stop_typing',
-  channelmemberjoin: 'channel.member.join',
-  channelmemberleave: 'channel.member.leave',
-  userstatus: 'user.status',
-  usernotification: 'user.notification',
-  error: 'error',
+  connectionconnect: "connection.connect",
+  connectiondisconnect: "connection.disconnect",
+  connectionping: "connection.ping",
+  connectionpong: "connection.pong",
+  channeljoin: "channel.join",
+  channelleave: "channel.leave",
+  channelmessage: "channel.message",
+  channeltyping: "channel.typing",
+  channelstop_typing: "channel.stop_typing",
+  channelmemberjoin: "channel.member.join",
+  channelmemberleave: "channel.member.leave",
+  userstatus: "user.status",
+  usernotification: "user.notification",
+  error: "error",
 } as const;
 
 /**
@@ -186,40 +186,21 @@ export interface WebSocketMessage {
   user_id: string;
 }
 
-export interface ChannelMessageData {
-  channel_id: string;
-  text: string;
-  /** @nullable */
-  url?: string | null;
-  /** @nullable */
-  fileName?: string | null;
-}
-
-export interface TypingIndicatorData {
-  channel_id: string;
-  is_typing: boolean;
-}
-
-export interface ErrorData {
-  code: string;
-  message: string;
-  details?: string;
-}
+// Note: ChannelMessageData, TypingIndicatorData, and ErrorData are imported from wsTypes
 
 export type GetWsParams = {
-/**
- * User ID for WebSocket connection
- */
-userId: string;
+  /**
+   * User ID for WebSocket connection
+   */
+  userId: string;
 };
 
 export type GetWs400 = { [key: string]: unknown };
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
-
-  export const getNotifyChatServiceAPI = () => {
-/**
+export const getNotifyChatServiceAPI = () => {
+  /**
  * Establish a WebSocket connection for real-time messaging with typed message support.
 
 ## Message Types
@@ -305,15 +286,10 @@ All messages follow this JSON structure:
 ```
  * @summary WebSocket connection for real-time messaging
  */
-const getWs = (
-    params: GetWsParams,
- options?: SecondParameter<typeof createWebSocketClient>,) => {
-      return createWebSocketClient<unknown>(
-      {url: `/ws`, method: 'GET',
-        params
-    },
-      options);
-    }
+  const getWs = (params: GetWsParams, options?: SecondParameter<typeof createWebSocketClient>) => {
+    return createWebSocketClient({ url: `/ws`, method: "GET", params }, options);
+  };
 
-return {getWs}};
-export type GetWsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getNotifyChatServiceAPI>['getWs']>>>
+  return { getWs };
+};
+export type GetWsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getNotifyChatServiceAPI>["getWs"]>>>;
