@@ -31,77 +31,43 @@ export default defineConfig({
       target: "./docs/swagger.json",
       override: {
         transformer: (schema) => {
-          // Keep only websocket path and enhance with WebSocket-specific schemas
-          const wsPath = schema.paths["/ws"];
-          if (wsPath) {
-            // Add WebSocket-specific response schemas to the components
-            if (!schema.components) schema.components = {};
-            if (!schema.components.schemas) schema.components.schemas = {};
+          // Keep WebSocket paths and schemas from backend
+          const wsPaths: Record<string, any> = {};
+          const wsSchemas: Record<string, any> = {};
 
-            // Add WebSocket message schemas
-            schema.components.schemas["WebSocketMessage"] = {
-              type: "object",
-              required: ["id", "type", "data", "timestamp", "user_id"],
-              properties: {
-                id: { type: "string", description: "Unique message identifier" },
-                type: {
-                  type: "string",
-                  enum: [
-                    "connection.connect",
-                    "connection.disconnect",
-                    "connection.ping",
-                    "connection.pong",
-                    "channel.join",
-                    "channel.leave",
-                    "channel.message",
-                    "channel.typing",
-                    "channel.stop_typing",
-                    "channel.member.join",
-                    "channel.member.leave",
-                    "user.status",
-                    "user.notification",
-                    "error",
-                  ],
-                  description: "Message type enum",
-                },
-                data: { type: "object", description: "Message payload data" },
-                timestamp: { type: "number", description: "Unix timestamp" },
-                user_id: { type: "string", description: "User ID who sent the message" },
-              },
-            };
+          // Extract WebSocket-related paths
+          Object.keys(schema.paths || {}).forEach((path) => {
+            if (path.startsWith("/ws") && schema.paths) {
+              wsPaths[path] = schema.paths[path];
+            }
+          });
 
-            schema.components.schemas["ChannelMessageData"] = {
-              type: "object",
-              required: ["channel_id", "text"],
-              properties: {
-                channel_id: { type: "string" },
-                text: { type: "string" },
-                url: { type: "string", nullable: true },
-                fileName: { type: "string", nullable: true },
-              },
-            };
-
-            schema.components.schemas["TypingIndicatorData"] = {
-              type: "object",
-              required: ["channel_id", "is_typing"],
-              properties: {
-                channel_id: { type: "string" },
-                is_typing: { type: "boolean" },
-              },
-            };
-
-            schema.components.schemas["ErrorData"] = {
-              type: "object",
-              required: ["code", "message"],
-              properties: {
-                code: { type: "string" },
-                message: { type: "string" },
-                details: { type: "string" },
-              },
-            };
+          // Extract WebSocket-related schemas from components
+          if (schema.components && schema.components.schemas) {
+            Object.keys(schema.components.schemas).forEach((schemaName) => {
+              if (
+                schemaName.includes("WebSocket") ||
+                schemaName.includes("ChannelMessage") ||
+                schemaName.includes("TypingIndicator") ||
+                schemaName.includes("ErrorData") ||
+                schemaName.includes("ConnectionData") ||
+                schemaName.includes("PingPongData") ||
+                schemaName.includes("UserStatusData") ||
+                schemaName.includes("UserNotificationData") ||
+                schemaName.includes("MemberJoinLeaveData") ||
+                schemaName.includes("ChannelJoinData") ||
+                schemaName.includes("ChannelLeaveData")
+              ) {
+                wsSchemas[schemaName] = schema.components!.schemas![schemaName];
+              }
+            });
           }
 
-          schema.paths = { "/ws": wsPath };
+          // Create new schema with only WebSocket-related content
+          schema.paths = wsPaths;
+          if (!schema.components) schema.components = {};
+          schema.components.schemas = wsSchemas;
+
           return schema;
         },
       },

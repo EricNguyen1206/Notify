@@ -1,21 +1,23 @@
-import { create } from 'zustand';
+import { create } from "zustand";
 import {
-    ChannelMessageReceivedMessage,
-    ErrorData,
-    MemberJoinLeaveData,
-    MessageType,
-    TypingIndicatorData,
-    UserNotificationData,
-    UserStatusData,
-    WsBaseMessage
-} from '../services/types/wsTypes';
-import {
-    ConnectionState,
-    TypeSafeWebSocketClient,
-    WebSocketClientConfig
-} from '../services/wsMutator';
-import { useChannelStore } from './useChannelStore';
-import { useChatStore } from './useChatStore';
+  ChannelMessageData,
+  ErrorData,
+  MemberJoinLeaveData,
+  MessageType,
+  MessageTypeValues,
+  TypingIndicatorData,
+  UserStatusData,
+  WebSocketMessage,
+  ConnectionState,
+  TypeSafeWebSocketClient,
+  WebSocketClientConfig,
+  createWebSocketMessage,
+  isChannelMessage,
+  isTypingIndicator,
+  isErrorMessage,
+} from "../services/websocket";
+import { useChannelStore } from "./useChannelStore";
+import { useChatStore } from "./useChatStore";
 
 // Enhanced WebSocket message interface for backward compatibility
 export interface WsMessage {
@@ -24,7 +26,7 @@ export interface WsMessage {
   senderId: string;
   senderName: string;
   timestamp: string;
-  type: MessageType;
+  type: MessageTypeValues;
   chatId: string;
 }
 
@@ -56,7 +58,7 @@ interface SocketState {
   };
 
   // Message data
-  messages: WsBaseMessage[];
+  messages: WebSocketMessage[];
   typingUsers: Record<string, TypingState[]>; // channelId -> typing users
 
   // User data
@@ -116,7 +118,7 @@ export const useSocketStore = create<SocketState>((set, get) => ({
   // Computed functions
   isConnected: () => {
     const { client, connectionState } = get();
-    console.log("TEST isConnected", connectionState, client?.isConnected())
+    console.log("TEST isConnected", connectionState, client?.isConnected());
     return connectionState === ConnectionState.CONNECTED && client?.isConnected() === true;
   },
 
@@ -135,7 +137,7 @@ export const useSocketStore = create<SocketState>((set, get) => ({
   // Configuration actions
   updateConfig: (newConfig: Partial<WebSocketClientConfig>) => {
     set((state) => ({
-      config: { ...state.config, ...newConfig }
+      config: { ...state.config, ...newConfig },
     }));
   },
 
@@ -145,25 +147,25 @@ export const useSocketStore = create<SocketState>((set, get) => ({
 
     // Prevent multiple connections
     if (isConnected() || isConnecting()) {
-      console.log('WebSocket already connected or connecting, skipping...');
+      console.log("WebSocket already connected or connecting, skipping...");
       return;
     }
 
     // Only run on client side
-    if (typeof window === 'undefined') {
-      console.log('Server side detected, skipping WebSocket connection');
+    if (typeof window === "undefined") {
+      console.log("Server side detected, skipping WebSocket connection");
       return;
     }
 
     // Clean up existing client
     if (client) {
-      console.log('Cleaning up existing client before creating new one');
+      console.log("Cleaning up existing client before creating new one");
       client.disconnect();
       set({ client: null, error: null });
     }
 
     try {
-      console.log('Creating new TypeSafeWebSocketClient for userId:', userId);
+      console.log("Creating new TypeSafeWebSocketClient for userId:", userId);
 
       // Create new client with configuration
       const newClient = new TypeSafeWebSocketClient(config);
@@ -172,26 +174,25 @@ export const useSocketStore = create<SocketState>((set, get) => ({
       set({
         client: newClient,
         connectionState: ConnectionState.CONNECTING,
-        error: null
+        error: null,
       });
 
       // Set up event listeners before connecting
       get().setupEventListeners();
 
       // Connect to WebSocket
-      const baseWsUrl = process.env.NEXT_PUBLIC_SOCKET_URL ?? 'ws://localhost:8080/api/v1';
+      const baseWsUrl = process.env.NEXT_PUBLIC_SOCKET_URL ?? "ws://localhost:8080/api/v1";
       await newClient.connect(`${baseWsUrl}/ws`, { userId });
-
     } catch (error) {
-      console.error('Failed to create or connect WebSocket:', error);
+      console.error("Failed to create or connect WebSocket:", error);
       set({
         error: {
-          code: 'CONNECTION_FAILED',
-          message: 'Failed to create WebSocket connection',
-          details: error instanceof Error ? error.message : 'Unknown error'
+          code: "CONNECTION_FAILED",
+          message: "Failed to create WebSocket connection",
+          details: error instanceof Error ? error.message : "Unknown error",
         },
         client: null,
-        connectionState: ConnectionState.ERROR
+        connectionState: ConnectionState.ERROR,
       });
     }
   },
@@ -204,83 +205,85 @@ export const useSocketStore = create<SocketState>((set, get) => ({
     client.setEventListeners({
       // Connection state changes
       onConnectionStateChange: (state: ConnectionState) => {
-        console.log('Connection state changed:', state);
+        console.log("Connection state changed:", state);
         set({ connectionState: state });
       },
 
       // Connection events
       onConnect: () => {
-        console.log('WebSocket connected successfully');
+        console.log("WebSocket connected successfully");
         set({ error: null, connectionState: ConnectionState.CONNECTED });
       },
 
       onDisconnect: () => {
-        console.info('WebSocket disconnected');
+        console.info("WebSocket disconnected");
         set({ connectionState: ConnectionState.DISCONNECTED });
       },
 
       onError: (error) => {
-        console.error('WebSocket error:', error);
+        console.error("WebSocket error:", error);
         set({
           error: {
-            code: 'WEBSOCKET_ERROR',
-            message: 'WebSocket connection error',
-            details: error.toString()
+            code: "WEBSOCKET_ERROR",
+            message: "WebSocket connection error",
+            details: error.toString(),
           },
-          connectionState: ConnectionState.ERROR
+          connectionState: ConnectionState.ERROR,
         });
       },
 
       // Message handling
-      onMessage: (message: WsBaseMessage) => {
-        console.info('WebSocket message received:', message);
+      onMessage: (message: WebSocketMessage) => {
+        console.info("WebSocket message received:", message);
         set((state) => ({
-          messages: [...state.messages, message]
+          messages: [...state.messages, message],
         }));
       },
 
       // Channel message handling
-      onChannelMessage: (message: ChannelMessageReceivedMessage) => {
-        console.info('Channel message received:', message);
+      onChannelMessage: (message: WebSocketMessage & { data: ChannelMessageData }) => {
+        console.info("Channel message received:", message);
 
         const channelMessage = message.data;
         const activeChannelId = useChannelStore.getState().activeChannelId;
 
         // Transform and add to chat store if it's for the active channel
-        if (activeChannelId && channelMessage.channelId === activeChannelId) {
+        if (activeChannelId && channelMessage.channel_id === activeChannelId.toString()) {
           const transformedMessage = {
-            id: Number(message.id.split('-')[1]) || Date.now(), // Extract numeric ID or use timestamp
-            channelId: Number(channelMessage.channelId),
+            id: Number(message.id.split("-")[1]) || Date.now(), // Extract numeric ID or use timestamp
+            channelId: Number(channelMessage.channel_id),
             createdAt: new Date(message.timestamp).toISOString(),
             senderId: Number(message.user_id),
-            senderName: channelMessage.Sender.name, // Will be populated by the backend message
-            senderAvatar: channelMessage.Sender.avatar,
-            text: channelMessage.text,
+            senderName: "Unknown", // Will need to be populated from user data
+            senderAvatar: "",
+            text: channelMessage.text || "",
             type: "channel",
-            url: undefined,
-            fileName: undefined
+            url: channelMessage.url || undefined,
+            fileName: channelMessage.fileName || undefined,
           };
 
-          useChatStore.getState().addMessageToChannel((channelMessage.channelId).toString(), transformedMessage);
+          useChatStore.getState().addMessageToChannel(channelMessage.channel_id.toString(), transformedMessage);
         }
       },
 
       // Typing indicator handling
-      onTypingIndicator: (message: WsBaseMessage<TypingIndicatorData>) => {
+      onTypingIndicator: (message: WebSocketMessage & { data: TypingIndicatorData }) => {
         const { channel_id, is_typing } = message.data;
         const userId = message.user_id;
+
+        if (!userId) return; // Skip if no user ID
 
         if (is_typing) {
           // Add typing indicator
           set((state) => {
             const channelTyping = state.typingUsers[channel_id] || [];
-            const existingIndex = channelTyping.findIndex(t => t.userId === userId);
+            const existingIndex = channelTyping.findIndex((t) => t.userId === userId);
 
             const newTypingState: TypingState = {
               channelId: channel_id,
               userId,
               isTyping: true,
-              timestamp: message.timestamp
+              timestamp: message.timestamp,
             };
 
             if (existingIndex >= 0) {
@@ -292,8 +295,8 @@ export const useSocketStore = create<SocketState>((set, get) => ({
             return {
               typingUsers: {
                 ...state.typingUsers,
-                [channel_id]: channelTyping
-              }
+                [channel_id]: channelTyping,
+              },
             };
           });
         } else {
@@ -303,55 +306,57 @@ export const useSocketStore = create<SocketState>((set, get) => ({
       },
 
       // Member join/leave handling
-      onMemberJoin: (message: WsBaseMessage<MemberJoinLeaveData>) => {
-        console.info('Member joined:', message.data);
+      onMemberJoin: (message: WebSocketMessage & { data: MemberJoinLeaveData }) => {
+        console.info("Member joined:", message.data);
         // Could update channel member list here
       },
 
-      onMemberLeave: (message: WsBaseMessage<MemberJoinLeaveData>) => {
-        console.info('Member left:', message.data);
+      onMemberLeave: (message: WebSocketMessage & { data: MemberJoinLeaveData }) => {
+        console.info("Member left:", message.data);
         // Could update channel member list here
       },
 
       // User status handling
-      onUserStatus: (message: WsBaseMessage<UserStatusData>) => {
+      onUserStatus: (message: WebSocketMessage & { data: UserStatusData }) => {
         const userData = message.data;
+        if (!message.user_id) return; // Skip if no user ID
+
         set((state) => ({
           connectedUsers: {
             ...state.connectedUsers,
-            [userData.user_id]: userData
-          }
+            [message.user_id!]: userData,
+          },
         }));
       },
 
       // User notification handling
-      onUserNotification: (message: WsBaseMessage<UserNotificationData>) => {
-        console.info('User notification:', message.data);
+      onUserNotification: (message: WebSocketMessage) => {
+        console.info("User notification:", message.data);
         // Could trigger UI notifications here
-      }
+      },
     });
   },
 
   // Message actions
   sendMessage: (channelId: string, msg: string, url?: string, fileName?: string) => {
-    console.log('Sending message:', msg);
+    console.log("Sending message:", msg);
     const { client, isConnected } = get();
 
     if (!isConnected() || !channelId || !client) {
-      console.log('Cannot send message: client not connected or invalid channelId');
+      console.log("Cannot send message: client not connected or invalid channelId");
       return;
     }
 
     try {
       client.sendChannelMessage(channelId, msg, url, fileName);
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error("Error sending message:", error);
       set({
         error: {
-          code: 'SEND_MESSAGE_FAILED',
-          message: 'Failed to send message',
-          details: error instanceof Error ? error.message : 'Unknown error'
-        }
+          code: "SEND_MESSAGE_FAILED",
+          message: "Failed to send message",
+          details: error instanceof Error ? error.message : "Unknown error",
+        },
       });
     }
   },
@@ -366,7 +371,7 @@ export const useSocketStore = create<SocketState>((set, get) => ({
     try {
       client.sendTypingIndicator(channelId, isTyping);
     } catch (error) {
-      console.error('Error sending typing indicator:', error);
+      console.error("Error sending typing indicator:", error);
     }
   },
 
@@ -402,10 +407,10 @@ export const useSocketStore = create<SocketState>((set, get) => ({
       console.error(`[${timestamp}] Error joining channel:`, error);
       set({
         error: {
-          code: 'JOIN_CHANNEL_FAILED',
-          message: 'Failed to join channel',
-          details: error instanceof Error ? error.message : 'Unknown error'
-        }
+          code: "JOIN_CHANNEL_FAILED",
+          message: "Failed to join channel",
+          details: error instanceof Error ? error.message : "Unknown error",
+        },
       });
     }
   },
@@ -448,10 +453,10 @@ export const useSocketStore = create<SocketState>((set, get) => ({
       console.error(`[${timestamp}] Error leaving channel:`, error);
       set({
         error: {
-          code: 'LEAVE_CHANNEL_FAILED',
-          message: 'Failed to leave channel',
-          details: error instanceof Error ? error.message : 'Unknown error'
-        }
+          code: "LEAVE_CHANNEL_FAILED",
+          message: "Failed to leave channel",
+          details: error instanceof Error ? error.message : "Unknown error",
+        },
       });
     }
   },
@@ -465,7 +470,7 @@ export const useSocketStore = create<SocketState>((set, get) => ({
     console.log(`[${timestamp}] switchChannel called with:`, newChannelId, {
       isProcessing: switchState.isProcessing,
       lastSwitchTime: switchState.lastSwitchTime,
-      pendingChannelId: switchState.pendingChannelId
+      pendingChannelId: switchState.pendingChannelId,
     });
 
     // Prevent rapid successive calls (debounce with 100ms)
@@ -475,11 +480,11 @@ export const useSocketStore = create<SocketState>((set, get) => ({
 
       // Update pending channel if it's different
       if (switchState.pendingChannelId !== newChannelId) {
-        set(state => ({
+        set((state) => ({
           _channelSwitchState: {
             ...state._channelSwitchState,
-            pendingChannelId: newChannelId
-          }
+            pendingChannelId: newChannelId,
+          },
         }));
 
         // Schedule the pending switch
@@ -513,8 +518,8 @@ export const useSocketStore = create<SocketState>((set, get) => ({
       _channelSwitchState: {
         lastSwitchTime: timestamp,
         pendingChannelId: null,
-        isProcessing: true
-      }
+        isProcessing: true,
+      },
     }));
 
     console.log(`[${timestamp}] Executing channel switch from "${currentChannelId}" to "${newChannelId}"`);
@@ -541,18 +546,18 @@ export const useSocketStore = create<SocketState>((set, get) => ({
       console.error(`[${timestamp}] Error during channel switch:`, error);
     } finally {
       // Clear processing flag
-      set(state => ({
+      set((state) => ({
         _channelSwitchState: {
           ...state._channelSwitchState,
-          isProcessing: false
-        }
+          isProcessing: false,
+        },
       }));
     }
   },
 
   // New method to leave all channels (useful for disconnect)
   leaveAllChannels: () => {
-    console.log('Leaving all channels');
+    console.log("Leaving all channels");
     const channelStore = useChannelStore.getState();
     const joinedChannels = channelStore.getJoinedChannels();
 
@@ -566,7 +571,7 @@ export const useSocketStore = create<SocketState>((set, get) => ({
     const { client } = get();
 
     if (client) {
-      console.log('Disconnecting WebSocket');
+      console.log("Disconnecting WebSocket");
 
       // Leave all channels before disconnecting
       get().leaveAllChannels();
@@ -575,10 +580,10 @@ export const useSocketStore = create<SocketState>((set, get) => ({
       const channelStore = useChannelStore.getState();
       channelStore.clearJoinedChannels();
       // Add window confirm to block reload and test disconnect
-      const confirm = window.confirm('Are you sure you want to leave?');
-    if (!confirm) {
+      const confirm = window.confirm("Are you sure you want to leave?");
+      if (!confirm) {
         return;
-    }
+      }
       client.disconnect();
       set({
         client: null,
@@ -586,7 +591,7 @@ export const useSocketStore = create<SocketState>((set, get) => ({
         connectionState: ConnectionState.DISCONNECTED,
         messages: [],
         typingUsers: {},
-        connectedUsers: {}
+        connectedUsers: {},
       });
     }
   },
@@ -595,13 +600,13 @@ export const useSocketStore = create<SocketState>((set, get) => ({
   clearTypingIndicator: (channelId: string, userId: string) => {
     set((state) => {
       const channelTyping = state.typingUsers[channelId] || [];
-      const filteredTyping = channelTyping.filter(t => t.userId !== userId);
+      const filteredTyping = channelTyping.filter((t) => t.userId !== userId);
 
       return {
         typingUsers: {
           ...state.typingUsers,
-          [channelId]: filteredTyping
-        }
+          [channelId]: filteredTyping,
+        },
       };
     });
   },

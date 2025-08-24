@@ -1,65 +1,51 @@
-import { ChannelJoinData, ChannelMessageData, ChannelMessageReceivedMessage, MessageType, WsBaseMessage, WsMessageType } from './types/wsTypes';
+import {
+  ChannelJoinData,
+  ChannelMessageData,
+  MessageType,
+  MessageTypeValues,
+  WebSocketMessage,
+  createWebSocketMessage,
+  isChannelMessage,
+  isTypingIndicator,
+  isErrorMessage,
+  TypingIndicatorData,
+  ErrorData,
+  UserStatusData,
+  MemberJoinLeaveData,
+} from "./websocket";
 
 // Connection states
 export enum ConnectionState {
-  DISCONNECTED = 'disconnected',
-  CONNECTING = 'connecting',
-  CONNECTED = 'connected',
-  RECONNECTING = 'reconnecting',
-  ERROR = 'error'
+  DISCONNECTED = "disconnected",
+  CONNECTING = "connecting",
+  CONNECTED = "connected",
+  RECONNECTING = "reconnecting",
+  ERROR = "error",
 }
 
-// Additional WebSocket-specific types
-export interface TypingIndicatorData {
-  channel_id: string;
-  is_typing: boolean;
-}
-
-export interface ErrorData {
-  code: string;
-  message: string;
-  details?: string;
-}
-
-export interface UserStatusData {
-  user_id: string;
-  status: 'online' | 'offline' | 'away';
-}
-
-export interface UserNotificationData {
-  type: 'message' | 'mention' | 'system';
-  title: string;
-  message: string;
-  channel_id?: string;
-}
-
-export interface MemberJoinLeaveData {
-  channel_id: string;
-  user_id: string;
-  username: string;
-}
+// Note: WebSocket message types are now imported from generated types
 
 // Type guards for message validation
-export const isValidMessageType = (type: string): type is MessageType => {
-  return Object.values(WsMessageType).includes(type as MessageType);
+export const isValidMessageType = (type: string): type is MessageTypeValues => {
+  return Object.values(MessageType).includes(type as MessageTypeValues);
 };
 
-export const isWsBaseMessage = (data: unknown): data is WsBaseMessage => {
-  if (typeof data !== 'object' || data === null) return false;
+export const isWebSocketMessage = (data: unknown): data is WebSocketMessage => {
+  if (typeof data !== "object" || data === null) return false;
   const msg = data as Record<string, unknown>;
   return (
-    typeof msg.id === 'string' &&
-    typeof msg.type === 'string' &&
+    typeof msg.id === "string" &&
+    typeof msg.type === "string" &&
     isValidMessageType(msg.type) &&
-    typeof msg.timestamp === 'number' &&
-    typeof msg.user_id === 'string' &&
+    typeof msg.timestamp === "number" &&
+    typeof msg.user_id === "string" &&
     msg.data !== undefined
   );
 };
 
 // Message queue item interface
 export interface QueuedMessage {
-  message: WsBaseMessage;
+  message: WebSocketMessage;
   timestamp: number;
   retries: number;
   maxRetries: number;
@@ -82,13 +68,13 @@ export interface WebSocketEventListeners {
   onConnect?: () => void;
   onDisconnect?: () => void;
   onError?: (error: Event) => void;
-  onMessage?: <T>(message: WsBaseMessage<T>) => void;
-  onChannelMessage?: (message: ChannelMessageReceivedMessage) => void;
-  onTypingIndicator?: (message: WsBaseMessage<TypingIndicatorData>) => void;
-  onMemberJoin?: (message: WsBaseMessage<MemberJoinLeaveData>) => void;
-  onMemberLeave?: (message: WsBaseMessage<MemberJoinLeaveData>) => void;
-  onUserStatus?: (message: WsBaseMessage<UserStatusData>) => void;
-  onUserNotification?: (message: WsBaseMessage<UserNotificationData>) => void;
+  onMessage?: (message: WebSocketMessage) => void;
+  onChannelMessage?: (message: WebSocketMessage & { data: ChannelMessageData }) => void;
+  onTypingIndicator?: (message: WebSocketMessage & { data: TypingIndicatorData }) => void;
+  onMemberJoin?: (message: WebSocketMessage & { data: MemberJoinLeaveData }) => void;
+  onMemberLeave?: (message: WebSocketMessage & { data: MemberJoinLeaveData }) => void;
+  onUserStatus?: (message: WebSocketMessage & { data: UserStatusData }) => void;
+  onUserNotification?: (message: WebSocketMessage) => void;
   onConnectionStateChange?: (state: ConnectionState) => void;
 }
 
@@ -118,7 +104,7 @@ export class TypeSafeWebSocketClient {
 
   // Event listeners and state
   private listeners: WebSocketEventListeners = {};
-  private url = '';
+  private url = "";
   private params: Record<string, any> = {};
   private isPageVisible = true;
 
@@ -139,9 +125,9 @@ export class TypeSafeWebSocketClient {
 
   // Page visibility and network monitoring setup
   private setupPageVisibilityHandling(): void {
-    if (typeof document !== 'undefined') {
-      document.addEventListener('visibilitychange', () => {
-        this.isPageVisible = document.visibilityState === 'visible';
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", () => {
+        this.isPageVisible = document.visibilityState === "visible";
 
         if (this.isPageVisible) {
           this.handlePageVisible();
@@ -151,33 +137,32 @@ export class TypeSafeWebSocketClient {
       });
     }
 
-    if (typeof window !== 'undefined') {
-      window.addEventListener('beforeunload', () => {
+    if (typeof window !== "undefined") {
+      window.addEventListener("beforeunload", () => {
         this.disconnect();
       });
     }
   }
 
   private setupNetworkMonitoring(): void {
-    if (typeof window !== 'undefined') {
-      window.addEventListener('online', () => {
-        console.log('Network came back online');
+    if (typeof window !== "undefined") {
+      window.addEventListener("online", () => {
+        console.log("Network came back online");
         if (this.connectionState !== ConnectionState.CONNECTED) {
           this.connect(this.url, this.params);
         }
       });
 
-      window.addEventListener('offline', () => {
-        console.log('Network went offline');
+      window.addEventListener("offline", () => {
+        console.log("Network went offline");
         this.setConnectionState(ConnectionState.DISCONNECTED);
       });
     }
   }
 
   private handlePageVisible(): void {
-    if (this.connectionState === ConnectionState.DISCONNECTED ||
-        this.connectionState === ConnectionState.ERROR) {
-      console.log('Page became visible, reconnecting...');
+    if (this.connectionState === ConnectionState.DISCONNECTED || this.connectionState === ConnectionState.ERROR) {
+      console.log("Page became visible, reconnecting...");
       this.connect(this.url, this.params);
     } else if (this.connectionState === ConnectionState.CONNECTED) {
       // Resume heartbeat if connection is still alive
@@ -204,8 +189,8 @@ export class TypeSafeWebSocketClient {
       try {
         this.setConnectionState(ConnectionState.CONNECTING);
 
-        const query = this.params ? '?' + new URLSearchParams(this.params).toString() : '';
-        const wsUrl = url.replace(/^http/, 'ws') + query;
+        const query = this.params ? "?" + new URLSearchParams(this.params).toString() : "";
+        const wsUrl = url.replace(/^http/, "ws") + query;
 
         this.ws = new WebSocket(wsUrl);
 
@@ -213,7 +198,7 @@ export class TypeSafeWebSocketClient {
         this.connectionTimer = setTimeout(() => {
           if (this.connectionState === ConnectionState.CONNECTING) {
             this.ws?.close();
-            reject(new Error('Connection timeout'));
+            reject(new Error("Connection timeout"));
           }
         }, this.connectionTimeout);
 
@@ -249,7 +234,6 @@ export class TypeSafeWebSocketClient {
         this.ws.onmessage = (event) => {
           this.handleMessage(event);
         };
-
       } catch (error) {
         this.setConnectionState(ConnectionState.ERROR);
         reject(error);
@@ -265,29 +249,23 @@ export class TypeSafeWebSocketClient {
   }
 
   // Message sending methods with queuing support
-  sendMessage<T>(type: MessageType, data: T): Promise<void> {
+  sendMessage<T>(type: MessageTypeValues, data: T): Promise<void> {
     return new Promise((resolve, reject) => {
-      const message: WsBaseMessage<T> = {
-        id: this.generateMessageId(),
-        type,
-        data,
-        timestamp: Date.now(),
-        user_id: this.params.userId || ''
-      };
+      const message = createWebSocketMessage(type, data, this.params.userId);
 
       if (this.isConnected() && this.ws) {
         try {
           this.ws.send(JSON.stringify(message));
           resolve();
         } catch (error) {
-          console.error('Failed to send message, queuing:', error);
-          this.queueMessage(message as WsBaseMessage);
+          console.error("Failed to send message, queuing:", error);
+          this.queueMessage(message);
           reject(error);
         }
       } else {
         // Queue message when not connected
-        console.log('Not connected, queuing message:', type);
-        this.queueMessage(message as WsBaseMessage);
+        console.log("Not connected, queuing message:", type);
+        this.queueMessage(message);
         // Resolve immediately for queued messages (optimistic response)
         resolve();
       }
@@ -295,31 +273,31 @@ export class TypeSafeWebSocketClient {
   }
 
   joinChannel(channelId: string): void {
-    this.sendMessage<ChannelJoinData>(WsMessageType.CHANNEL_JOIN, {
-      channel_id: channelId
+    this.sendMessage(MessageType.CHANNEL_JOIN, {
+      channel_id: channelId,
     });
   }
 
   leaveChannel(channelId: string): void {
-    this.sendMessage<ChannelJoinData>(WsMessageType.CHANNEL_LEAVE, {
-      channel_id: channelId
+    this.sendMessage(MessageType.CHANNEL_LEAVE, {
+      channel_id: channelId,
     });
   }
 
   sendChannelMessage(channelId: string, text: string, url?: string, fileName?: string): void {
-    this.sendMessage<ChannelMessageData>(WsMessageType.CHANNEL_MESSAGE, {
+    this.sendMessage(MessageType.CHANNEL_MESSAGE, {
       channel_id: channelId,
       text,
       url: url || null,
-      fileName: fileName || null
+      fileName: fileName || null,
     });
   }
 
   sendTypingIndicator(channelId: string, isTyping: boolean): void {
-    const type = isTyping ? WsMessageType.CHANNEL_TYPING : WsMessageType.CHANNEL_STOP_TYPING;
-    this.sendMessage<TypingIndicatorData>(type, {
+    const type = isTyping ? MessageType.CHANNEL_TYPING : MessageType.CHANNEL_STOP_TYPING;
+    this.sendMessage(type, {
       channel_id: channelId,
-      is_typing: isTyping
+      is_typing: isTyping,
     });
   }
 
@@ -353,14 +331,14 @@ export class TypeSafeWebSocketClient {
     try {
       const data = JSON.parse(event.data);
 
-      if (!isWsBaseMessage(data)) {
-        console.warn('Received invalid WebSocket message:', data);
+      if (!isWebSocketMessage(data)) {
+        console.warn("Received invalid WebSocket message:", data);
         return;
       }
 
       // Message deduplication
       if (data.id && this.processedMessages.has(data.id)) {
-        console.log('Duplicate message ignored:', data.id);
+        console.log("Duplicate message ignored:", data.id);
         return;
       }
 
@@ -377,14 +355,14 @@ export class TypeSafeWebSocketClient {
       }
 
       // Handle pong messages for heartbeat
-      if (data.type === WsMessageType.PONG) {
-        console.log('Received pong response');
+      if (data.type === MessageType.PONG) {
+        console.log("Received pong response");
         return; // Heartbeat response, no need to emit
       }
 
       // Handle connection success message
-      if (data.type === 'connection.connect') {
-        console.log('Connection established:', data);
+      if (data.type === "connection.connect") {
+        console.log("Connection established:", data);
         this.connectionStartTime = Date.now();
         return;
       }
@@ -394,46 +372,52 @@ export class TypeSafeWebSocketClient {
 
       // Emit specific message type events
       switch (data.type) {
-        case WsMessageType.CHANNEL_MESSAGE:
-          this.listeners.onChannelMessage?.(data as ChannelMessageReceivedMessage);
+        case MessageType.CHANNEL_MESSAGE:
+          if (isChannelMessage(data)) {
+            this.listeners.onChannelMessage?.(data);
+          }
           break;
-        case WsMessageType.CHANNEL_TYPING:
-        case WsMessageType.CHANNEL_STOP_TYPING:
-          this.listeners.onTypingIndicator?.(data as WsBaseMessage<TypingIndicatorData>);
+        case MessageType.CHANNEL_TYPING:
+        case MessageType.CHANNEL_STOP_TYPING:
+          if (isTypingIndicator(data)) {
+            this.listeners.onTypingIndicator?.(data);
+          }
           break;
-        case WsMessageType.MEMBER_JOIN:
-          this.listeners.onMemberJoin?.(data as WsBaseMessage<MemberJoinLeaveData>);
+        case MessageType.MEMBER_JOIN:
+          this.listeners.onMemberJoin?.(data as WebSocketMessage & { data: MemberJoinLeaveData });
           break;
-        case WsMessageType.MEMBER_LEAVE:
-          this.listeners.onMemberLeave?.(data as WsBaseMessage<MemberJoinLeaveData>);
+        case MessageType.MEMBER_LEAVE:
+          this.listeners.onMemberLeave?.(data as WebSocketMessage & { data: MemberJoinLeaveData });
           break;
-        case WsMessageType.USER_STATUS:
-          this.listeners.onUserStatus?.(data as WsBaseMessage<UserStatusData>);
+        case MessageType.USER_STATUS:
+          this.listeners.onUserStatus?.(data as WebSocketMessage & { data: UserStatusData });
           break;
-        case WsMessageType.USER_NOTIFICATION:
-          this.listeners.onUserNotification?.(data as WsBaseMessage<UserNotificationData>);
+        case MessageType.USER_NOTIFICATION:
+          this.listeners.onUserNotification?.(data);
           break;
-        case WsMessageType.ERROR:
-          console.error('WebSocket error message:', data);
-          this.listeners.onError?.(new Event('websocket-error'));
+        case MessageType.ERROR:
+          if (isErrorMessage(data)) {
+            console.error("WebSocket error message:", data);
+            this.listeners.onError?.(new Event("websocket-error"));
+          }
           break;
       }
     } catch (error) {
-      console.error('Failed to parse WebSocket message:', error, event.data);
+      console.error("Failed to parse WebSocket message:", error, event.data);
     }
   }
 
   // Message queuing for offline scenarios
-  private queueMessage(message: WsBaseMessage): void {
+  private queueMessage(message: WebSocketMessage): void {
     const queuedMessage: QueuedMessage = {
       message: {
         ...message,
         id: message.id || this.generateMessageId(),
-        timestamp: Date.now()
+        timestamp: Date.now(),
       },
       timestamp: Date.now(),
       retries: 0,
-      maxRetries: 3
+      maxRetries: 3,
     };
 
     this.messageQueue.push(queuedMessage);
@@ -441,7 +425,7 @@ export class TypeSafeWebSocketClient {
     // Limit queue size to prevent memory issues
     if (this.messageQueue.length > this.messageQueueLimit) {
       this.messageQueue.shift(); // Remove oldest message
-      console.warn('Message queue limit reached, removing oldest message');
+      console.warn("Message queue limit reached, removing oldest message");
     }
   }
 
@@ -454,10 +438,10 @@ export class TypeSafeWebSocketClient {
         try {
           if (this.ws) {
             this.ws.send(JSON.stringify(queuedItem.message));
-            console.log('Sent queued message:', queuedItem.message.type);
+            console.log("Sent queued message:", queuedItem.message.type);
           }
         } catch (error) {
-          console.error('Failed to send queued message:', error);
+          console.error("Failed to send queued message:", error);
 
           // Re-queue if under retry limit
           if (queuedItem.retries < queuedItem.maxRetries) {
@@ -465,7 +449,7 @@ export class TypeSafeWebSocketClient {
             this.messageQueue.unshift(queuedItem);
             console.log(`Re-queued message (retry ${queuedItem.retries}/${queuedItem.maxRetries})`);
           } else {
-            console.error('Max retries reached for queued message, dropping:', queuedItem.message);
+            console.error("Max retries reached for queued message, dropping:", queuedItem.message);
           }
           break; // Stop processing queue on error
         }
@@ -482,7 +466,7 @@ export class TypeSafeWebSocketClient {
     this.stopHeartbeat();
     this.heartbeatTimer = setInterval(() => {
       if (this.isConnected()) {
-        this.sendMessage(WsMessageType.PING, {});
+        this.sendMessage(MessageType.PING, {});
       }
     }, this.heartbeatInterval);
   }
@@ -497,7 +481,7 @@ export class TypeSafeWebSocketClient {
   // Reconnection logic with exponential backoff and jitter
   private attemptReconnect(): void {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.error('Max reconnection attempts reached');
+      console.error("Max reconnection attempts reached");
       this.setConnectionState(ConnectionState.ERROR);
       return;
     }
@@ -517,9 +501,9 @@ export class TypeSafeWebSocketClient {
       try {
         console.log(`Attempting reconnection ${this.reconnectAttempts}/${this.maxReconnectAttempts}`);
         await this.connect(this.url, this.params);
-        console.log('Reconnection successful');
+        console.log("Reconnection successful");
       } catch (error) {
-        console.error('Reconnection failed:', error);
+        console.error("Reconnection failed:", error);
         this.attemptReconnect();
       }
     }, finalDelay);

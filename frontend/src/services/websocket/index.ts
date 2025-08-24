@@ -7,151 +7,85 @@
  */
 
 // WebSocket Type-Safe Client
-import { TypeSafeWebSocketClient, ConnectionState, createWebSocketClient } from "../wsMutator";
-import { MessageType, WsBaseMessage, ChannelMessageData, TypingIndicatorData, ErrorData } from "../types/wsTypes";
-
-// Re-export types for convenience
-export { MessageType, ConnectionState };
-export type { WsBaseMessage, ChannelMessageData, TypingIndicatorData, ErrorData };
-export interface ChatServiceInternalModelsChannel {
-  created_at?: string;
-  deleted_at?: GormDeletedAt;
-  id?: number;
-  members?: ChatServiceInternalModelsUser[];
-  /** Name of the channel */
-  name?: string;
-  /** ID of the channel owner */
-  ownerId?: number;
-  /** Type of channel, either 'direct' or 'group' */
-  type?: string;
-  updated_at?: string;
-}
-
-export interface ChatServiceInternalModelsChannelDetailResponse {
-  createdAt?: string;
-  id?: number;
-  /** List of members in the channel */
-  members?: ChatServiceInternalModelsUser[];
-  name?: string;
-  ownerId?: number;
-  type?: string;
-}
-
-export interface ChatServiceInternalModelsChannelResponse {
-  id?: number;
-  name?: string;
-  ownerId?: number;
-  type?: string;
-}
-
-export interface ChatServiceInternalModelsChatResponse {
-  /** channel */
-  channelId?: number;
-  /** timestamp of when the message was created */
-  createdAt?: string;
-  /** optional file name for media */
-  fileName?: string;
-  id?: number;
-  /** Relate to type message */
-  receiverId?: number;
-  /** url string for avatar */
-  senderAvatar?: string;
-  /** ID of the user who sent the message */
-  senderId?: number;
-  /** Username of the sender */
-  senderName?: string;
-  /** free text message */
+import {
+  TypeSafeWebSocketClient,
+  ConnectionState,
+  WebSocketClientConfig,
+  WebSocketEventListeners,
+  createWebSocketClient,
+} from "../wsMutator";
+/**
+ * Data structure for channel.message message type
+ */
+export interface ChatServiceInternalModelsChannelMessageData {
+  /** ID of the channel where message is sent */
+  channel_id: string;
+  /** Text content of the message */
   text?: string;
-  /** "direct" | "group" */
-  type?: string;
-  /** optional URL for media */
-  url?: string;
-}
-
-export interface ChatServiceInternalModelsDirectChannelResponse {
-  /** Optional avatar for direct channels */
-  avatar?: string;
-  id?: number;
-  name?: string;
-  ownerId?: number;
-  type?: string;
-}
-
-export interface ChatServiceInternalModelsErrorResponse {
-  code?: number;
-  details?: string;
-  message?: string;
-}
-
-export interface ChatServiceInternalModelsLoginRequest {
-  email: string;
-  password: string;
-}
-
-export interface ChatServiceInternalModelsLoginResponse {
-  token?: string;
-  user?: ChatServiceInternalModelsUserResponse;
-}
-
-export interface ChatServiceInternalModelsPaginatedChatResponse {
-  items?: ChatServiceInternalModelsChatResponse[];
-  nextCursor?: number;
-  total?: number;
-}
-
-export interface ChatServiceInternalModelsRegisterRequest {
-  email: string;
-  /** @minLength 6 */
-  password: string;
   /**
-   * @minLength 3
-   * @maxLength 50
+   * Optional URL attachment
+   * @nullable
    */
-  username: string;
-}
-
-export interface ChatServiceInternalModelsUser {
-  /** Avatar is optional and can be used to store a profile picture URL
-It is not mandatory for the user to have an avatar. */
-  avatar?: string;
-  channels?: ChatServiceInternalModelsChannel[];
-  created_at?: string;
-  deleted_at?: GormDeletedAt;
-  /** Unique email for the user */
-  email?: string;
-  id?: number;
-  updated_at?: string;
-  /** Username for the user */
-  username?: string;
-}
-
-export interface ChatServiceInternalModelsUserChannelsResponse {
-  /** List of channels of type 'direct' */
-  direct?: ChatServiceInternalModelsDirectChannelResponse[];
-  /** List of channels of type 'group' */
-  group?: ChatServiceInternalModelsChannelResponse[];
-}
-
-export interface ChatServiceInternalModelsUserResponse {
-  avatar?: string;
-  created_at?: string;
-  email?: string;
-  id?: number;
-  username?: string;
-}
-
-export interface GormDeletedAt {
-  time?: string;
-  /** Valid is true if Time is not NULL */
-  valid?: boolean;
+  url?: string | null;
+  /**
+   * Optional file name for attachments
+   * @nullable
+   */
+  fileName?: string | null;
+  /**
+   * Optional ID of message being replied to
+   * @nullable
+   */
+  reply_to_id?: string | null;
 }
 
 /**
- * Message type enum
+ * Data structure for error message type
  */
-export type WebSocketMessageType = (typeof WebSocketMessageType)[keyof typeof WebSocketMessageType];
+export interface ChatServiceInternalModelsErrorData {
+  /** Error code */
+  code: string;
+  /** Human-readable error message */
+  message: string;
+  /**
+   * Optional additional error details
+   * @nullable
+   */
+  details?: string | null;
+}
 
-export const WebSocketMessageType = {
+/**
+ * Data structure for channel.typing and channel.stop_typing message types
+ */
+export interface ChatServiceInternalModelsTypingIndicatorData {
+  /** ID of the channel where typing is happening */
+  channel_id: string;
+  /** Whether user is currently typing */
+  is_typing?: boolean;
+}
+
+/**
+ * Example WebSocket messages for different message types
+ */
+export interface ChatServiceInternalModelsWebSocketExampleMessages {
+  /** Example channel join message */
+  channel_join_example?: ChatServiceInternalModelsWebSocketMessage;
+  /** Example channel message */
+  channel_message_example?: ChatServiceInternalModelsWebSocketMessage;
+  /** Example error message */
+  error_example?: ChatServiceInternalModelsWebSocketMessage;
+  /** Example typing indicator */
+  typing_indicator_example?: ChatServiceInternalModelsWebSocketMessage;
+}
+
+/**
+ * Message type enum - see WebSocketMessageType for valid values
+ */
+export type ChatServiceInternalModelsWebSocketMessageTypeProperty =
+  (typeof ChatServiceInternalModelsWebSocketMessageTypeProperty)[keyof typeof ChatServiceInternalModelsWebSocketMessageTypeProperty];
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const ChatServiceInternalModelsWebSocketMessageTypeProperty = {
   connectionconnect: "connection.connect",
   connectiondisconnect: "connection.disconnect",
   connectionping: "connection.ping",
@@ -169,24 +103,132 @@ export const WebSocketMessageType = {
 } as const;
 
 /**
- * Message payload data
+ * Base WebSocket message structure that all messages follow
  */
-export type WebSocketMessageData = { [key: string]: unknown };
-
-export interface WebSocketMessage {
+export interface ChatServiceInternalModelsWebSocketMessage {
   /** Unique message identifier */
   id: string;
-  /** Message type enum */
-  type: WebSocketMessageType;
-  /** Message payload data */
-  data: WebSocketMessageData;
-  /** Unix timestamp */
+  /** Message type enum - see WebSocketMessageType for valid values */
+  type: ChatServiceInternalModelsWebSocketMessageTypeProperty;
+  /** Message payload data - structure depends on message type */
+  data: unknown;
+  /** Unix timestamp when message was created */
   timestamp: number;
-  /** User ID who sent the message */
-  user_id: string;
+  /** ID of the user who sent the message */
+  user_id?: string;
 }
 
-// Note: ChannelMessageData, TypingIndicatorData, and ErrorData are imported from wsTypes
+/**
+ * Enum of valid WebSocket message types
+ */
+export interface ChatServiceInternalModelsWebSocketMessageType {
+  /** Channel events */
+  "channel.join"?: string;
+  "channel.leave"?: string;
+  /** Channel member events */
+  "channel.member.join"?: string;
+  "channel.member.leave"?: string;
+  "channel.message"?: string;
+  "channel.stop_typing"?: string;
+  "channel.typing"?: string;
+  /** Connection events */
+  "connection.connect"?: string;
+  "connection.disconnect"?: string;
+  "connection.ping"?: string;
+  "connection.pong"?: string;
+  /** Error events */
+  error?: string;
+  "user.notification"?: string;
+  /** User events */
+  "user.status"?: string;
+}
+
+/**
+ * Data structure for channel.join message type
+ */
+export interface ChatServiceInternalModelsChannelJoinData {
+  /** ID of the channel to join */
+  channel_id: string;
+}
+
+/**
+ * Data structure for channel.leave message type
+ */
+export interface ChatServiceInternalModelsChannelLeaveData {
+  /** ID of the channel to leave */
+  channel_id: string;
+}
+
+/**
+ * Connection status
+ */
+export type ChatServiceInternalModelsConnectionDataStatus =
+  (typeof ChatServiceInternalModelsConnectionDataStatus)[keyof typeof ChatServiceInternalModelsConnectionDataStatus];
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const ChatServiceInternalModelsConnectionDataStatus = {
+  connected: "connected",
+  disconnected: "disconnected",
+} as const;
+
+/**
+ * Data structure for connection.connect and connection.disconnect message types
+ */
+export interface ChatServiceInternalModelsConnectionData {
+  /** Client connection ID */
+  client_id?: string;
+  /** Connection status */
+  status?: ChatServiceInternalModelsConnectionDataStatus;
+}
+
+/**
+ * Data structure for connection.ping and connection.pong message types
+ */
+export interface ChatServiceInternalModelsPingPongData {
+  /** Timestamp for ping/pong */
+  timestamp?: number;
+  /**
+   * Optional ping ID for pong responses
+   * @nullable
+   */
+  ping_id?: string | null;
+}
+
+/**
+ * Current status of the user
+ */
+export type ChatServiceInternalModelsUserStatusDataStatus =
+  (typeof ChatServiceInternalModelsUserStatusDataStatus)[keyof typeof ChatServiceInternalModelsUserStatusDataStatus];
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const ChatServiceInternalModelsUserStatusDataStatus = {
+  online: "online",
+  offline: "offline",
+  away: "away",
+  busy: "busy",
+} as const;
+
+/**
+ * Data structure for user.status message type
+ */
+export interface ChatServiceInternalModelsUserStatusData {
+  /** Current status of the user */
+  status: ChatServiceInternalModelsUserStatusDataStatus;
+  /** Unix timestamp of last seen time */
+  last_seen?: number;
+}
+
+/**
+ * Data structure for channel.member.join and channel.member.leave message types
+ */
+export interface ChatServiceInternalModelsMemberJoinLeaveData {
+  /** ID of the channel */
+  channel_id: string;
+  /** ID of the user joining/leaving */
+  user_id: string;
+  /** Username of the user joining/leaving */
+  username?: string;
+}
 
 export type GetWsParams = {
   /**
@@ -290,6 +332,147 @@ All messages follow this JSON structure:
     return createWebSocketClient({ url: `/ws`, method: "GET", params }, options);
   };
 
-  return { getWs };
+  /**
+   * Returns the enum values for all valid WebSocket message types
+   * @summary Get WebSocket message type enum
+   */
+  const getWsMessageTypes = (options?: SecondParameter<typeof createWebSocketClient>) => {
+    return createWebSocketClient({ url: `/ws/message-types`, method: "GET" }, options);
+  };
+
+  /**
+ * Returns the schemas for all WebSocket message types used in the real-time messaging API.
+This endpoint is for documentation purposes only and provides TypeScript-compatible schemas.
+
+## Available Message Types:
+- **connection.connect** - Connection established (server -> client)
+- **connection.disconnect** - Connection closed (server -> client)
+- **connection.ping** - Ping message (client -> server)
+- **connection.pong** - Pong response (server -> client)
+- **channel.join** - Join a channel (client -> server)
+- **channel.leave** - Leave a channel (client -> server)
+- **channel.message** - Send/receive channel message (bidirectional)
+- **channel.typing** - Typing indicator (client -> server)
+- **channel.stop_typing** - Stop typing indicator (client -> server)
+- **channel.member.join** - Member joined channel (server -> client)
+- **channel.member.leave** - Member left channel (server -> client)
+- **user.status** - User status update (server -> client)
+- **user.notification** - User notification (server -> client)
+- **error** - Error message (server -> client)
+ * @summary Get WebSocket message schemas
+ */
+  const getWsSchemas = (options?: SecondParameter<typeof createWebSocketClient>) => {
+    return createWebSocketClient({ url: `/ws/schemas`, method: "GET" }, options);
+  };
+
+  /**
+   * Returns the schema for channel message data structure
+   * @summary Get channel message data schema
+   */
+  const getWsSchemasChannelMessage = (options?: SecondParameter<typeof createWebSocketClient>) => {
+    return createWebSocketClient({ url: `/ws/schemas/channel-message`, method: "GET" }, options);
+  };
+
+  /**
+   * Returns the schema for error data structure
+   * @summary Get error data schema
+   */
+  const getWsSchemasError = (options?: SecondParameter<typeof createWebSocketClient>) => {
+    return createWebSocketClient({ url: `/ws/schemas/error`, method: "GET" }, options);
+  };
+
+  /**
+   * Returns the schema for typing indicator data structure
+   * @summary Get typing indicator data schema
+   */
+  const getWsSchemasTypingIndicator = (options?: SecondParameter<typeof createWebSocketClient>) => {
+    return createWebSocketClient({ url: `/ws/schemas/typing-indicator`, method: "GET" }, options);
+  };
+
+  return {
+    getWs,
+    getWsMessageTypes,
+    getWsSchemas,
+    getWsSchemasChannelMessage,
+    getWsSchemasError,
+    getWsSchemasTypingIndicator,
+  };
 };
 export type GetWsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getNotifyChatServiceAPI>["getWs"]>>>;
+export type GetWsMessageTypesResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getNotifyChatServiceAPI>["getWsMessageTypes"]>>
+>;
+export type GetWsSchemasResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getNotifyChatServiceAPI>["getWsSchemas"]>>
+>;
+export type GetWsSchemasChannelMessageResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getNotifyChatServiceAPI>["getWsSchemasChannelMessage"]>>
+>;
+export type GetWsSchemasErrorResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getNotifyChatServiceAPI>["getWsSchemasError"]>>
+>;
+export type GetWsSchemasTypingIndicatorResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getNotifyChatServiceAPI>["getWsSchemasTypingIndicator"]>>
+>;
+
+// Re-export generated types with cleaner names for easier use
+export type WebSocketMessage = ChatServiceInternalModelsWebSocketMessage;
+export type ChannelMessageData = ChatServiceInternalModelsChannelMessageData;
+export type TypingIndicatorData = ChatServiceInternalModelsTypingIndicatorData;
+export type ErrorData = ChatServiceInternalModelsErrorData;
+export type ChannelJoinData = ChatServiceInternalModelsChannelJoinData;
+export type ChannelLeaveData = ChatServiceInternalModelsChannelLeaveData;
+export type ConnectionData = ChatServiceInternalModelsConnectionData;
+export type PingPongData = ChatServiceInternalModelsPingPongData;
+export type UserStatusData = ChatServiceInternalModelsUserStatusData;
+export type MemberJoinLeaveData = ChatServiceInternalModelsMemberJoinLeaveData;
+export type WebSocketMessageType = ChatServiceInternalModelsWebSocketMessageType;
+
+// Message type enum for easier use
+export const MessageType = {
+  CONNECT: "connection.connect" as const,
+  DISCONNECT: "connection.disconnect" as const,
+  PING: "connection.ping" as const,
+  PONG: "connection.pong" as const,
+  CHANNEL_JOIN: "channel.join" as const,
+  CHANNEL_LEAVE: "channel.leave" as const,
+  CHANNEL_MESSAGE: "channel.message" as const,
+  CHANNEL_TYPING: "channel.typing" as const,
+  CHANNEL_STOP_TYPING: "channel.stop_typing" as const,
+  MEMBER_JOIN: "channel.member.join" as const,
+  MEMBER_LEAVE: "channel.member.leave" as const,
+  USER_STATUS: "user.status" as const,
+  USER_NOTIFICATION: "user.notification" as const,
+  ERROR: "error" as const,
+} as const;
+
+export type MessageTypeValues = (typeof MessageType)[keyof typeof MessageType];
+
+// Re-export WebSocket client types
+export { ConnectionState, TypeSafeWebSocketClient };
+export type { WebSocketClientConfig, WebSocketEventListeners };
+
+// Type-safe message creators
+export const createWebSocketMessage = <T>(type: MessageTypeValues, data: T, userId?: string): WebSocketMessage => ({
+  id: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+  type: type as any,
+  data,
+  timestamp: Date.now(),
+  user_id: userId || "",
+});
+
+// Type guards for message types
+export const isChannelMessage = (msg: WebSocketMessage): msg is WebSocketMessage & { data: ChannelMessageData } =>
+  msg.type === MessageType.CHANNEL_MESSAGE;
+
+export const isTypingIndicator = (msg: WebSocketMessage): msg is WebSocketMessage & { data: TypingIndicatorData } =>
+  msg.type === MessageType.CHANNEL_TYPING || msg.type === MessageType.CHANNEL_STOP_TYPING;
+
+export const isErrorMessage = (msg: WebSocketMessage): msg is WebSocketMessage & { data: ErrorData } =>
+  msg.type === MessageType.ERROR;
+
+export const isChannelJoin = (msg: WebSocketMessage): msg is WebSocketMessage & { data: ChannelJoinData } =>
+  msg.type === MessageType.CHANNEL_JOIN;
+
+export const isChannelLeave = (msg: WebSocketMessage): msg is WebSocketMessage & { data: ChannelLeaveData } =>
+  msg.type === MessageType.CHANNEL_LEAVE;

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"chat-service/internal/models"
 	"chat-service/internal/websocket"
 	"log/slog"
 	"net/http"
@@ -139,6 +140,8 @@ func (e *ValidationError) Error() string {
 // @Failure 400 {object} map[string]interface{} "Bad request - missing or invalid userId parameter"
 // @Router /ws [get]
 func (h *WSHandler) HandleWebSocket(c *gin.Context) {
+	// This handler uses WebSocket message types defined in models package
+	// See models.WebSocketMessage and related data structures for message schemas
 	startTime := time.Now()
 	clientIP := c.ClientIP()
 	userAgent := c.GetHeader("User-Agent")
