@@ -7,12 +7,13 @@
  */
 
 // WebSocket Type-Safe Client
-import { MessageType, WsBaseMessage } from '../types/wsTypes';
-import { ConnectionState, createWebSocketClient } from '../wsMutator';
+import { TypeSafeWebSocketClient, ConnectionState, WebSocketClientConfig, WebSocketEventListeners } from '../wsMutator';
+import { MessageType, WsBaseMessage, ChannelMessageData, TypingIndicatorData, ErrorData } from '../types/wsTypes';
 
 // Re-export types for convenience
-export { ConnectionState, MessageType };
-export type { WsBaseMessage };
+export { MessageType, ConnectionState, WebSocketClientConfig, WebSocketEventListeners };
+export type { WsBaseMessage, ChannelMessageData, TypingIndicatorData, ErrorData };
+import { createWebSocketClient } from '../wsMutator';
 export interface ChatServiceInternalModelsChannel {
   created_at?: string;
   deleted_at?: GormDeletedAt;
@@ -151,6 +152,8 @@ export interface GormDeletedAt {
  */
 export type WebSocketMessageType = typeof WebSocketMessageType[keyof typeof WebSocketMessageType];
 
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const WebSocketMessageType = {
   connectionconnect: 'connection.connect',
   connectiondisconnect: 'connection.disconnect',
@@ -314,6 +317,6 @@ const getWs = (
     },
       options);
     }
-
+  
 return {getWs}};
 export type GetWsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getNotifyChatServiceAPI>['getWs']>>>
