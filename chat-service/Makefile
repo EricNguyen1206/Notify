@@ -141,7 +141,7 @@ migrate-seed: migrate-up seed-db
 # Database reset (use with caution)
 db-reset:
 	@echo "Resetting database..."
-	@docker exec -it $$(docker ps -q -f name=postgres) psql -U postgres -d postgres -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+	@docker exec -it notify-chat-db psql -U postgres -d postgres -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
 	@make migrate-seed
 
 # Help target

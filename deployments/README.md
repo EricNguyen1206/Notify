@@ -10,6 +10,95 @@ This directory contains all the deployment configurations for the Notify Chat Ap
 - At least 4GB of available RAM
 - Ports 80, 3000, 8080, 5432, 6379 available
 
+## Frontend-Backend Connectivity
+
+### Environment Configuration
+
+The application uses environment variables to configure frontend-backend connectivity:
+
+- **Production (via Nginx proxy)**: `NEXT_PUBLIC_API_URL=http://localhost/api`
+- **Development (direct access)**: `NEXT_PUBLIC_API_URL=http://localhost:8080`
+
+### Configuration Files
+
+1. **`.env`** - Production configuration using Nginx proxy
+2. **`.env.development`** - Development configuration with direct backend access
+3. **`.env.example`** - Template for environment variables
+
+### Troubleshooting Connectivity Issues
+
+If you encounter frontend-backend connectivity issues:
+
+1. **Check environment variables**:
+
+   ```bash
+   docker compose exec frontend printenv | grep NEXT_PUBLIC
+   ```
+
+2. **Test connectivity**:
+
+   ```bash
+   make docker-test
+   # or manually:
+   cd deployments/docker && ./test-connection.sh
+   ```
+
+3. **Test authentication**:
+
+   ```bash
+   make docker-test-auth
+   # or manually:
+   cd deployments/docker && ./test-auth.sh
+   ```
+
+4. **View logs**:
+
+   ```bash
+   make docker-logs
+   ```
+
+5. **Check container status**:
+   ```bash
+   make status
+   ```
+
+### Common Issues
+
+#### **CORS Errors**
+
+If you see CORS errors in the browser console:
+
+1. **Verify allowed origins**:
+
+   ```bash
+   docker compose exec app printenv | grep ALLOWED_ORIGINS
+   ```
+
+2. **Check CORS configuration**: See `deployments/CORS_FIX.md` for detailed troubleshooting
+
+3. **Test CORS manually**:
+   ```bash
+   curl -X OPTIONS http://localhost/api/auth/login \
+     -H "Origin: http://localhost" \
+     -H "Access-Control-Request-Method: POST"
+   ```
+
+The frontend includes debug logging in development mode to help identify configuration issues.
+
+### Default Test Credentials
+
+After running database seeding (`make migrate-seed`), you can use these credentials to test authentication:
+
+- **Email**: `admin@notify.com`
+- **Password**: `123456`
+
+Additional test users are also created:
+
+- `test@notify.com` / `123456`
+- `alice@notify.com` / `123456`
+- `bob@notify.com` / `123456`
+- `charlie@notify.com` / `123456`
+
 ### 1. Clone and Navigate
 
 ```bash

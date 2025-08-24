@@ -9,7 +9,7 @@ import { toast } from "react-toastify";
 
 const LoginEmailForm = () => {
   const [email, setEmail] = useState("admin@notify.com");
-  const [password, setPassword] = useState("admin123");
+  const [password, setPassword] = useState("123456");
   const router = useRouter();
   const { setUser, setIsAuthenticated, setToken } = useAuthStore();
 

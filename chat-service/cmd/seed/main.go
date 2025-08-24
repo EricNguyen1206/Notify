@@ -28,14 +28,7 @@ func main() {
 		log.Fatal("Failed to connect to database:", err)
 	}
 
-	// Connect to Redis
-	redisClient, err := database.NewRedisConnection(cfg.Redis.URI)
-	if err != nil {
-		log.Fatal("Failed to connect to Redis:", err)
-	}
-	defer redisClient.Close()
-
-	slog.Info("Database and Redis connections established")
+	slog.Info("Database connection established")
 
 	// Initialize repositories
 	userRepo := postgres.NewUserRepository(db)
@@ -48,7 +41,7 @@ func main() {
 	slog.Info("Creating initial users...")
 
 	// Create admin user
-	adminPassword, _ := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
+	adminPassword, _ := bcrypt.GenerateFromPassword([]byte("123456"), bcrypt.DefaultCost)
 	adminUser := &models.User{
 		Username: "admin",
 		Email:    "admin@notify.com",
@@ -67,10 +60,10 @@ func main() {
 		email    string
 		password string
 	}{
-		{"testuser", "test@notify.com", "test123"},
-		{"alice", "alice@notify.com", "alice123"},
-		{"bob", "bob@notify.com", "bob123"},
-		{"charlie", "charlie@notify.com", "charlie123"},
+		{"testuser", "test@notify.com", "123456"},
+		{"alice", "alice@notify.com", "123456"},
+		{"bob", "bob@notify.com", "123456"},
+		{"charlie", "charlie@notify.com", "123456"},
 	}
 
 	for _, userData := range testUsers {

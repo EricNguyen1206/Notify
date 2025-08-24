@@ -92,13 +92,21 @@ interface SocketState {
   clearTypingIndicator: (channelId: string, userId: string) => void;
 }
 
-// Default WebSocket configuration
+// Default WebSocket configuration with improved backoff strategy
 const DEFAULT_WS_CONFIG: WebSocketClientConfig = {
-  reconnectAttempts: 5,
+  reconnectAttempts: 8, // Increased from 5 to allow more attempts
   reconnectDelay: 1000,
+  maxReconnectDelay: 60000, // Cap at 1 minute instead of 30 seconds
   heartbeatInterval: 30000,
   connectionTimeout: 10000,
+  messageQueueLimit: 100,
+  messageCacheSize: 1000,
+  enableJitter: true,
 };
+
+// Global connection rate limiting
+let lastGlobalConnectionAttempt = 0;
+const GLOBAL_CONNECTION_RATE_LIMIT = 2000; // 2 seconds between any connection attempts
 
 export const useSocketStore = create<SocketState>((set, get) => ({
   // Initial state
@@ -143,11 +151,19 @@ export const useSocketStore = create<SocketState>((set, get) => ({
 
   // Connection actions
   connect: async (userId: string) => {
-    const { client, isConnected, isConnecting, config } = get();
+    const { client, isConnected, isConnecting, isReconnecting, config } = get();
+    const now = Date.now();
 
-    // Prevent multiple connections
-    if (isConnected() || isConnecting()) {
-      console.log("WebSocket already connected or connecting, skipping...");
+    // Global rate limiting check
+    if (now - lastGlobalConnectionAttempt < GLOBAL_CONNECTION_RATE_LIMIT) {
+      const waitTime = GLOBAL_CONNECTION_RATE_LIMIT - (now - lastGlobalConnectionAttempt);
+      console.log(`Global connection rate limited, waiting ${waitTime}ms`);
+      return;
+    }
+
+    // Enhanced connection state validation
+    if (isConnected() || isConnecting() || isReconnecting()) {
+      console.log(`WebSocket connection attempt skipped - current state: ${get().connectionState}`);
       return;
     }
 
@@ -157,14 +173,45 @@ export const useSocketStore = create<SocketState>((set, get) => ({
       return;
     }
 
-    // Clean up existing client
+    // Update global rate limiting timestamp
+    lastGlobalConnectionAttempt = now;
+
+    // Clean up existing client if it exists and is not in a valid state
     if (client) {
+      const clientConnected = client.isConnected();
+      if (clientConnected) {
+        console.log("Client already connected, skipping connection attempt");
+        return;
+      }
       console.log("Cleaning up existing client before creating new one");
       client.disconnect();
       set({ client: null, error: null });
     }
 
     try {
+      const baseWsUrl = process.env.NEXT_PUBLIC_SOCKET_URL ?? "ws://localhost:8080/api/v1";
+
+      // If an existing client is present, attempt to reuse it based on its state
+      if (client) {
+        const state = client.getConnectionState();
+        if (
+          state === ConnectionState.CONNECTED ||
+          state === ConnectionState.CONNECTING ||
+          state === ConnectionState.RECONNECTING
+        ) {
+          console.log("Existing client is active or connecting; skipping new connection");
+          return;
+        }
+        // For DISCONNECTED/ERROR, reuse the client instance and reconnect
+        console.log("Reusing existing client instance; reconnecting...");
+        set({ connectionState: ConnectionState.CONNECTING, error: null });
+        get().setupEventListeners();
+        await client.connect(`${baseWsUrl}/ws`, { userId });
+        const clientState = client.getConnectionState();
+        if (get().connectionState !== clientState) set({ connectionState: clientState });
+        return;
+      }
+
       console.log("Creating new TypeSafeWebSocketClient for userId:", userId);
 
       // Create new client with configuration
@@ -181,8 +228,14 @@ export const useSocketStore = create<SocketState>((set, get) => ({
       get().setupEventListeners();
 
       // Connect to WebSocket
-      const baseWsUrl = process.env.NEXT_PUBLIC_SOCKET_URL ?? "ws://localhost:8080/api/v1";
       await newClient.connect(`${baseWsUrl}/ws`, { userId });
+
+      // Manually sync state after connection attempt
+      const clientState = newClient.getConnectionState();
+      if (get().connectionState !== clientState) {
+        console.log(`Syncing connection state: store=${get().connectionState} -> client=${clientState}`);
+        set({ connectionState: clientState });
+      }
     } catch (error) {
       console.error("Failed to create or connect WebSocket:", error);
       set({
@@ -203,25 +256,16 @@ export const useSocketStore = create<SocketState>((set, get) => ({
 
     // Set up event listeners using the proper WebSocketEventListeners interface
     client.setEventListeners({
-      // Connection state changes
-      onConnectionStateChange: (state: ConnectionState) => {
-        console.log("Connection state changed:", state);
-        set({ connectionState: state });
-      },
-
       // Connection events
       onConnect: () => {
-        console.log("WebSocket connected successfully");
         set({ error: null, connectionState: ConnectionState.CONNECTED });
       },
 
       onDisconnect: () => {
-        console.info("WebSocket disconnected");
         set({ connectionState: ConnectionState.DISCONNECTED });
       },
 
       onError: (error) => {
-        console.error("WebSocket error:", error);
         set({
           error: {
             code: "WEBSOCKET_ERROR",
@@ -232,12 +276,19 @@ export const useSocketStore = create<SocketState>((set, get) => ({
         });
       },
 
+      onConnectionStateChange: (state) => {
+        // Mirror client's internal connection state to the store to avoid duplicate connection attempts
+        set({ connectionState: state });
+      },
+
       // Message handling
       onMessage: (message: WebSocketMessage) => {
-        console.info("WebSocket message received:", message);
-        set((state) => ({
-          messages: [...state.messages, message],
-        }));
+        set((state) => {
+          const max = state.config.messageCacheSize ?? 1000;
+          const next = [...state.messages, message];
+          if (next.length > max) next.splice(0, next.length - max);
+          return { messages: next };
+        });
       },
 
       // Channel message handling
@@ -473,10 +524,14 @@ export const useSocketStore = create<SocketState>((set, get) => ({
       pendingChannelId: switchState.pendingChannelId,
     });
 
-    // Prevent rapid successive calls (debounce with 100ms)
+    // Enhanced debouncing with longer delay to prevent rapid switches
     const timeSinceLastSwitch = timestamp - switchState.lastSwitchTime;
-    if (switchState.isProcessing || timeSinceLastSwitch < 100) {
-      console.log(`[${timestamp}] Debouncing channel switch (${timeSinceLastSwitch}ms since last)`);
+    const debounceDelay = 200; // Increased from 100ms to 200ms
+
+    if (switchState.isProcessing || timeSinceLastSwitch < debounceDelay) {
+      console.log(
+        `[${timestamp}] Debouncing channel switch (${timeSinceLastSwitch}ms since last, need ${debounceDelay}ms)`
+      );
 
       // Update pending channel if it's different
       if (switchState.pendingChannelId !== newChannelId) {
@@ -487,14 +542,24 @@ export const useSocketStore = create<SocketState>((set, get) => ({
           },
         }));
 
-        // Schedule the pending switch
+        // Clear any existing pending timeout
+        if (switchState.pendingChannelId !== null) {
+          console.log(`[${timestamp}] Clearing previous pending switch`);
+        }
+
+        // Schedule the pending switch with longer delay
         setTimeout(() => {
           const currentState = get();
-          if (currentState._channelSwitchState.pendingChannelId === newChannelId) {
+          const currentSwitchState = currentState._channelSwitchState;
+
+          // Only execute if this is still the pending channel and we're not processing
+          if (currentSwitchState.pendingChannelId === newChannelId && !currentSwitchState.isProcessing) {
             console.log(`[${Date.now()}] Executing pending channel switch to:`, newChannelId);
             get().switchChannel(newChannelId);
+          } else {
+            console.log(`[${Date.now()}] Skipping pending switch - state changed`);
           }
-        }, 150);
+        }, debounceDelay + 50); // Additional buffer
       }
       return;
     }
@@ -569,31 +634,31 @@ export const useSocketStore = create<SocketState>((set, get) => ({
 
   disconnect: () => {
     const { client } = get();
+    if (!client) return;
 
-    if (client) {
-      console.log("Disconnecting WebSocket");
+    console.log("Disconnecting WebSocket");
 
+    // Prevent further auto-reconnects and tear down cleanly
+    try {
       // Leave all channels before disconnecting
       get().leaveAllChannels();
+    } catch {}
 
-      // Clear channel store state
+    // Clear channel store state
+    try {
       const channelStore = useChannelStore.getState();
       channelStore.clearJoinedChannels();
-      // Add window confirm to block reload and test disconnect
-      const confirm = window.confirm("Are you sure you want to leave?");
-      if (!confirm) {
-        return;
-      }
-      client.disconnect();
-      set({
-        client: null,
-        error: null,
-        connectionState: ConnectionState.DISCONNECTED,
-        messages: [],
-        typingUsers: {},
-        connectedUsers: {},
-      });
-    }
+    } catch {}
+
+    client.disconnect();
+    set({
+      client: null,
+      error: null,
+      connectionState: ConnectionState.DISCONNECTED,
+      messages: [],
+      typingUsers: {},
+      connectedUsers: {},
+    });
   },
 
   // Utility functions

@@ -1,15 +1,15 @@
 import { useGetChannels } from "@/services/endpoints/channels/channels";
 import { EnhancedChannel, useChannelStore } from "@/store/useChannelStore";
 import { useSocketStore } from "@/store/useSocketStore";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 
 /**
  * Hook for managing channel search functionality
  */
 export const useChannelSearch = () => {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const clearSearch = () => setSearchQuery('');
+  const clearSearch = () => setSearchQuery("");
 
   return {
     searchQuery,
@@ -21,18 +21,23 @@ export const useChannelSearch = () => {
 /**
  * Transforms API channel data to EnhancedChannel format
  */
-const transformChannelData = (channels: any[], type: 'group' | 'direct'): EnhancedChannel[] => {
-  return channels?.map((ch) => ({
-    id: ch.id ?? 0,
-    name: ch.name,
-    ownerId: ch.ownerId,
-    createdAt: new Date(),
-    type: type,
-    avatar: ch.avatar || "",
-    lastActivity: new Date(),
-    unreadCount: 0,
-    members: [],
-  } as EnhancedChannel)) ?? [];
+const transformChannelData = (channels: any[], type: "group" | "direct"): EnhancedChannel[] => {
+  return (
+    channels?.map(
+      (ch) =>
+        ({
+          id: ch.id ?? 0,
+          name: ch.name,
+          ownerId: ch.ownerId,
+          createdAt: new Date(),
+          type: type,
+          avatar: ch.avatar || "",
+          lastActivity: new Date(),
+          unreadCount: 0,
+          members: [],
+        }) as EnhancedChannel
+    ) ?? []
+  );
 };
 
 /**
@@ -46,20 +51,14 @@ export const useChannelData = () => {
     data: channelsData,
     isLoading: isChannelsLoading,
     error: channelsError,
-    refetch: refetchChannels
+    refetch: refetchChannels,
   } = useGetChannels();
 
   // Transform and set channel data when it changes
   useEffect(() => {
     if (channelsData?.data) {
-      const groupChannels = transformChannelData(
-        channelsData.data.group || [],
-        'group'
-      );
-      const directChannels = transformChannelData(
-        channelsData.data.direct || [],
-        'direct'
-      );
+      const groupChannels = transformChannelData(channelsData.data.group || [], "group");
+      const directChannels = transformChannelData(channelsData.data.direct || [], "direct");
 
       setGroupChannels(groupChannels);
       setDirectChannels(directChannels);
@@ -82,17 +81,13 @@ export const useChannelData = () => {
 export const useChannelFiltering = (searchQuery: string) => {
   const { groupChannels, directChannels } = useChannelStore();
 
-  const filteredChannels = useMemo(() =>
-    groupChannels.filter(chan =>
-      chan.name.toLowerCase().includes(searchQuery.toLowerCase())
-    ),
+  const filteredChannels = useMemo(
+    () => groupChannels.filter((chan) => chan.name.toLowerCase().includes(searchQuery.toLowerCase())),
     [groupChannels, searchQuery]
   );
 
-  const filteredDirectMessages = useMemo(() =>
-    directChannels.filter(chat =>
-      chat.name.toLowerCase().includes(searchQuery.toLowerCase())
-    ),
+  const filteredDirectMessages = useMemo(
+    () => directChannels.filter((chat) => chat.name.toLowerCase().includes(searchQuery.toLowerCase())),
     [directChannels, searchQuery]
   );
 
@@ -107,33 +102,59 @@ export const useChannelFiltering = (searchQuery: string) => {
  * This ensures the connection is established only once
  */
 export const useWebSocketConnection = (userId: number | null) => {
-  const {
-    connect,
-    disconnect,
-    isConnected,
-    isConnecting,
-    isReconnecting,
-    connectionState,
-    error,
-    client
-  } = useSocketStore();
+  const { connect, disconnect, isConnected, isConnecting, isReconnecting, connectionState, error, client } =
+    useSocketStore();
+
+  // Use ref to track if component is mounted to prevent state updates after unmount
+  const isMountedRef = useRef(true);
+  const connectionAttemptedRef = useRef(false);
 
   useEffect(() => {
-    if (userId && !isConnected() && !isConnecting()) {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    // Only attempt connection once per userId and if component is mounted
+    if (
+      userId &&
+      !isConnected() &&
+      !isConnecting() &&
+      !isReconnecting() &&
+      !connectionAttemptedRef.current &&
+      isMountedRef.current
+    ) {
+      connectionAttemptedRef.current = true;
+      console.log("Initiating WebSocket connection for user:", userId);
+
       // Convert userId to string for the new API
       connect(String(userId)).catch((err) => {
-        console.error('Failed to connect WebSocket:', err);
+        console.error("Failed to connect WebSocket:", err);
+        if (isMountedRef.current) {
+          connectionAttemptedRef.current = false; // Allow retry on error
+        }
       });
     }
 
-    // Cleanup on unmount or when userId changes
+    // Reset connection attempt flag when userId changes
+    if (!userId) {
+      connectionAttemptedRef.current = false;
+    }
+  }, [userId]); // Remove connection state functions from dependencies to prevent loops
+
+  // Separate cleanup effect that only runs on unmount
+  useEffect(() => {
     return () => {
-      // Only disconnect if we're changing users, not on every render
+      // Only disconnect if we're unmounting and there's no userId
+      // This prevents disconnection during normal navigation
       if (!userId) {
+        console.log("Component unmounting without userId, disconnecting WebSocket");
         disconnect();
       }
     };
-  }, [userId, connect, disconnect, isConnected, isConnecting]);
+  }, []); // Empty dependency array - only runs on mount/unmount
 
   return {
     isConnected: isConnected(),
@@ -189,14 +210,14 @@ export const channelUtils = {
    */
   getChannelById: (channelId: number): EnhancedChannel | null => {
     const { groupChannels, directChannels } = useChannelStore.getState();
-    return [...groupChannels, ...directChannels].find(ch => ch.id === channelId) || null;
+    return [...groupChannels, ...directChannels].find((ch) => ch.id === channelId) || null;
   },
 
   /**
    * Format channel name for display
    */
   formatChannelName: (channel: EnhancedChannel): string => {
-    return channel.type === 'group' ? `#${channel.name}` : channel.name;
+    return channel.type === "group" ? `#${channel.name}` : channel.name;
   },
 
   /**

@@ -78,7 +78,14 @@ export interface WebSocketEventListeners {
   onConnectionStateChange?: (state: ConnectionState) => void;
 }
 
-// Enhanced WebSocket client class
+// Circuit breaker states for connection management
+enum CircuitBreakerState {
+  CLOSED = "closed", // Normal operation
+  OPEN = "open", // Failing, stop attempts
+  HALF_OPEN = "half_open", // Testing if service recovered
+}
+
+// Enhanced WebSocket client class with circuit breaker pattern
 export class TypeSafeWebSocketClient {
   private ws: WebSocket | null = null;
   private connectionState: ConnectionState = ConnectionState.DISCONNECTED;
@@ -91,6 +98,19 @@ export class TypeSafeWebSocketClient {
   private messageQueueLimit: number;
   private messageCacheSize: number;
   private enableJitter: boolean;
+
+  // Circuit breaker properties
+  private circuitBreakerState: CircuitBreakerState = CircuitBreakerState.CLOSED;
+  private failureCount = 0;
+  private lastFailureTime = 0;
+  private circuitBreakerTimeout = 300000; // 5 minutes before trying again
+  private failureThreshold = 5; // Number of failures before opening circuit
+
+  // Connection management flags
+  private intentionalDisconnect = false; // Flag to track intentional disconnects
+  private lastConnectionAttempt = 0; // Timestamp of last connection attempt
+  private connectionRateLimit = 1000; // Minimum time between connection attempts (1 second)
+  private autoReconnect = true; // Gate auto-reconnect triggers from visibility/network events
 
   // Timers
   private heartbeatTimer: NodeJS.Timeout | null = null;
@@ -107,6 +127,12 @@ export class TypeSafeWebSocketClient {
   private url = "";
   private params: Record<string, any> = {};
   private isPageVisible = true;
+
+  // Bound global event handlers for cleanup
+  private visibilityChangeHandler?: () => void;
+  private beforeUnloadHandler?: () => void;
+  private onlineHandler?: () => void;
+  private offlineHandler?: () => void;
 
   constructor(config: WebSocketClientConfig = {}) {
     this.maxReconnectAttempts = config.reconnectAttempts ?? 5;
@@ -126,47 +152,112 @@ export class TypeSafeWebSocketClient {
   // Page visibility and network monitoring setup
   private setupPageVisibilityHandling(): void {
     if (typeof document !== "undefined") {
-      document.addEventListener("visibilitychange", () => {
+      this.visibilityChangeHandler = () => {
         this.isPageVisible = document.visibilityState === "visible";
-
         if (this.isPageVisible) {
           this.handlePageVisible();
         } else {
           this.handlePageHidden();
         }
-      });
+      };
+      document.addEventListener("visibilitychange", this.visibilityChangeHandler);
     }
 
     if (typeof window !== "undefined") {
-      window.addEventListener("beforeunload", () => {
+      this.beforeUnloadHandler = () => {
         this.disconnect();
-      });
+      };
+      window.addEventListener("beforeunload", this.beforeUnloadHandler);
+    }
+  }
+
+  private teardownPageVisibilityHandling(): void {
+    if (typeof document !== "undefined" && this.visibilityChangeHandler) {
+      document.removeEventListener("visibilitychange", this.visibilityChangeHandler);
+      this.visibilityChangeHandler = undefined;
+    }
+    if (typeof window !== "undefined" && this.beforeUnloadHandler) {
+      window.removeEventListener("beforeunload", this.beforeUnloadHandler);
+      this.beforeUnloadHandler = undefined;
     }
   }
 
   private setupNetworkMonitoring(): void {
     if (typeof window !== "undefined") {
-      window.addEventListener("online", () => {
+      this.onlineHandler = () => {
         console.log("Network came back online");
-        if (this.connectionState !== ConnectionState.CONNECTED) {
-          this.connect(this.url, this.params);
+        if (!this.autoReconnect) {
+          console.log("Auto-reconnect disabled; ignoring online event");
+          return;
         }
-      });
+        // Only attempt reconnection if we're disconnected or in error and not already trying to connect
+        if (this.connectionState === ConnectionState.DISCONNECTED || this.connectionState === ConnectionState.ERROR) {
+          if (!this.reconnectTimer) {
+            console.log("Network online, attempting reconnection...");
+            this.connect(this.url, this.params).catch((error) => {
+              console.error("Failed to reconnect on network online:", error);
+            });
+          } else {
+            console.log("Network online, but reconnection already in progress");
+          }
+        } else {
+          console.log("Network online, but connection is already active or connecting");
+        }
+      };
 
-      window.addEventListener("offline", () => {
+      this.offlineHandler = () => {
         console.log("Network went offline");
-        this.setConnectionState(ConnectionState.DISCONNECTED);
-      });
+        // Stop heartbeat to conserve resources
+        this.stopHeartbeat();
+      };
+
+      window.addEventListener("online", this.onlineHandler);
+      window.addEventListener("offline", this.offlineHandler);
+    }
+  }
+
+  private teardownNetworkMonitoring(): void {
+    if (typeof window !== "undefined") {
+      if (this.onlineHandler) {
+        window.removeEventListener("online", this.onlineHandler);
+        this.onlineHandler = undefined;
+      }
+      if (this.offlineHandler) {
+        window.removeEventListener("offline", this.offlineHandler);
+        this.offlineHandler = undefined;
+      }
     }
   }
 
   private handlePageVisible(): void {
+    if (!this.autoReconnect) {
+      console.log("Auto-reconnect disabled; ignoring visibility event");
+      return;
+    }
+    // Only attempt reconnection if we're actually disconnected and not already trying to connect
     if (this.connectionState === ConnectionState.DISCONNECTED || this.connectionState === ConnectionState.ERROR) {
-      console.log("Page became visible, reconnecting...");
-      this.connect(this.url, this.params);
+      if (!this.reconnectTimer) {
+        console.log("Page became visible, reconnecting...");
+        this.connect(this.url, this.params).catch((error) => {
+          console.error("Failed to reconnect on page visible:", error);
+        });
+      } else {
+        console.log("Page became visible, but reconnection already in progress");
+      }
     } else if (this.connectionState === ConnectionState.CONNECTED) {
-      // Resume heartbeat if connection is still alive
-      this.startHeartbeat();
+      // Verify the connection is actually alive before resuming heartbeat
+      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+        console.log("Page became visible, resuming heartbeat for active connection");
+        this.startHeartbeat();
+      } else {
+        console.log("Page became visible, connection appears dead, reconnecting...");
+        this.attemptReconnect();
+      }
+    } else if (
+      this.connectionState === ConnectionState.CONNECTING ||
+      this.connectionState === ConnectionState.RECONNECTING
+    ) {
+      console.log("Page became visible, connection attempt already in progress");
     }
   }
 
@@ -182,8 +273,37 @@ export class TypeSafeWebSocketClient {
 
   // Connection management
   async connect(url: string, params?: Record<string, any>): Promise<void> {
+    const now = Date.now();
+
+    // Rate limiting: prevent too frequent connection attempts
+    if (now - this.lastConnectionAttempt < this.connectionRateLimit) {
+      const waitTime = this.connectionRateLimit - (now - this.lastConnectionAttempt);
+      console.log(`Connection rate limited, waiting ${waitTime}ms`);
+      return Promise.resolve();
+    }
+
+    // Prevent multiple simultaneous connection attempts
+    if (
+      this.connectionState === ConnectionState.CONNECTING ||
+      this.connectionState === ConnectionState.RECONNECTING ||
+      (this.connectionState === ConnectionState.CONNECTED && this.ws?.readyState === WebSocket.OPEN)
+    ) {
+      console.log(`Connection attempt skipped - current state: ${this.connectionState}`);
+      return Promise.resolve();
+    }
+
+    // Update last connection attempt timestamp
+    this.lastConnectionAttempt = now;
+
+    // Clear any existing reconnection timer to prevent conflicts
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+
     this.url = url;
     this.params = params || {};
+    this.autoReconnect = true; // Allow auto-reconnect for this session
 
     return new Promise((resolve, reject) => {
       try {
@@ -207,6 +327,7 @@ export class TypeSafeWebSocketClient {
           this.setConnectionState(ConnectionState.CONNECTED);
           this.reconnectAttempts = 0;
           this.connectionStartTime = Date.now();
+          this.recordConnectionSuccess(); // Reset circuit breaker
           this.startHeartbeat();
           this.flushMessageQueue(); // Send any queued messages
           this.listeners.onConnect?.();
@@ -215,20 +336,38 @@ export class TypeSafeWebSocketClient {
 
         this.ws.onerror = (error) => {
           this.clearConnectionTimer();
+          this.recordConnectionFailure(); // Record failure for circuit breaker
           this.setConnectionState(ConnectionState.ERROR);
           this.listeners.onError?.(error);
           reject(error);
         };
 
-        this.ws.onclose = () => {
+        this.ws.onclose = (event) => {
           this.clearConnectionTimer();
           this.stopHeartbeat();
 
+          console.log("WebSocket closed", {
+            code: event.code,
+            reason: event.reason,
+            wasClean: event.wasClean,
+            intentional: this.intentionalDisconnect,
+          });
+
           if (this.connectionState === ConnectionState.CONNECTED) {
-            this.setConnectionState(ConnectionState.DISCONNECTED);
+            // this.setConnectionState(ConnectionState.DISCONNECTED);
             this.listeners.onDisconnect?.();
-            this.attemptReconnect();
+
+            // Only attempt reconnection if disconnect was not intentional and autoReconnect is enabled
+            if (!this.intentionalDisconnect && this.autoReconnect) {
+              console.log("Unintentional disconnect detected, attempting reconnection");
+              this.attemptReconnect();
+            } else {
+              console.log("Reconnect suppressed (intentional disconnect or autoReconnect disabled)");
+            }
           }
+
+          // Reset the intentional disconnect flag for next connection
+          this.intentionalDisconnect = false;
         };
 
         this.ws.onmessage = (event) => {
@@ -242,10 +381,19 @@ export class TypeSafeWebSocketClient {
   }
 
   disconnect(): void {
+    console.log("Intentional disconnect initiated");
+    this.intentionalDisconnect = true; // Mark as intentional
+    this.autoReconnect = false; // Disable auto-reconnect triggers
     this.clearTimers();
     this.setConnectionState(ConnectionState.DISCONNECTED);
-    this.ws?.close();
-    this.ws = null;
+    // Remove global listeners before closing
+    this.teardownPageVisibilityHandling();
+    this.teardownNetworkMonitoring();
+    try {
+      this.ws?.close();
+    } finally {
+      this.ws = null;
+    }
   }
 
   // Message sending methods with queuing support
@@ -321,6 +469,14 @@ export class TypeSafeWebSocketClient {
 
   private setConnectionState(state: ConnectionState): void {
     if (this.connectionState !== state) {
+      const timestamp = new Date().toISOString();
+      console.log(`[${timestamp}] Connection state changed: ${this.connectionState} -> ${state}`, {
+        url: this.url,
+        reconnectAttempts: this.reconnectAttempts,
+        circuitBreakerState: this.circuitBreakerState,
+        intentionalDisconnect: this.intentionalDisconnect,
+        wsReadyState: this.ws?.readyState,
+      });
       this.connectionState = state;
       this.listeners.onConnectionStateChange?.(state);
     }
@@ -478,11 +634,76 @@ export class TypeSafeWebSocketClient {
     }
   }
 
-  // Reconnection logic with exponential backoff and jitter
+  // Circuit breaker logic
+  private canAttemptConnection(): boolean {
+    const now = Date.now();
+
+    switch (this.circuitBreakerState) {
+      case CircuitBreakerState.CLOSED:
+        return true;
+
+      case CircuitBreakerState.OPEN:
+        // Check if enough time has passed to try again
+        if (now - this.lastFailureTime >= this.circuitBreakerTimeout) {
+          console.log("Circuit breaker: Moving to HALF_OPEN state");
+          this.circuitBreakerState = CircuitBreakerState.HALF_OPEN;
+          return true;
+        }
+        console.log(
+          `Circuit breaker: OPEN - waiting ${Math.round((this.circuitBreakerTimeout - (now - this.lastFailureTime)) / 1000)}s before retry`
+        );
+        return false;
+
+      case CircuitBreakerState.HALF_OPEN:
+        return true;
+
+      default:
+        return false;
+    }
+  }
+
+  private recordConnectionFailure(): void {
+    this.failureCount++;
+    this.lastFailureTime = Date.now();
+
+    if (this.failureCount >= this.failureThreshold) {
+      console.log(`Circuit breaker: Opening circuit after ${this.failureCount} failures`);
+      this.circuitBreakerState = CircuitBreakerState.OPEN;
+    }
+  }
+
+  private recordConnectionSuccess(): void {
+    console.log("Circuit breaker: Connection successful, resetting");
+    this.failureCount = 0;
+    this.circuitBreakerState = CircuitBreakerState.CLOSED;
+  }
+
+  // Reconnection logic with exponential backoff, jitter, and circuit breaker
   private attemptReconnect(): void {
+    // Prevent multiple reconnection attempts
+    if (this.reconnectTimer) {
+      console.log("Reconnection already in progress, skipping");
+      return;
+    }
+
+    // Check circuit breaker
+    if (!this.canAttemptConnection()) {
+      console.log("Circuit breaker preventing reconnection attempt");
+      this.setConnectionState(ConnectionState.ERROR);
+      return;
+    }
+
+    // Check if we've exceeded max attempts
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
       console.error("Max reconnection attempts reached");
+      this.recordConnectionFailure();
       this.setConnectionState(ConnectionState.ERROR);
+      return;
+    }
+
+    // Don't attempt reconnection if we're already connected or connecting
+    if (this.connectionState === ConnectionState.CONNECTED || this.connectionState === ConnectionState.CONNECTING) {
+      console.log("Skipping reconnection - already connected or connecting");
       return;
     }
 
@@ -498,13 +719,24 @@ export class TypeSafeWebSocketClient {
     console.log(`Reconnecting in ${finalDelay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
 
     this.reconnectTimer = setTimeout(async () => {
+      // Clear the timer reference
+      this.reconnectTimer = null;
+
       try {
         console.log(`Attempting reconnection ${this.reconnectAttempts}/${this.maxReconnectAttempts}`);
         await this.connect(this.url, this.params);
         console.log("Reconnection successful");
+        // Success is handled in the onopen callback via recordConnectionSuccess()
       } catch (error) {
         console.error("Reconnection failed:", error);
-        this.attemptReconnect();
+        this.recordConnectionFailure(); // Record failure for circuit breaker
+
+        // Only attempt another reconnection if we haven't exceeded max attempts and circuit breaker allows
+        if (this.reconnectAttempts < this.maxReconnectAttempts && this.canAttemptConnection()) {
+          this.attemptReconnect();
+        } else {
+          this.setConnectionState(ConnectionState.ERROR);
+        }
       }
     }, finalDelay);
   }
