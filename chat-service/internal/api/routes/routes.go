@@ -41,6 +41,7 @@ import (
 type Router struct {
 	engine         *gin.Engine
 	wsHandler      *handlers.WSHandler
+	wsDocsHandler  *handlers.WebSocketDocsHandler
 	channelHandler *handlers.ChannelHandler
 	messageHandler *handlers.ChatHandler
 	userHandler    *handlers.UserHandler
@@ -81,6 +82,7 @@ func NewRouter(
 	return &Router{
 		engine:         engine,
 		wsHandler:      wsHandler,
+		wsDocsHandler:  handlers.NewWebSocketDocsHandler(),
 		channelHandler: handlers.NewChannelHandler(channelService),
 		messageHandler: handlers.NewChatHandler(channelService, userService, chatRepo, hub),
 		userHandler:    handlers.NewUserHandler(userService, redisClient),
@@ -114,6 +116,16 @@ func (r *Router) SetupRoutes() {
 		// r.rateLimitMW.WebSocketRateLimit(5, time.Minute), // 5 connections per minute
 		r.wsHandler.HandleWebSocket,
 	)
+
+	// WebSocket documentation endpoints (public for schema access)
+	wsGroup := api.Group("/ws")
+	{
+		wsGroup.GET("/schemas", r.wsDocsHandler.GetWebSocketSchemas)
+		wsGroup.GET("/message-types", r.wsDocsHandler.GetWebSocketMessageTypes)
+		wsGroup.GET("/schemas/channel-message", r.wsDocsHandler.GetChannelMessageSchema)
+		wsGroup.GET("/schemas/typing-indicator", r.wsDocsHandler.GetTypingIndicatorSchema)
+		wsGroup.GET("/schemas/error", r.wsDocsHandler.GetErrorDataSchema)
+	}
 
 	// Authenticated routes
 	auth := api.Group("/")

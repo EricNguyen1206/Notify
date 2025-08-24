@@ -708,6 +708,121 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/ws/message-types": {
+            "get": {
+                "description": "Returns the enum values for all valid WebSocket message types",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "websocket"
+                ],
+                "summary": "Get WebSocket message type enum",
+                "responses": {
+                    "200": {
+                        "description": "WebSocket message type enum",
+                        "schema": {
+                            "$ref": "#/definitions/chat-service_internal_models.WebSocketMessageType"
+                        }
+                    }
+                }
+            }
+        },
+        "/ws/schemas": {
+            "get": {
+                "description": "Returns the schemas for all WebSocket message types used in the real-time messaging API.\nThis endpoint is for documentation purposes only and provides TypeScript-compatible schemas.\n\n## Available Message Types:\n- **connection.connect** - Connection established (server -\u003e client)\n- **connection.disconnect** - Connection closed (server -\u003e client)\n- **connection.ping** - Ping message (client -\u003e server)\n- **connection.pong** - Pong response (server -\u003e client)\n- **channel.join** - Join a channel (client -\u003e server)\n- **channel.leave** - Leave a channel (client -\u003e server)\n- **channel.message** - Send/receive channel message (bidirectional)\n- **channel.typing** - Typing indicator (client -\u003e server)\n- **channel.stop_typing** - Stop typing indicator (client -\u003e server)\n- **channel.member.join** - Member joined channel (server -\u003e client)\n- **channel.member.leave** - Member left channel (server -\u003e client)\n- **user.status** - User status update (server -\u003e client)\n- **user.notification** - User notification (server -\u003e client)\n- **error** - Error message (server -\u003e client)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "websocket"
+                ],
+                "summary": "Get WebSocket message schemas",
+                "responses": {
+                    "200": {
+                        "description": "WebSocket message schemas and examples",
+                        "schema": {
+                            "$ref": "#/definitions/chat-service_internal_models.WebSocketExampleMessages"
+                        }
+                    }
+                }
+            }
+        },
+        "/ws/schemas/channel-message": {
+            "get": {
+                "description": "Returns the schema for channel message data structure",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "websocket"
+                ],
+                "summary": "Get channel message data schema",
+                "responses": {
+                    "200": {
+                        "description": "Channel message data schema",
+                        "schema": {
+                            "$ref": "#/definitions/chat-service_internal_models.ChannelMessageData"
+                        }
+                    }
+                }
+            }
+        },
+        "/ws/schemas/error": {
+            "get": {
+                "description": "Returns the schema for error data structure",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "websocket"
+                ],
+                "summary": "Get error data schema",
+                "responses": {
+                    "200": {
+                        "description": "Error data schema",
+                        "schema": {
+                            "$ref": "#/definitions/chat-service_internal_models.ErrorData"
+                        }
+                    }
+                }
+            }
+        },
+        "/ws/schemas/typing-indicator": {
+            "get": {
+                "description": "Returns the schema for typing indicator data structure",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "websocket"
+                ],
+                "summary": "Get typing indicator data schema",
+                "responses": {
+                    "200": {
+                        "description": "Typing indicator data schema",
+                        "schema": {
+                            "$ref": "#/definitions/chat-service_internal_models.TypingIndicatorData"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -770,6 +885,40 @@ const docTemplate = `{
                 },
                 "type": {
                     "type": "string"
+                }
+            }
+        },
+        "chat-service_internal_models.ChannelMessageData": {
+            "description": "Data structure for channel.message message type",
+            "type": "object",
+            "required": [
+                "channel_id"
+            ],
+            "properties": {
+                "channel_id": {
+                    "description": "ID of the channel where message is sent",
+                    "type": "string",
+                    "example": "channel-123"
+                },
+                "fileName": {
+                    "description": "Optional file name for attachments",
+                    "type": "string",
+                    "example": "document.pdf"
+                },
+                "reply_to_id": {
+                    "description": "Optional ID of message being replied to",
+                    "type": "string",
+                    "example": "msg-456"
+                },
+                "text": {
+                    "description": "Text content of the message",
+                    "type": "string",
+                    "example": "Hello world!"
+                },
+                "url": {
+                    "description": "Optional URL attachment",
+                    "type": "string",
+                    "example": "https://example.com/image.jpg"
                 }
             }
         },
@@ -859,6 +1008,31 @@ const docTemplate = `{
                 }
             }
         },
+        "chat-service_internal_models.ErrorData": {
+            "description": "Data structure for error message type",
+            "type": "object",
+            "required": [
+                "code",
+                "message"
+            ],
+            "properties": {
+                "code": {
+                    "description": "Error code",
+                    "type": "string",
+                    "example": "INVALID_MESSAGE"
+                },
+                "details": {
+                    "description": "Optional additional error details",
+                    "type": "string",
+                    "example": "Field 'channel_id' is required"
+                },
+                "message": {
+                    "description": "Human-readable error message",
+                    "type": "string",
+                    "example": "Invalid message format"
+                }
+            }
+        },
         "chat-service_internal_models.ErrorResponse": {
             "type": "object",
             "properties": {
@@ -938,6 +1112,25 @@ const docTemplate = `{
                 }
             }
         },
+        "chat-service_internal_models.TypingIndicatorData": {
+            "description": "Data structure for channel.typing and channel.stop_typing message types",
+            "type": "object",
+            "required": [
+                "channel_id"
+            ],
+            "properties": {
+                "channel_id": {
+                    "description": "ID of the channel where typing is happening",
+                    "type": "string",
+                    "example": "channel-123"
+                },
+                "is_typing": {
+                    "description": "Whether user is currently typing",
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
         "chat-service_internal_models.User": {
             "type": "object",
             "properties": {
@@ -1009,6 +1202,162 @@ const docTemplate = `{
                 },
                 "username": {
                     "type": "string"
+                }
+            }
+        },
+        "chat-service_internal_models.WebSocketExampleMessages": {
+            "description": "Example WebSocket messages for different message types",
+            "type": "object",
+            "properties": {
+                "channel_join_example": {
+                    "description": "Example channel join message",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/chat-service_internal_models.WebSocketMessage"
+                        }
+                    ]
+                },
+                "channel_message_example": {
+                    "description": "Example channel message",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/chat-service_internal_models.WebSocketMessage"
+                        }
+                    ]
+                },
+                "error_example": {
+                    "description": "Example error message",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/chat-service_internal_models.WebSocketMessage"
+                        }
+                    ]
+                },
+                "typing_indicator_example": {
+                    "description": "Example typing indicator",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/chat-service_internal_models.WebSocketMessage"
+                        }
+                    ]
+                }
+            }
+        },
+        "chat-service_internal_models.WebSocketMessage": {
+            "description": "Base WebSocket message structure that all messages follow",
+            "type": "object",
+            "required": [
+                "data",
+                "id",
+                "timestamp",
+                "type"
+            ],
+            "properties": {
+                "data": {
+                    "description": "Message payload data - structure depends on message type"
+                },
+                "id": {
+                    "description": "Unique message identifier",
+                    "type": "string",
+                    "example": "msg-123"
+                },
+                "timestamp": {
+                    "description": "Unix timestamp when message was created",
+                    "type": "integer",
+                    "example": 1234567890
+                },
+                "type": {
+                    "description": "Message type enum - see WebSocketMessageType for valid values",
+                    "type": "string",
+                    "enum": [
+                        "connection.connect",
+                        "connection.disconnect",
+                        "connection.ping",
+                        "connection.pong",
+                        "channel.join",
+                        "channel.leave",
+                        "channel.message",
+                        "channel.typing",
+                        "channel.stop_typing",
+                        "channel.member.join",
+                        "channel.member.leave",
+                        "user.status",
+                        "user.notification",
+                        "error"
+                    ],
+                    "example": "channel.message"
+                },
+                "user_id": {
+                    "description": "ID of the user who sent the message",
+                    "type": "string",
+                    "example": "user-456"
+                }
+            }
+        },
+        "chat-service_internal_models.WebSocketMessageType": {
+            "description": "Enum of valid WebSocket message types",
+            "type": "object",
+            "properties": {
+                "channel.join": {
+                    "description": "Channel events",
+                    "type": "string",
+                    "example": "channel.join"
+                },
+                "channel.leave": {
+                    "type": "string",
+                    "example": "channel.leave"
+                },
+                "channel.member.join": {
+                    "description": "Channel member events",
+                    "type": "string",
+                    "example": "channel.member.join"
+                },
+                "channel.member.leave": {
+                    "type": "string",
+                    "example": "channel.member.leave"
+                },
+                "channel.message": {
+                    "type": "string",
+                    "example": "channel.message"
+                },
+                "channel.stop_typing": {
+                    "type": "string",
+                    "example": "channel.stop_typing"
+                },
+                "channel.typing": {
+                    "type": "string",
+                    "example": "channel.typing"
+                },
+                "connection.connect": {
+                    "description": "Connection events",
+                    "type": "string",
+                    "example": "connection.connect"
+                },
+                "connection.disconnect": {
+                    "type": "string",
+                    "example": "connection.disconnect"
+                },
+                "connection.ping": {
+                    "type": "string",
+                    "example": "connection.ping"
+                },
+                "connection.pong": {
+                    "type": "string",
+                    "example": "connection.pong"
+                },
+                "error": {
+                    "description": "Error events",
+                    "type": "string",
+                    "example": "error"
+                },
+                "user.notification": {
+                    "type": "string",
+                    "example": "user.notification"
+                },
+                "user.status": {
+                    "description": "User events",
+                    "type": "string",
+                    "example": "user.status"
                 }
             }
         },
