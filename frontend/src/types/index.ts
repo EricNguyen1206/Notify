@@ -1,15 +1,9 @@
 export interface ServerType {
-  id?: number | string | null; // null is for direct messages server
-  name?: string;
-  owner?: UserType; // userId
-  avatar?: string | null;
-  created?: string;
-  members?: UserType[];
-  categories?: CategoryType[];
-  channels?: ChannelType[];
-  totalMembers?: number;
-  totalCategories?: number;
-  totalChannels?: number;
+  id: string;
+  name: string;
+  icon?: string;
+  ownerId: string;
+  channels: ChannelType[];
 }
 
 export interface UserType {
@@ -24,9 +18,9 @@ export interface UserType {
 }
 
 export interface DirectMessageChatType {
-  id?: string;
+  id?: number;
   user: UserType | any;
-  userId?: string;
+  userId?: number;
   friendId?: string;
   text: string;
   type?: string;
@@ -35,27 +29,15 @@ export interface DirectMessageChatType {
   fileName?: string;
   sended?: string;
 }
-
-export interface CategoryType {
-  id?: string;
-  serverId?: string;
-  name?: string;
-  channels?: ChannelType[];
-  created?: string;
-}
-
 export interface ChannelType {
-  id?: string;
-  categoryId?: string;
-  name?: string;
-  type?: "text" | "voice";
-  created?: string;
+  id: string;
+  name: string;
+  type: 'text' | 'voice';
 }
 
 export interface ChannelMessageChatType {
   id?: string;
   user: UserType | any;
-  serverId?: string;
   channelId?: string;
   text: string;
   type?: string;

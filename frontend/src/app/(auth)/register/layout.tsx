@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Discord Clone | Register",
+  title: "Notify | Register",
   description: "Developed by minhtrifit",
 };
 

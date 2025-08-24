@@ -1,77 +1,135 @@
-"use server";
+'use server'
 
-import { auth, signIn, signOut } from "@/lib/auth";
-import { createNewUser, getUserByEmail } from "./action.api";
-import { UserType } from "@/types";
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { createClientForServer } from './supabase/server'
+import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
 
-export const handleRegister = async (prevState: any, form: FormData) => {
+export async function handleRegister(prevState: any, formData: FormData) {
   try {
-    const { email, name, password, adminCode, agree }: any =
-      Object.fromEntries(form);
+    const supabase = await createClientForServer()
+    
+    const email = formData.get('email') as string
+    const password = formData.get('password') as string
+    const name = formData.get('name') as string
+    const adminCode = formData.get('adminCode') as string
+    const agree = formData.get('agree') as string
 
-    if (agree === undefined) return { error: "Please agree terms & policy" };
-
-    const res = await getUserByEmail(email);
-    const { user } = res;
-
-    if (user !== null) return { error: "Email is already exist" };
-
-    if (adminCode !== "" && adminCode !== process.env.NEXT_ADMIN_CODE)
-      return { error: "Admin code incorrect" };
-
-    const newUser: UserType = {
-      name: name,
-      email: email,
-      password: password,
-      avatar: null,
-      provider: "email",
-      isAdmin: adminCode === process.env.NEXT_ADMIN_CODE ? true : false,
-    };
-
-    const res2 = await createNewUser(newUser);
-    const { message } = res2;
-
-    if (message !== "Create user successfully") {
-      return { error: message };
+    // Validate required fields
+    if (!email || !password || !name) {
+      return {
+        error: 'Please fill in all required fields'
+      }
     }
 
-    return { message: "Register account successfully" };
-  } catch (err: any) {
-    console.log(err);
-
-    throw err;
-  }
-};
-
-export const handleEmailLogin = async (prevState: any, form: FormData) => {
-  try {
-    const { email, password } = Object.fromEntries(form);
-    await signIn("credentials", { email, password });
-  } catch (err: any) {
-    if (err.message.includes("CredentialsSignin")) {
-      return { error: "Invalid username or password" };
+    // Check if user agreed to terms
+    if (!agree) {
+      return {
+        error: 'You must agree to the terms of service to continue'
+      }
     }
 
-    throw err;
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      return {
+        error: 'Please enter a valid email address'
+      }
+    }
+
+    // Validate password strength
+    if (password.length < 6) {
+      return {
+        error: 'Password must be at least 6 characters long'
+      }
+    }
+
+    // Check if admin code is provided and valid (optional)
+    let isAdmin = false
+    if (adminCode) {
+      // You can implement admin code validation here
+      // For now, we'll just check if it matches a specific code
+      if (adminCode === process.env.ADMIN_CODE) {
+        isAdmin = true
+      }
+    }
+
+    // Create user account
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          name,
+          is_admin: isAdmin
+        }
+      }
+    })
+
+    if (error) {
+      return {
+        error: error.message
+      }
+    }
+
+    // If user was created successfully
+    if (data.user) {
+      return {
+        message: 'Register account successfully'
+      }
+    }
+
+    return {
+      error: 'An unexpected error occurred'
+    }
+
+  } catch (error) {
+    console.error('Registration error:', error)
+    return {
+      error: 'An unexpected error occurred during registration'
+    }
   }
-};
+}
 
-export const handleGithubLogin = async () => {
-  await signIn("github");
-};
+export async function handleLogin(prevState: any, formData: FormData) {
+  try {
+    const supabase = await createClientForServer()
+    
+    const email = formData.get('email') as string
+    const password = formData.get('password') as string
 
-export const getUserSession = async () => {
-  const session = await auth();
-  return session;
-};
+    // Validate required fields
+    if (!email || !password) {
+      return {
+        error: 'Please fill in all required fields'
+      }
+    }
 
-export const handleSignOut = async () => {
-  await signOut();
-};
+    // Attempt to sign in
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    })
 
-export const handleLeaveServerAction = async () => {
-  revalidatePath("/dashboard/friends");
-  redirect("/dashboard/friends");
-};
+    if (error) {
+      return {
+        error: error.message
+      }
+    }
+
+    // If login successful, redirect to dashboard
+    if (data.user) {
+      revalidatePath('/', 'layout')
+      redirect('/')
+    }
+
+    return {
+      error: 'An unexpected error occurred'
+    }
+
+  } catch (error) {
+    console.error('Login error:', error)
+    return {
+      error: 'An unexpected error occurred during login'
+    }
+  }
+}

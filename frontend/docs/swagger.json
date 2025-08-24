@@ -1,0 +1,1163 @@
+{
+    "openapi": "3.0.1",
+    "info": {
+        "title": "Notify Chat Service API",
+        "description": "A RESTful API service for chat functionality",
+        "contact": {},
+        "version": "1.0"
+    },
+    "servers": [
+        {
+            "url": "//localhost:8080/api/v1"
+        }
+    ],
+    "paths": {
+        "/auth/login": {
+            "post": {
+                "tags": [
+                    "auth"
+                ],
+                "summary": "User login",
+                "description": "Authenticate user with email and password",
+                "requestBody": {
+                    "description": "User login credentials",
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/chat-service_internal_models.LoginRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Login successful - returns JWT token and user data",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/chat-service_internal_models.LoginResponse"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - invalid input data",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/chat-service_internal_models.ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - invalid credentials",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/chat-service_internal_models.ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/chat-service_internal_models.ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "x-codegen-request-body-name": "request"
+            }
+        },
+        "/auth/register": {
+            "post": {
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Register a new user",
+                "description": "Register a new user with username, email, and password",
+                "requestBody": {
+                    "description": "User registration data",
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/chat-service_internal_models.RegisterRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "201": {
+                        "description": "User created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/chat-service_internal_models.UserResponse"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - invalid input data",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/chat-service_internal_models.ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/chat-service_internal_models.ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "x-codegen-request-body-name": "request"
+            }
+        },
+        "/channels/": {
+            "get": {
+                "tags": [
+                    "channels"
+                ],
+                "summary": "Get user's channels",
+                "description": "Get all channels that the current user is a member of, separated by type",
+                "responses": {
+                    "200": {
+                        "description": "Object with direct and group channel lists",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/chat-service_internal_models.UserChannelsResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - invalid or missing token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/chat-service_internal_models.ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/chat-service_internal_models.ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "channels"
+                ],
+                "summary": "Create a new channel",
+                "description": "Create a new channel with the specified name",
+                "requestBody": {
+                    "description": "Channel creation data",
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "additionalProperties": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Channel created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/chat-service_internal_models.ChannelResponse"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - invalid input data",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/chat-service_internal_models.ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - invalid or missing token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/chat-service_internal_models.ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/chat-service_internal_models.ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "x-codegen-request-body-name": "request"
+            }
+        },
+        "/channels/{id}": {
+            "get": {
+                "tags": [
+                    "channels"
+                ],
+                "summary": "Get channel by ID",
+                "description": "Get detailed information about a specific channel",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Channel ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Channel details retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/chat-service_internal_models.ChannelDetailResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - invalid or missing token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/chat-service_internal_models.ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Channel not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/chat-service_internal_models.ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "channels"
+                ],
+                "summary": "Update channel",
+                "description": "Update the name of an existing channel",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Channel ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "description": "Channel update data",
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "additionalProperties": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Channel updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - invalid input data",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/chat-service_internal_models.ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - invalid or missing token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/chat-service_internal_models.ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/chat-service_internal_models.ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "x-codegen-request-body-name": "request"
+            },
+            "delete": {
+                "tags": [
+                    "channels"
+                ],
+                "summary": "Delete channel",
+                "description": "Delete a channel (only channel owner can delete)",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Channel ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Channel deleted successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - invalid or missing token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/chat-service_internal_models.ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/chat-service_internal_models.ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/channels/{id}/user": {
+            "put": {
+                "tags": [
+                    "channels"
+                ],
+                "summary": "Leave channel",
+                "description": "Remove the current user from a channel",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Channel ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User left channel successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - invalid or missing token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/chat-service_internal_models.ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/chat-service_internal_models.ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "channels"
+                ],
+                "summary": "Add user to channel",
+                "description": "Add a user to a channel (only channel owner can add users)",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Channel ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "description": "User addition data",
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "additionalProperties": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "User added to channel successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - invalid input data",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/chat-service_internal_models.ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - invalid or missing token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/chat-service_internal_models.ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/chat-service_internal_models.ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "x-codegen-request-body-name": "request"
+            },
+            "delete": {
+                "tags": [
+                    "channels"
+                ],
+                "summary": "Remove user from channel",
+                "description": "Remove a user from a channel (only channel owner can remove users)",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Channel ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "description": "User removal data",
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "additionalProperties": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "User removed from channel successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - invalid input data",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/chat-service_internal_models.ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - invalid or missing token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/chat-service_internal_models.ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/chat-service_internal_models.ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "x-codegen-request-body-name": "request"
+            }
+        },
+        "/messages/channel/{id}": {
+            "get": {
+                "tags": [
+                    "chats"
+                ],
+                "summary": "Get chat messages in a channel",
+                "description": "Get all chat messages for a specific channel (paginated)",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Channel ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "description": "Page size",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "before",
+                        "in": "query",
+                        "description": "Cursor for infinite scroll (timestamp)",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated chat messages",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/chat-service_internal_models.PaginatedChatResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - invalid or missing token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/chat-service_internal_models.ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Channel not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/chat-service_internal_models.ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/chat-service_internal_models.ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/users/profile": {
+            "get": {
+                "tags": [
+                    "users"
+                ],
+                "summary": "Get user profile",
+                "description": "Get the current user's profile information",
+                "responses": {
+                    "200": {
+                        "description": "User profile retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/chat-service_internal_models.UserResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - invalid or missing token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/chat-service_internal_models.ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/chat-service_internal_models.ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/ws": {
+            "get": {
+                "tags": [
+                    "websocket"
+                ],
+                "summary": "WebSocket connection for real-time messaging",
+                "description": "Establish a WebSocket connection for real-time messaging with typed message support.\n\n## Message Types\nThe WebSocket API uses typed messages with the following enum values:\n\n### Connection Events\n- `connection.connect` - Connection established (server -> client)\n- `connection.disconnect` - Connection closed (server -> client)\n- `connection.ping` - Ping message (client -> server)\n- `connection.pong` - Pong response (server -> client)\n\n### Channel Events\n- `channel.join` - Join a channel (client -> server)\n- `channel.leave` - Leave a channel (client -> server)\n- `channel.message` - Send/receive channel message (bidirectional)\n- `channel.typing` - Typing indicator (client -> server)\n- `channel.stop_typing` - Stop typing indicator (client -> server)\n\n### Channel Member Events\n- `channel.member.join` - Member joined channel (server -> client)\n- `channel.member.leave` - Member left channel (server -> client)\n\n### User Events\n- `user.status` - User status update (server -> client)\n- `user.notification` - User notification (server -> client)\n\n### Error Events\n- `error` - Error message (server -> client)\n\n## Message Format\nAll messages follow this JSON structure:\n```json\n{\n\"id\": \"unique-message-id\",\n\"type\": \"message-type-enum\",\n\"data\": { /* type-specific data */ },\n\"timestamp\": 1234567890,\n\"user_id\": \"user-id\"\n}\n```\n\n## Example Messages\n\n### Join Channel\n```json\n{\n\"id\": \"msg-123\",\n\"type\": \"channel.join\",\n\"data\": { \"channel_id\": \"channel-123\" },\n\"timestamp\": 1234567890,\n\"user_id\": \"user-456\"\n}\n```\n\n### Send Message\n```json\n{\n\"id\": \"msg-456\",\n\"type\": \"channel.message\",\n\"data\": {\n\"channel_id\": \"channel-123\",\n\"text\": \"Hello world!\",\n\"url\": null,\n\"fileName\": null\n},\n\"timestamp\": 1234567890,\n\"user_id\": \"user-456\"\n}\n```\n\n### Error Response\n```json\n{\n\"id\": \"error-789\",\n\"type\": \"error\",\n\"data\": {\n\"code\": \"INVALID_MESSAGE\",\n\"message\": \"Invalid message format\"\n},\n\"timestamp\": 1234567890,\n\"user_id\": \"user-456\"\n}\n```",
+                "parameters": [
+                    {
+                        "name": "userId",
+                        "in": "query",
+                        "description": "User ID for WebSocket connection",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "101": {
+                        "description": "Switching Protocols - WebSocket connection established",
+                        "content": {}
+                    },
+                    "400": {
+                        "description": "Bad request - missing or invalid userId parameter",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": true
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "chat-service_internal_models.Channel": {
+                "type": "object",
+                "properties": {
+                    "created_at": {
+                        "type": "string"
+                    },
+                    "deleted_at": {
+                        "$ref": "#/components/schemas/gorm.DeletedAt"
+                    },
+                    "id": {
+                        "type": "integer"
+                    },
+                    "members": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/chat-service_internal_models.User"
+                        }
+                    },
+                    "name": {
+                        "type": "string",
+                        "description": "Name of the channel"
+                    },
+                    "ownerId": {
+                        "type": "integer",
+                        "description": "ID of the channel owner"
+                    },
+                    "type": {
+                        "type": "string",
+                        "description": "Type of channel, either 'direct' or 'group'"
+                    },
+                    "updated_at": {
+                        "type": "string"
+                    }
+                }
+            },
+            "chat-service_internal_models.ChannelDetailResponse": {
+                "type": "object",
+                "properties": {
+                    "createdAt": {
+                        "type": "string"
+                    },
+                    "id": {
+                        "type": "integer"
+                    },
+                    "members": {
+                        "type": "array",
+                        "description": "List of members in the channel",
+                        "items": {
+                            "$ref": "#/components/schemas/chat-service_internal_models.User"
+                        }
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "ownerId": {
+                        "type": "integer"
+                    },
+                    "type": {
+                        "type": "string"
+                    }
+                }
+            },
+            "chat-service_internal_models.ChannelResponse": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "ownerId": {
+                        "type": "integer"
+                    },
+                    "type": {
+                        "type": "string"
+                    }
+                }
+            },
+            "chat-service_internal_models.ChatResponse": {
+                "type": "object",
+                "properties": {
+                    "channelId": {
+                        "type": "integer",
+                        "description": "channel"
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "description": "timestamp of when the message was created"
+                    },
+                    "fileName": {
+                        "type": "string",
+                        "description": "optional file name for media"
+                    },
+                    "id": {
+                        "type": "integer"
+                    },
+                    "receiverId": {
+                        "type": "integer",
+                        "description": "Relate to type message"
+                    },
+                    "senderAvatar": {
+                        "type": "string",
+                        "description": "url string for avatar"
+                    },
+                    "senderId": {
+                        "type": "integer",
+                        "description": "ID of the user who sent the message"
+                    },
+                    "senderName": {
+                        "type": "string",
+                        "description": "Username of the sender"
+                    },
+                    "text": {
+                        "type": "string",
+                        "description": "free text message"
+                    },
+                    "type": {
+                        "type": "string",
+                        "description": "\"direct\" | \"group\""
+                    },
+                    "url": {
+                        "type": "string",
+                        "description": "optional URL for media"
+                    }
+                }
+            },
+            "chat-service_internal_models.DirectChannelResponse": {
+                "type": "object",
+                "properties": {
+                    "avatar": {
+                        "type": "string",
+                        "description": "Optional avatar for direct channels"
+                    },
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "ownerId": {
+                        "type": "integer"
+                    },
+                    "type": {
+                        "type": "string"
+                    }
+                }
+            },
+            "chat-service_internal_models.ErrorResponse": {
+                "type": "object",
+                "properties": {
+                    "code": {
+                        "type": "integer"
+                    },
+                    "details": {
+                        "type": "string"
+                    },
+                    "message": {
+                        "type": "string"
+                    }
+                }
+            },
+            "chat-service_internal_models.LoginRequest": {
+                "required": [
+                    "email",
+                    "password"
+                ],
+                "type": "object",
+                "properties": {
+                    "email": {
+                        "type": "string"
+                    },
+                    "password": {
+                        "type": "string"
+                    }
+                }
+            },
+            "chat-service_internal_models.LoginResponse": {
+                "type": "object",
+                "properties": {
+                    "token": {
+                        "type": "string"
+                    },
+                    "user": {
+                        "$ref": "#/components/schemas/chat-service_internal_models.UserResponse"
+                    }
+                }
+            },
+            "chat-service_internal_models.PaginatedChatResponse": {
+                "type": "object",
+                "properties": {
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/chat-service_internal_models.ChatResponse"
+                        }
+                    },
+                    "nextCursor": {
+                        "type": "integer"
+                    },
+                    "total": {
+                        "type": "integer"
+                    }
+                }
+            },
+            "chat-service_internal_models.RegisterRequest": {
+                "required": [
+                    "email",
+                    "password",
+                    "username"
+                ],
+                "type": "object",
+                "properties": {
+                    "email": {
+                        "type": "string"
+                    },
+                    "password": {
+                        "minLength": 6,
+                        "type": "string"
+                    },
+                    "username": {
+                        "maxLength": 50,
+                        "minLength": 3,
+                        "type": "string"
+                    }
+                }
+            },
+            "chat-service_internal_models.User": {
+                "type": "object",
+                "properties": {
+                    "avatar": {
+                        "type": "string",
+                        "description": "Avatar is optional and can be used to store a profile picture URL\nIt is not mandatory for the user to have an avatar."
+                    },
+                    "channels": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/chat-service_internal_models.Channel"
+                        }
+                    },
+                    "created_at": {
+                        "type": "string"
+                    },
+                    "deleted_at": {
+                        "$ref": "#/components/schemas/gorm.DeletedAt"
+                    },
+                    "email": {
+                        "type": "string",
+                        "description": "Unique email for the user"
+                    },
+                    "id": {
+                        "type": "integer"
+                    },
+                    "updated_at": {
+                        "type": "string"
+                    },
+                    "username": {
+                        "type": "string",
+                        "description": "Username for the user"
+                    }
+                }
+            },
+            "chat-service_internal_models.UserChannelsResponse": {
+                "type": "object",
+                "properties": {
+                    "direct": {
+                        "type": "array",
+                        "description": "List of channels of type 'direct'",
+                        "items": {
+                            "$ref": "#/components/schemas/chat-service_internal_models.DirectChannelResponse"
+                        }
+                    },
+                    "group": {
+                        "type": "array",
+                        "description": "List of channels of type 'group'",
+                        "items": {
+                            "$ref": "#/components/schemas/chat-service_internal_models.ChannelResponse"
+                        }
+                    }
+                }
+            },
+            "chat-service_internal_models.UserResponse": {
+                "type": "object",
+                "properties": {
+                    "avatar": {
+                        "type": "string"
+                    },
+                    "created_at": {
+                        "type": "string"
+                    },
+                    "email": {
+                        "type": "string"
+                    },
+                    "id": {
+                        "type": "integer"
+                    },
+                    "username": {
+                        "type": "string"
+                    }
+                }
+            },
+            "gorm.DeletedAt": {
+                "type": "object",
+                "properties": {
+                    "time": {
+                        "type": "string"
+                    },
+                    "valid": {
+                        "type": "boolean",
+                        "description": "Valid is true if Time is not NULL"
+                    }
+                }
+            }
+        },
+        "securitySchemes": {
+            "BearerAuth": {
+                "type": "apiKey",
+                "description": "Type \"Bearer\" followed by a space and JWT token.",
+                "name": "Authorization",
+                "in": "header"
+            }
+        }
+    },
+    "x-original-swagger-version": "2.0"
+}
