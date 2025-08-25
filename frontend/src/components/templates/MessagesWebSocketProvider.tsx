@@ -1,7 +1,7 @@
 "use client";
 
-import { useWebSocketConnection } from "@/app/messages/action";
 import { memo, useEffect } from "react";
+import { useSocketStore } from "@/store/useSocketStore";
 
 interface MessagesWebSocketProviderProps {
   userId: number;
@@ -9,17 +9,35 @@ interface MessagesWebSocketProviderProps {
 }
 
 function MessagesWebSocketProvider({ userId, children }: MessagesWebSocketProviderProps) {
-  // Always establish connection, but the useWebSocketConnection hook handles deduplication
-  const connectionState = useWebSocketConnection(userId);
+  const { connect, disconnect, isConnected, error, connectionState } = useSocketStore();
+
+  // Establish WebSocket connection
+  useEffect(() => {
+    const userIdString = userId.toString();
+
+    console.log("Establishing WebSocket connection for user:", userIdString);
+
+    connect(userIdString).catch((error: any) => {
+      console.error("Failed to establish WebSocket connection:", error);
+    });
+
+    // Cleanup on unmount
+    return () => {
+      console.log("Cleaning up WebSocket connection");
+      disconnect();
+    };
+  }, [userId, connect, disconnect]);
 
   // Log connection state changes for debugging
   useEffect(() => {
-    if (connectionState.isConnected) {
-      console.log("WebSocket connected for user:", userId);
-    } else if (connectionState.error) {
-      console.error("WebSocket connection error for user:", userId, connectionState.error);
+    console.log("WebSocket connection state changed:", connectionState);
+
+    if (isConnected()) {
+      console.log("✅ WebSocket connected successfully for user:", userId);
+    } else if (error) {
+      console.error("❌ WebSocket connection error for user:", userId, error);
     }
-  }, [connectionState.isConnected, connectionState.error, userId]);
+  }, [isConnected, error, connectionState, userId]);
 
   return <>{children}</>;
 }

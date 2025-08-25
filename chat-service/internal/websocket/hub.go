@@ -259,93 +259,12 @@ func (h *Hub) handleClientMessage(clientMsg *ClientMessage) {
 	}
 
 	switch message.Type {
-	case MessageTypeJoinChannel:
-		h.handleJoinChannel(client, message)
-	case MessageTypeLeaveChannel:
-		h.handleLeaveChannel(client, message)
 	case MessageTypeChannelMessage:
 		h.handleChannelMessage(client, message)
-	case MessageTypeTyping:
-		h.handleTyping(client, message)
-	case MessageTypeStopTyping:
-		h.handleStopTyping(client, message)
-	case MessageTypePing:
-		h.handlePing(client, message)
 	default:
 		slog.Warn("Unknown message type", "type", message.Type)
 		client.sendError("UNKNOWN_MESSAGE_TYPE", "Unknown message type")
 	}
-}
-
-func (h *Hub) handleJoinChannel(client *Client, message *Message) {
-	var data JoinChannelData
-	if err := h.mapToStruct(message.Data, &data); err != nil {
-		client.sendError("INVALID_DATA", "Invalid join channel data")
-		return
-	}
-
-	// Check if user can join channel (implement permission checks here)
-	canJoin, err := h.canUserJoinChannel(client.userID, data.ChannelID)
-	if err != nil {
-		slog.Error("Failed to check channel permissions", "error", err)
-		client.sendError("PERMISSION_ERROR", "Failed to check permissions")
-		return
-	}
-
-	if !canJoin {
-		client.sendError("PERMISSION_DENIED", "Permission denied to join channel")
-		return
-	}
-
-	// Add client to channel
-	h.addClientToChannel(client, data.ChannelID)
-
-	// Update Redis
-	if err := h.redisService.JoinChannel(h.ctx, client.userID, data.ChannelID); err != nil {
-		slog.Error("Failed to join channel in Redis", "error", err)
-		client.sendError("JOIN_FAILED", "Failed to join channel")
-		return
-	}
-
-	// Send success response
-	joinResponse := NewMessage(
-		fmt.Sprintf("join_%d", time.Now().UnixNano()),
-		MessageTypeJoinChannel,
-		client.userID,
-		map[string]interface{}{
-			"channel_id": data.ChannelID,
-			"status":     "joined",
-		},
-	)
-	client.SendMessage(joinResponse)
-}
-
-func (h *Hub) handleLeaveChannel(client *Client, message *Message) {
-	var data LeaveChannelData
-	if err := h.mapToStruct(message.Data, &data); err != nil {
-		client.sendError("INVALID_DATA", "Invalid leave channel data")
-		return
-	}
-
-	// Remove client from channel
-	h.removeClientFromChannel(client, data.ChannelID)
-
-	// Update Redis
-	if err := h.redisService.LeaveChannel(h.ctx, client.userID, data.ChannelID); err != nil {
-		slog.Error("Failed to leave channel in Redis", "error", err)
-	}
-
-	// Send success response
-	leaveResponse := NewMessage(
-		fmt.Sprintf("leave_%d", time.Now().UnixNano()),
-		MessageTypeLeaveChannel,
-		client.userID,
-		map[string]interface{}{
-			"channel_id": data.ChannelID,
-			"status":     "left",
-		},
-	)
-	client.SendMessage(leaveResponse)
 }
 
 func (h *Hub) handleChannelMessage(client *Client, message *Message) {
@@ -356,10 +275,10 @@ func (h *Hub) handleChannelMessage(client *Client, message *Message) {
 	}
 	slog.Info("Received channel message", "channelID", data.ChannelID, "userID", client.userID)
 
-	// Check if client is in channel
+	// Auto-assign client to channel if not already in it (simplified approach)
 	if !client.IsInChannel(data.ChannelID) {
-		client.sendError("NOT_IN_CHANNEL", "You are not in this channel")
-		return
+		h.addClientToChannel(client, data.ChannelID)
+		slog.Debug("Auto-assigned client to channel", "clientID", client.id, "channelID", data.ChannelID)
 	}
 
 	// Check rate limit
@@ -426,69 +345,6 @@ func (h *Hub) handleChannelMessage(client *Client, message *Message) {
 	}
 }
 
-func (h *Hub) handleTyping(client *Client, message *Message) {
-	var data TypingData
-	if err := h.mapToStruct(message.Data, &data); err != nil {
-		client.sendError("INVALID_DATA", "Invalid typing data")
-		return
-	}
-
-	// Check if client is in channel
-	if !client.IsInChannel(data.ChannelID) {
-		return
-	}
-
-	// Create typing message
-	typingMessage := NewMessage(
-		fmt.Sprintf("typing_%d", time.Now().UnixNano()),
-		MessageTypeTyping,
-		client.userID,
-		map[string]interface{}{
-			"channel_id": data.ChannelID,
-			"is_typing":  data.IsTyping,
-		},
-	)
-
-	// Broadcast to channel (excluding sender)
-	h.broadcastToChannelExcept(data.ChannelID, typingMessage, client)
-}
-
-func (h *Hub) handleStopTyping(client *Client, message *Message) {
-	var data TypingData
-	if err := h.mapToStruct(message.Data, &data); err != nil {
-		client.sendError("INVALID_DATA", "Invalid typing data")
-		return
-	}
-
-	// Check if client is in channel
-	if !client.IsInChannel(data.ChannelID) {
-		return
-	}
-
-	// Create typing message
-	typingMessage := NewMessage(
-		fmt.Sprintf("typing_%d", time.Now().UnixNano()),
-		MessageTypeStopTyping,
-		client.userID,
-		map[string]interface{}{
-			"channel_id": data.ChannelID,
-			"is_typing":  data.IsTyping,
-		},
-	)
-
-	// Broadcast to channel (excluding sender)
-	h.broadcastToChannelExcept(data.ChannelID, typingMessage, client)
-}
-
-func (h *Hub) handlePing(client *Client, message *Message) {
-	pongMessage := NewPongMessage(
-		fmt.Sprintf("pong_%d", time.Now().UnixNano()),
-		client.userID,
-		message.ID,
-	)
-	client.SendMessage(pongMessage)
-}
-
 func (h *Hub) addClientToChannel(client *Client, channelID string) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -529,22 +385,6 @@ func (h *Hub) broadcastToChannel(channelID string, message *Message) {
 		case client.send <- h.messageToBytes(message):
 		default:
 			h.unregisterClient(client)
-		}
-	}
-}
-
-func (h *Hub) broadcastToChannelExcept(channelID string, message *Message, exceptClient *Client) {
-	h.mu.RLock()
-	clients := h.channelClients[channelID]
-	h.mu.RUnlock()
-
-	for client := range clients {
-		if client != exceptClient {
-			select {
-			case client.send <- h.messageToBytes(message):
-			default:
-				h.unregisterClient(client)
-			}
 		}
 	}
 }
@@ -636,14 +476,6 @@ func (h *Hub) mapToStruct(data map[string]interface{}, dest interface{}) error {
 		return err
 	}
 	return json.Unmarshal(jsonBytes, dest)
-}
-
-func (h *Hub) canUserJoinChannel(userID, channelID string) (bool, error) {
-	// Implement your channel permission logic here
-	// For now, allow all users to join all channels
-	// TODO: Add proper permission checks based on userID and channelID
-	slog.Debug("Checking channel permissions", "userID", userID, "channelID", channelID)
-	return true, nil
 }
 
 // cleanupStaleConnections removes clients that have been inactive for too long

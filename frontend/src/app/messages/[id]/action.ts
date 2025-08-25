@@ -3,7 +3,7 @@
 import { useScreenDimensions } from "@/hooks/useScreenDimensions";
 import { useGetMessagesChannelId } from "@/services/endpoints/chats/chats";
 import { ChatServiceInternalModelsChatResponse } from "@/services/schemas";
-import { ConnectionState } from "@/services/websocket";
+import { ChatMessage } from "@/services/simpleWebSocket";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useChannelStore } from "@/store/useChannelStore";
 import { Message, useChatStore } from "@/store/useChatStore";
@@ -139,15 +139,14 @@ export const useFormState = () => {
   };
 };
 
-// Hook for managing message sending with typing indicators
+// Hook for managing message sending (simplified - no typing indicators)
 export const useMessageSending = (
   channelId: number | undefined,
   sessionUser: any,
   setFormData: (data: { message: string }) => void,
   scrollToBottom: () => void
 ) => {
-  const { sendMessage, sendTypingIndicator, isConnected, error } = useSocketStore();
-  const [isTyping, setIsTyping] = useState(false);
+  const { sendMessage, isConnected, error } = useSocketStore();
 
   // Handle sending messages
   const handleSendMessage = useCallback(
@@ -156,13 +155,6 @@ export const useMessageSending = (
         try {
           // Convert channelId to string for the new API
           sendMessage(String(channelId), message);
-
-          // Stop typing indicator when sending message
-          if (isTyping) {
-            sendTypingIndicator(String(channelId), false);
-            setIsTyping(false);
-          }
-
           setFormData({ message: "" });
           scrollToBottom();
         } catch (error) {
@@ -173,39 +165,22 @@ export const useMessageSending = (
         toast.warn("Not connected to chat server");
       }
     },
-    [sessionUser?.id, channelId, isConnected, sendMessage, sendTypingIndicator, isTyping, setFormData, scrollToBottom]
+    [sessionUser?.id, channelId, isConnected, sendMessage, setFormData, scrollToBottom]
   );
 
-  // Handle typing indicators
+  // Simplified typing handlers (no-op for now)
   const handleStartTyping = useCallback(() => {
-    if (channelId && isConnected() && !isTyping) {
-      sendTypingIndicator(String(channelId), true);
-      setIsTyping(true);
-    }
-  }, [channelId, isConnected, sendTypingIndicator, isTyping]);
+    // Typing indicators removed for simplicity
+  }, []);
 
   const handleStopTyping = useCallback(() => {
-    if (channelId && isConnected() && isTyping) {
-      sendTypingIndicator(String(channelId), false);
-      setIsTyping(false);
-    }
-  }, [channelId, isConnected, sendTypingIndicator, isTyping]);
-
-  // Auto-stop typing after 3 seconds of inactivity
-  useEffect(() => {
-    if (isTyping) {
-      const timer = setTimeout(() => {
-        handleStopTyping();
-      }, 3000);
-
-      return () => clearTimeout(timer);
-    }
-  }, [isTyping, handleStopTyping]);
+    // Typing indicators removed for simplicity
+  }, []);
 
   // Show error notifications
   useEffect(() => {
     if (error) {
-      toast.error(`WebSocket Error: ${error.message}`);
+      toast.error(`WebSocket Error: ${error}`);
     }
   }, [error]);
 
@@ -213,87 +188,78 @@ export const useMessageSending = (
     handleSendMessage,
     handleStartTyping,
     handleStopTyping,
-    isTyping,
+    isTyping: false, // Always false since we removed typing indicators
     isConnected: isConnected(),
     error,
   };
 };
 
-// Hook for managing WebSocket connection and channel operations
+// Hook for managing WebSocket connection and channel operations (simplified)
 export const useWebSocketChannelManagement = () => {
-  const {
-    client,
-    isConnected,
-    isConnecting,
-    isReconnecting,
-    connectionState,
-    switchChannel,
-    getTypingUsersInChannel,
-    error,
-  } = useSocketStore();
+  const { client, isConnected, connectionState, error, connect, disconnect, sendMessage } = useSocketStore();
 
   const { activeChannelId } = useChannelStore();
 
-  // Get channel state from channel store
-  const { getCurrentChannelId, isInChannel } = useChannelStore();
-
-  // Single ref to track the current processing state
-  const processingRef = useRef<{
-    lastActiveChannelId: number | null;
-    lastConnectionState: boolean;
-    isProcessing: boolean;
-  }>({
-    lastActiveChannelId: null,
-    lastConnectionState: false,
-    isProcessing: false,
-  });
-
-  // Simplified effect: when connected and activeChannelId changes, ensure we are in that channel
+  // Simple connection management - no complex channel joining/leaving
   useEffect(() => {
-    const isClientConnected = Boolean(client?.isConnected());
-    const isStoreConnected = connectionState === ConnectionState.CONNECTED;
-    if (!isClientConnected || !isStoreConnected) return;
-
-    const targetChannelId = activeChannelId ? String(activeChannelId) : null;
-    const currentChannelId = getCurrentChannelId();
-    if (currentChannelId === targetChannelId) return;
-
-    try {
-      switchChannel(targetChannelId);
-    } catch (error) {
-      console.error("Error during channel switch:", error);
+    if (activeChannelId) {
+      console.log("Active channel:", activeChannelId);
     }
-  }, [activeChannelId, connectionState]);
-
-  // Separate cleanup effect for component unmount only
-  useEffect(() => {
-    return () => {
-      // Leave current channel when unmounting this page
-      const currentChannel = getCurrentChannelId();
-      if (currentChannel && isConnected()) {
-        const { leaveChannel } = useSocketStore.getState();
-        leaveChannel(currentChannel);
-      }
-    };
-  }, []);
-
-  // Get typing users for current channel
-  const typingUsers = activeChannelId ? getTypingUsersInChannel(String(activeChannelId)) : [];
-
-  // Check if we're currently in the target channel
-  const isInCurrentChannel = activeChannelId ? isInChannel(String(activeChannelId)) : false;
+  }, [activeChannelId]);
 
   return {
     client,
     isConnected: isConnected(),
-    isConnecting: isConnecting(),
-    isReconnecting: isReconnecting(),
+    isConnecting: connectionState === "connecting",
+    isReconnecting: false, // Simplified - no separate reconnecting state
     connectionState,
-    isInCurrentChannel,
-    currentChannel: getCurrentChannelId(),
-    typingUsers,
+    isInCurrentChannel: true, // Simplified - always consider in current channel
+    currentChannel: String(activeChannelId),
+    typingUsers: [], // Simplified - no typing indicators
     error,
+    sendMessage,
+    connect,
+    disconnect,
   };
+};
+
+// Hook for handling incoming WebSocket messages
+export const useWebSocketMessageHandler = (channelId: number | undefined) => {
+  const { upsertMessageToChannel } = useChatStore();
+
+  useEffect(() => {
+    const handleChatMessage = (event: CustomEvent<ChatMessage>) => {
+      const chatMessage = event.detail;
+
+      // Only process messages for the current channel
+      if (channelId && chatMessage.channelId === channelId) {
+        // Transform ChatMessage to Message format
+        const message: Message = {
+          id: chatMessage.id,
+          channelId: chatMessage.channelId,
+          senderId: chatMessage.senderId,
+          senderName: chatMessage.senderName,
+          senderAvatar: chatMessage.senderAvatar,
+          text: chatMessage.text,
+          createdAt: chatMessage.createdAt,
+          type: chatMessage.type,
+          url: chatMessage.url,
+          fileName: chatMessage.fileName,
+        };
+
+        // Add message to chat store
+        upsertMessageToChannel(String(channelId), message);
+        console.log("Added incoming message to channel:", channelId, message);
+      }
+    };
+
+    // Listen for chat messages from WebSocket
+    window.addEventListener("chat-message", handleChatMessage as EventListener);
+
+    return () => {
+      window.removeEventListener("chat-message", handleChatMessage as EventListener);
+    };
+  }, [channelId, upsertMessageToChannel]);
 };
 
 // Main hook that combines all other hooks
@@ -308,6 +274,9 @@ export const useChatPage = () => {
   const { containerRef, mainRef, scrollToBottom, scrollToBottomOnUpdate } = useScrollBehavior();
   const { formData, setFormData } = useFormState();
   const messageSending = useMessageSending(channelId, sessionUser, setFormData, scrollToBottom);
+
+  // Handle incoming WebSocket messages
+  useWebSocketMessageHandler(channelId);
 
   // Scroll effects
   useEffect(() => {

@@ -7,13 +7,8 @@
  */
 
 // WebSocket Type-Safe Client
-import {
-  TypeSafeWebSocketClient,
-  ConnectionState,
-  WebSocketClientConfig,
-  WebSocketEventListeners,
-  createWebSocketClient,
-} from "../wsMutator";
+import { SimpleWebSocketClient, ConnectionState } from "../simpleWsClient";
+import { isWebSocketMessage } from "../types/wsTypes";
 /**
  * Data structure for channel.message message type
  */
@@ -328,16 +323,18 @@ All messages follow this JSON structure:
 ```
  * @summary WebSocket connection for real-time messaging
  */
-  const getWs = (params: GetWsParams, options?: SecondParameter<typeof createWebSocketClient>) => {
-    return createWebSocketClient({ url: `/ws`, method: "GET", params }, options);
+  const getWs = (params: GetWsParams) => {
+    // Simplified WebSocket connection - not using complex client
+    return { url: `/ws`, method: "GET", params };
   };
 
   /**
    * Returns the enum values for all valid WebSocket message types
    * @summary Get WebSocket message type enum
    */
-  const getWsMessageTypes = (options?: SecondParameter<typeof createWebSocketClient>) => {
-    return createWebSocketClient({ url: `/ws/message-types`, method: "GET" }, options);
+  const getWsMessageTypes = () => {
+    // Simplified - return static message types
+    return { url: `/ws/message-types`, method: "GET" };
   };
 
   /**
@@ -361,32 +358,36 @@ This endpoint is for documentation purposes only and provides TypeScript-compati
 - **error** - Error message (server -> client)
  * @summary Get WebSocket message schemas
  */
-  const getWsSchemas = (options?: SecondParameter<typeof createWebSocketClient>) => {
-    return createWebSocketClient({ url: `/ws/schemas`, method: "GET" }, options);
+  const getWsSchemas = () => {
+    // Simplified - return static schemas
+    return { url: `/ws/schemas`, method: "GET" };
   };
 
   /**
    * Returns the schema for channel message data structure
    * @summary Get channel message data schema
    */
-  const getWsSchemasChannelMessage = (options?: SecondParameter<typeof createWebSocketClient>) => {
-    return createWebSocketClient({ url: `/ws/schemas/channel-message`, method: "GET" }, options);
+  const getWsSchemasChannelMessage = () => {
+    // Simplified - return static schema
+    return { url: `/ws/schemas/channel-message`, method: "GET" };
   };
 
   /**
    * Returns the schema for error data structure
    * @summary Get error data schema
    */
-  const getWsSchemasError = (options?: SecondParameter<typeof createWebSocketClient>) => {
-    return createWebSocketClient({ url: `/ws/schemas/error`, method: "GET" }, options);
+  const getWsSchemasError = () => {
+    // Simplified - return static schema
+    return { url: `/ws/schemas/error`, method: "GET" };
   };
 
   /**
    * Returns the schema for typing indicator data structure
    * @summary Get typing indicator data schema
    */
-  const getWsSchemasTypingIndicator = (options?: SecondParameter<typeof createWebSocketClient>) => {
-    return createWebSocketClient({ url: `/ws/schemas/typing-indicator`, method: "GET" }, options);
+  const getWsSchemasTypingIndicator = () => {
+    // Simplified - return static schema
+    return { url: `/ws/schemas/typing-indicator`, method: "GET" };
   };
 
   return {
@@ -449,8 +450,7 @@ export const MessageType = {
 export type MessageTypeValues = (typeof MessageType)[keyof typeof MessageType];
 
 // Re-export WebSocket client types
-export { ConnectionState, TypeSafeWebSocketClient };
-export type { WebSocketClientConfig, WebSocketEventListeners };
+export { ConnectionState, SimpleWebSocketClient };
 
 // Type-safe message creators
 export const createWebSocketMessage = <T>(type: MessageTypeValues, data: T, userId?: string): WebSocketMessage => ({

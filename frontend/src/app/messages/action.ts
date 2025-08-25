@@ -102,8 +102,7 @@ export const useChannelFiltering = (searchQuery: string) => {
  * This ensures the connection is established only once
  */
 export const useWebSocketConnection = (userId: number | null) => {
-  const { connect, disconnect, isConnected, isConnecting, isReconnecting, connectionState, error, client } =
-    useSocketStore();
+  const { connect, disconnect, isConnected, connectionState, error, client } = useSocketStore();
 
   // Use ref to track if component is mounted to prevent state updates after unmount
   const isMountedRef = useRef(true);
@@ -121,8 +120,7 @@ export const useWebSocketConnection = (userId: number | null) => {
     if (
       userId &&
       !isConnected() &&
-      !isConnecting() &&
-      !isReconnecting() &&
+      connectionState !== "connecting" &&
       !connectionAttemptedRef.current &&
       isMountedRef.current
     ) {
@@ -130,7 +128,7 @@ export const useWebSocketConnection = (userId: number | null) => {
       console.log("Initiating WebSocket connection for user:", userId);
 
       // Convert userId to string for the new API
-      connect(String(userId)).catch((err) => {
+      connect(String(userId)).catch((err: any) => {
         console.error("Failed to connect WebSocket:", err);
         if (isMountedRef.current) {
           connectionAttemptedRef.current = false; // Allow retry on error
@@ -142,7 +140,7 @@ export const useWebSocketConnection = (userId: number | null) => {
     if (!userId) {
       connectionAttemptedRef.current = false;
     }
-  }, [userId]); // Remove connection state functions from dependencies to prevent loops
+  }, [userId, connectionState]); // Add connectionState to dependencies
 
   // Separate cleanup effect that only runs on unmount
   useEffect(() => {
@@ -158,8 +156,8 @@ export const useWebSocketConnection = (userId: number | null) => {
 
   return {
     isConnected: isConnected(),
-    isConnecting: isConnecting(),
-    isReconnecting: isReconnecting(),
+    isConnecting: connectionState === "connecting",
+    isReconnecting: false, // Simplified store doesn't have reconnecting state
     connectionState,
     error,
     client,

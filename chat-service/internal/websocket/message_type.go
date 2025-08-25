@@ -9,28 +9,14 @@ import (
 // MessageType represents the type of WebSocket message using a custom enum type for better type safety
 type MessageType string
 
-// WebSocket message types - using typed enum for better type safety and IDE support
+// Simplified WebSocket message types - only essential chat functionality
 const (
 	// Connection events
 	MessageTypeConnect    MessageType = "connection.connect"
 	MessageTypeDisconnect MessageType = "connection.disconnect"
-	MessageTypePing       MessageType = "connection.ping"
-	MessageTypePong       MessageType = "connection.pong"
 
 	// Channel events
-	MessageTypeJoinChannel    MessageType = "channel.join"
-	MessageTypeLeaveChannel   MessageType = "channel.leave"
 	MessageTypeChannelMessage MessageType = "channel.message"
-	MessageTypeTyping         MessageType = "channel.typing"
-	MessageTypeStopTyping     MessageType = "channel.stop_typing"
-
-	// Channel member events
-	MessageTypeMemberJoin  MessageType = "channel.member.join"
-	MessageTypeMemberLeave MessageType = "channel.member.leave"
-
-	// User events
-	MessageTypeUserStatus   MessageType = "user.status"
-	MessageTypeNotification MessageType = "user.notification"
 
 	// Error events
 	MessageTypeError MessageType = "error"
@@ -44,10 +30,7 @@ func (mt MessageType) String() string {
 // IsValid checks if the MessageType is a valid enum value
 func (mt MessageType) IsValid() bool {
 	switch mt {
-	case MessageTypeConnect, MessageTypeDisconnect, MessageTypePing, MessageTypePong,
-		MessageTypeJoinChannel, MessageTypeLeaveChannel, MessageTypeChannelMessage,
-		MessageTypeTyping, MessageTypeStopTyping, MessageTypeMemberJoin, MessageTypeMemberLeave,
-		MessageTypeUserStatus, MessageTypeNotification, MessageTypeError:
+	case MessageTypeConnect, MessageTypeDisconnect, MessageTypeChannelMessage, MessageTypeError:
 		return true
 	default:
 		return false
@@ -57,10 +40,7 @@ func (mt MessageType) IsValid() bool {
 // GetAllMessageTypes returns all valid message types for documentation and validation
 func GetAllMessageTypes() []MessageType {
 	return []MessageType{
-		MessageTypeConnect, MessageTypeDisconnect, MessageTypePing, MessageTypePong,
-		MessageTypeJoinChannel, MessageTypeLeaveChannel, MessageTypeChannelMessage,
-		MessageTypeTyping, MessageTypeStopTyping, MessageTypeMemberJoin, MessageTypeMemberLeave,
-		MessageTypeUserStatus, MessageTypeNotification, MessageTypeError,
+		MessageTypeConnect, MessageTypeDisconnect, MessageTypeChannelMessage, MessageTypeError,
 	}
 }
 
@@ -87,31 +67,12 @@ func (m *Message) Validate() error {
 	return nil
 }
 
-// Specific message data structures with validation
-type JoinChannelData struct {
-	ChannelID string `json:"channel_id" binding:"required" validate:"required"`
-}
-
-type LeaveChannelData struct {
-	ChannelID string `json:"channel_id" binding:"required" validate:"required"`
-}
-
+// Simplified message data structures
 type ChannelMessageData struct {
 	ChannelID string  `json:"channel_id" binding:"required" validate:"required"`
 	Text      *string `json:"text,omitempty"`
 	URL       *string `json:"url,omitempty"`
 	FileName  *string `json:"fileName,omitempty"`
-	ReplyToID *string `json:"reply_to_id,omitempty"`
-}
-
-type TypingData struct {
-	ChannelID string `json:"channel_id" binding:"required" validate:"required"`
-	IsTyping  bool   `json:"is_typing"`
-}
-
-type UserStatusData struct {
-	Status   string `json:"status" validate:"required"`
-	LastSeen int64  `json:"last_seen"`
 }
 
 type ErrorData struct {
@@ -122,14 +83,6 @@ type ErrorData struct {
 type ConnectData struct {
 	ClientID string `json:"client_id"`
 	Status   string `json:"status"`
-}
-
-type PingData struct {
-	Timestamp int64 `json:"timestamp"`
-}
-
-type PongData struct {
-	PingID string `json:"ping_id"`
 }
 
 // Message constructors for type safety and consistency
@@ -161,13 +114,6 @@ func NewErrorMessage(id, userID, code, message string) *Message {
 	return NewMessage(id, MessageTypeError, userID, map[string]interface{}{
 		"code":    code,
 		"message": message,
-	})
-}
-
-// NewPongMessage creates a pong response message
-func NewPongMessage(id, userID, pingID string) *Message {
-	return NewMessage(id, MessageTypePong, userID, map[string]interface{}{
-		"ping_id": pingID,
 	})
 }
 
