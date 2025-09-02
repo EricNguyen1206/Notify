@@ -5,8 +5,9 @@ import MessageBubble from "@/components/molecules/MessageBubble";
 import MessagesSkeleton from "@/components/molecules/MessagesSkeleton";
 import MessageInput from "@/components/organisms/MessageInput";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ConnectionState } from "@/services/simpleWebSocket";
 import { useChatPage } from "./action";
+import { ConnectionState } from "@/store/useSocketStore";
+import { useEffect } from "react";
 
 const DirectMessagesPage = () => {
   const {
@@ -17,30 +18,27 @@ const DirectMessagesPage = () => {
     chats,
     chatsLoading,
     handleSendMessage,
-    handleStartTyping,
-    handleStopTyping,
     isConnected,
-    webSocketState,
+    connectionState,
   } = useChatPage();
-
-  // Get connection status for UI feedback
-  const connectionStatus = webSocketState?.connectionState;
-  const typingUsers = webSocketState?.typingUsers || [];
+  useEffect(() => {
+    console.log("TEST chats", chats);
+  }, [chats]);
 
   return (
     <div className="w-full h-full flex flex-col bg-background">
       <ChatHeader id={String(channelId)} name={String(channelId)} isGroup={true} avatar="" participantCount={10} />
 
       {/* Connection status indicator */}
-      {connectionStatus === ConnectionState.CONNECTING && (
+      {connectionState === ConnectionState.CONNECTING && (
         <div className="px-5 py-2 bg-blue-50 border-b border-blue-200">
           <div className="text-sm text-blue-600">Connecting to chat server...</div>
         </div>
       )}
 
-      {connectionStatus === ConnectionState.ERROR && webSocketState?.error && (
+      {connectionState === ConnectionState.ERROR && (
         <div className="px-chat-outer py-2 bg-red-50 border-b border-red-200">
-          <div className="text-sm text-chat-error font-normal">Connection error: {webSocketState.error}</div>
+          <div className="text-sm text-chat-error font-normal">Connection error</div>
         </div>
       )}
 
@@ -53,10 +51,6 @@ const DirectMessagesPage = () => {
               chats.map((message) => (
                 <MessageBubble key={message.id} message={message} isGroup={true} userId={user.id} />
               ))}
-
-            {/* Typing indicators removed for simplicity */}
-
-            {/* Invisible element to scroll to */}
             <div ref={mainRef} className="h-0" />
           </div>
         )}
@@ -64,10 +58,10 @@ const DirectMessagesPage = () => {
 
       <MessageInput
         onSendMessage={handleSendMessage}
-        onStartTyping={handleStartTyping}
-        onStopTyping={handleStopTyping}
+        // onStartTyping={handleStartTyping}
+        // onStopTyping={handleStopTyping}
         isConnected={isConnected}
-        disabled={connectionStatus === ConnectionState.ERROR}
+        disabled={connectionState === ConnectionState.ERROR}
       />
     </div>
   );

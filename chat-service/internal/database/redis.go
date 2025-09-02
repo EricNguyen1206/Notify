@@ -72,25 +72,49 @@ func NewRedisConnection(redisURL string) (*RedisClient, error) {
 	if redisURL == "" {
 		return nil, fmt.Errorf("REDIS_URL environment variable is not set")
 	}
-	opt, err := redis.ParseURL(redisURL)
 
+	opt, err := redis.ParseURL(redisURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse Redis URL: %w", err)
 	}
 
 	rdb := redis.NewClient(opt)
 
-	// Test connection
-	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
-	defer cancel()
+	// Retry logic with incremental timeout
+	maxRetries := 3
+	baseTimeout := 5 * time.Second
 
-	if err := rdb.Ping(ctx).Err(); err != nil {
-		return nil, fmt.Errorf("failed to connect to Redis: %w", err)
+	var lastErr error
+
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		// Calculate timeout: 5s, 10s, 15s for attempts 1, 2, 3
+		timeout := time.Duration(attempt) * baseTimeout
+
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+
+		// Test connection
+		err := rdb.Ping(ctx).Err()
+		cancel() // Clean up context immediately after use
+
+		if err == nil {
+			// Connection successful
+			return &RedisClient{
+				client: rdb,
+			}, nil
+		}
+
+		lastErr = err
+
+		// If this wasn't the last attempt, wait before retrying
+		if attempt < maxRetries {
+			waitTime := time.Duration(attempt) * time.Second // 1s, 2s wait between attempts
+			time.Sleep(waitTime)
+		}
 	}
 
-	return &RedisClient{
-		client: rdb,
-	}, nil
+	// All retries failed, close the client and return error
+	rdb.Close()
+	return nil, fmt.Errorf("failed to connect to Redis after %d attempts, last error: %w", maxRetries, lastErr)
 }
 
 func (r *RedisClient) GetClient() *redis.Client {

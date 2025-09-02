@@ -1,7 +1,15 @@
 import { Message } from "@/store/useChatStore";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 
-export default function MessageBubble({ message, isGroup, userId }: { message: Message; isGroup: boolean, userId: number }) {
+export default function MessageBubble({
+  message,
+  isGroup,
+  userId,
+}: {
+  message: Message;
+  isGroup: boolean;
+  userId: number;
+}) {
   if (message.senderId == userId) {
     // Sent messages (right side)
     return (
@@ -15,7 +23,7 @@ export default function MessageBubble({ message, isGroup, userId }: { message: M
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   // Received messages (left side)
@@ -24,13 +32,13 @@ export default function MessageBubble({ message, isGroup, userId }: { message: M
       {isGroup && (
         <Avatar className="w-8 h-8 mr-2 flex-shrink-0">
           <AvatarImage src={message.senderAvatar} />
-          <AvatarFallback className="bg-chat-primary text-white">{message.senderName?.[0]?.toUpperCase() ?? 'A'}</AvatarFallback>
+          <AvatarFallback className="bg-chat-primary text-white">
+            {message.senderName?.[0]?.toUpperCase() ?? "A"}
+          </AvatarFallback>
         </Avatar>
       )}
       <div className="max-w-xs lg:max-w-md">
-        {isGroup && (
-          <p className="text-sm font-medium text-foreground mb-1">{message.senderName ?? "Sender"}</p>
-        )}
+        {isGroup && <p className="text-sm font-medium text-foreground mb-1">{message.senderName ?? "Sender"}</p>}
         <div className="bg-card border border-chat-border rounded-chat px-4 py-2">
           <p className="text-card-foreground break-words font-normal">{message.text}</p>
         </div>
@@ -39,5 +47,5 @@ export default function MessageBubble({ message, isGroup, userId }: { message: M
         </div>
       </div>
     </div>
-  )
+  );
 }

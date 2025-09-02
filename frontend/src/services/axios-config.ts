@@ -1,14 +1,5 @@
 import axios, { AxiosResponse } from "axios";
 
-// Debug logging for environment variables
-if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
-  console.log("🔧 Axios Config Debug:", {
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
-    NODE_ENV: process.env.NODE_ENV,
-    baseURL: process.env.NEXT_PUBLIC_API_URL || "UNDEFINED - Check environment variables!",
-  });
-}
-
 const instance = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
   timeout: 10000, // 10 second timeout

@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useEffect } from "react";
+import { memo, useEffect, useRef } from "react";
 import { useSocketStore } from "@/store/useSocketStore";
 
 interface MessagesWebSocketProviderProps {
@@ -9,35 +9,32 @@ interface MessagesWebSocketProviderProps {
 }
 
 function MessagesWebSocketProvider({ userId, children }: MessagesWebSocketProviderProps) {
-  const { connect, disconnect, isConnected, error, connectionState } = useSocketStore();
+  const { connect, disconnect, isConnected } = useSocketStore();
+  const hasConnected = useRef(false);
 
-  // Establish WebSocket connection
+  // Establish WebSocket connection only once when component mounts
   useEffect(() => {
     const userIdString = userId.toString();
 
-    console.log("Establishing WebSocket connection for user:", userIdString);
+    console.log("TEST Establishing WebSocket connection for user:", userIdString);
 
-    connect(userIdString).catch((error: any) => {
-      console.error("Failed to establish WebSocket connection:", error);
-    });
+    // Only connect if we haven't connected yet and we're not already connected
+    if (!hasConnected.current && !isConnected()) {
+      hasConnected.current = true;
+      connect(userIdString).catch((error: any) => {
+        console.error("Failed to establish WebSocket connection:", error);
+        // Reset the flag on error so we can try again if needed
+        hasConnected.current = false;
+      });
+    }
 
     // Cleanup on unmount
     return () => {
-      console.log("Cleaning up WebSocket connection");
+      console.log("TEST Cleaning up WebSocket connection");
+      hasConnected.current = false;
       disconnect();
     };
-  }, [userId, connect, disconnect]);
-
-  // Log connection state changes for debugging
-  useEffect(() => {
-    console.log("WebSocket connection state changed:", connectionState);
-
-    if (isConnected()) {
-      console.log("✅ WebSocket connected successfully for user:", userId);
-    } else if (error) {
-      console.error("❌ WebSocket connection error for user:", userId, error);
-    }
-  }, [isConnected, error, connectionState, userId]);
+  }, [userId]); // Only depend on userId, not connectionState
 
   return <>{children}</>;
 }

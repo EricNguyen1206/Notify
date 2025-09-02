@@ -4,19 +4,20 @@ import { useEffect, useState } from "react";
 export const useScreenDimensions = (initScreenHeight: number) => {
   const [screenHeight, setScreenHeight] = useState(initScreenHeight);
   const [isOverFlow, setIsOverFlow] = useState<boolean>(false);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
+
     const handleResize = () => {
       setScreenHeight(window.innerHeight);
     };
 
-    if (typeof window !== "undefined") {
-      setScreenHeight(window.innerHeight);
-      window.addEventListener("resize", handleResize);
-      return () => {
-        window.removeEventListener("resize", handleResize);
-      };
-    }
+    setScreenHeight(window.innerHeight);
+    window.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
   }, []);
 
   const updateOverflow = (chatBoxHeight: number) => {
@@ -26,6 +27,15 @@ export const useScreenDimensions = (initScreenHeight: number) => {
       setIsOverFlow(false);
     }
   };
+
+  // Return consistent values during SSR
+  if (!isClient) {
+    return {
+      screenHeight: initScreenHeight,
+      isOverFlow: false,
+      updateOverflow,
+    };
+  }
 
   return {
     screenHeight,

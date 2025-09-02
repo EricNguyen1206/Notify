@@ -9,13 +9,15 @@ import (
 // MessageType represents the type of WebSocket message using a custom enum type for better type safety
 type MessageType string
 
-// Simplified WebSocket message types - only essential chat functionality
+// WebSocket message types - essential chat functionality
 const (
 	// Connection events
 	MessageTypeConnect    MessageType = "connection.connect"
 	MessageTypeDisconnect MessageType = "connection.disconnect"
 
 	// Channel events
+	MessageTypeJoinChannel    MessageType = "channel.join"
+	MessageTypeLeaveChannel   MessageType = "channel.leave"
 	MessageTypeChannelMessage MessageType = "channel.message"
 
 	// Error events
@@ -30,7 +32,8 @@ func (mt MessageType) String() string {
 // IsValid checks if the MessageType is a valid enum value
 func (mt MessageType) IsValid() bool {
 	switch mt {
-	case MessageTypeConnect, MessageTypeDisconnect, MessageTypeChannelMessage, MessageTypeError:
+	case MessageTypeConnect, MessageTypeDisconnect, MessageTypeJoinChannel,
+		MessageTypeLeaveChannel, MessageTypeChannelMessage, MessageTypeError:
 		return true
 	default:
 		return false
@@ -40,7 +43,8 @@ func (mt MessageType) IsValid() bool {
 // GetAllMessageTypes returns all valid message types for documentation and validation
 func GetAllMessageTypes() []MessageType {
 	return []MessageType{
-		MessageTypeConnect, MessageTypeDisconnect, MessageTypeChannelMessage, MessageTypeError,
+		MessageTypeConnect, MessageTypeDisconnect, MessageTypeJoinChannel,
+		MessageTypeLeaveChannel, MessageTypeChannelMessage, MessageTypeError,
 	}
 }
 
@@ -67,12 +71,16 @@ func (m *Message) Validate() error {
 	return nil
 }
 
-// Simplified message data structures
+// Message data structures for different message types
 type ChannelMessageData struct {
 	ChannelID string  `json:"channel_id" binding:"required" validate:"required"`
 	Text      *string `json:"text,omitempty"`
 	URL       *string `json:"url,omitempty"`
 	FileName  *string `json:"fileName,omitempty"`
+}
+
+type ChannelJoinLeaveData struct {
+	ChannelID string `json:"channel_id" binding:"required" validate:"required"`
 }
 
 type ErrorData struct {
@@ -127,4 +135,18 @@ func NewChannelMessage(id, userID string, data interface{}) *Message {
 		}
 	}
 	return NewMessage(id, MessageTypeChannelMessage, userID, dataMap)
+}
+
+// NewJoinChannelMessage creates a channel join message
+func NewJoinChannelMessage(id, userID, channelID string) *Message {
+	return NewMessage(id, MessageTypeJoinChannel, userID, map[string]interface{}{
+		"channel_id": channelID,
+	})
+}
+
+// NewLeaveChannelMessage creates a channel leave message
+func NewLeaveChannelMessage(id, userID, channelID string) *Message {
+	return NewMessage(id, MessageTypeLeaveChannel, userID, map[string]interface{}{
+		"channel_id": channelID,
+	})
 }
