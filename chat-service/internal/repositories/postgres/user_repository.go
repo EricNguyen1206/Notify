@@ -177,3 +177,15 @@ func (r *UserRepository) GetFriendsByChannelID(channelID uint, userId uint) ([]m
 	}
 	return users, nil
 }
+
+// SearchUsersByUsername searches for users by username (partial match)
+func (r *UserRepository) SearchUsersByUsername(username string) ([]models.User, error) {
+	var users []models.User
+	err := r.db.Where("username ILIKE ? AND deleted_at IS NULL", "%"+username+"%").
+		Limit(10). // Limit results to prevent abuse
+		Find(&users).Error
+	if err != nil {
+		return nil, fmt.Errorf("failed to search users by username: %w", err)
+	}
+	return users, nil
+}

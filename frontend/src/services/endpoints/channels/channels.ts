@@ -27,12 +27,12 @@ import type {
 import type {
   ChatServiceInternalModelsChannelDetailResponse,
   ChatServiceInternalModelsChannelResponse,
+  ChatServiceInternalModelsCreateChannelRequest,
   ChatServiceInternalModelsErrorResponse,
   ChatServiceInternalModelsUserChannelsResponse,
   DeleteChannelsId200,
   DeleteChannelsIdUser200,
   DeleteChannelsIdUserBody,
-  PostChannelsBody,
   PostChannelsIdUser200,
   PostChannelsIdUserBody,
   PutChannelsId200,
@@ -134,11 +134,11 @@ export function useGetChannels<TData = Awaited<ReturnType<typeof getChannels>>, 
 
 
 /**
- * Create a new channel with the specified name
+ * Create a new channel with the specified name and selected users
  * @summary Create a new channel
  */
 export const postChannels = (
-    postChannelsBody: PostChannelsBody,
+    chatServiceInternalModelsCreateChannelRequest: ChatServiceInternalModelsCreateChannelRequest,
  signal?: AbortSignal
 ) => {
       
@@ -146,7 +146,7 @@ export const postChannels = (
       return axiosInstance<ChatServiceInternalModelsChannelResponse>(
       {url: `/channels/`, method: 'POST',
       headers: {'Content-Type': 'application/json', },
-      data: postChannelsBody, signal
+      data: chatServiceInternalModelsCreateChannelRequest, signal
     },
       );
     }
@@ -154,8 +154,8 @@ export const postChannels = (
 
 
 export const getPostChannelsMutationOptions = <TError = ChatServiceInternalModelsErrorResponse | ChatServiceInternalModelsErrorResponse | ChatServiceInternalModelsErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postChannels>>, TError,{data: PostChannelsBody}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof postChannels>>, TError,{data: PostChannelsBody}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postChannels>>, TError,{data: ChatServiceInternalModelsCreateChannelRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof postChannels>>, TError,{data: ChatServiceInternalModelsCreateChannelRequest}, TContext> => {
 
 const mutationKey = ['postChannels'];
 const {mutation: mutationOptions} = options ?
@@ -167,7 +167,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postChannels>>, {data: PostChannelsBody}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postChannels>>, {data: ChatServiceInternalModelsCreateChannelRequest}> = (props) => {
           const {data} = props ?? {};
 
           return  postChannels(data,)
@@ -179,18 +179,18 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type PostChannelsMutationResult = NonNullable<Awaited<ReturnType<typeof postChannels>>>
-    export type PostChannelsMutationBody = PostChannelsBody
+    export type PostChannelsMutationBody = ChatServiceInternalModelsCreateChannelRequest
     export type PostChannelsMutationError = ChatServiceInternalModelsErrorResponse | ChatServiceInternalModelsErrorResponse | ChatServiceInternalModelsErrorResponse
 
     /**
  * @summary Create a new channel
  */
 export const usePostChannels = <TError = ChatServiceInternalModelsErrorResponse | ChatServiceInternalModelsErrorResponse | ChatServiceInternalModelsErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postChannels>>, TError,{data: PostChannelsBody}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postChannels>>, TError,{data: ChatServiceInternalModelsCreateChannelRequest}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof postChannels>>,
         TError,
-        {data: PostChannelsBody},
+        {data: ChatServiceInternalModelsCreateChannelRequest},
         TContext
       > => {
 

@@ -156,7 +156,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Create a new channel with the specified name",
+                "description": "Create a new channel with the specified name and selected users",
                 "consumes": [
                     "application/json"
                 ],
@@ -169,15 +169,12 @@
                 "summary": "Create a new channel",
                 "parameters": [
                     {
-                        "description": "Channel creation data",
+                        "description": "Channel creation data with user selection",
                         "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/chat-service_internal_models.CreateChannelRequest"
                         }
                     }
                 ],
@@ -670,6 +667,64 @@
                     }
                 }
             }
+        },
+        "/users/search": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Search for users by username (partial match for channel creation)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Search users by username",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Username to search for",
+                        "name": "username",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of users found",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/chat-service_internal_models.UserResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - invalid username",
+                        "schema": {
+                            "$ref": "#/definitions/chat-service_internal_models.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - invalid or missing token",
+                        "schema": {
+                            "$ref": "#/definitions/chat-service_internal_models.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/chat-service_internal_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -800,6 +855,35 @@
                 }
             }
         },
+        "chat-service_internal_models.CreateChannelRequest": {
+            "type": "object",
+            "required": [
+                "type",
+                "userIds"
+            ],
+            "properties": {
+                "name": {
+                    "description": "Channel name. For direct messages, can be empty and will be auto-generated from the other user's email",
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "direct",
+                        "group"
+                    ]
+                },
+                "userIds": {
+                    "description": "Minimum 2, maximum 4 users",
+                    "type": "array",
+                    "maxItems": 4,
+                    "minItems": 2,
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
         "chat-service_internal_models.DirectChannelResponse": {
             "type": "object",
             "properties": {
@@ -811,6 +895,7 @@
                     "type": "integer"
                 },
                 "name": {
+                    "description": "Email of the other user in direct message (ensures uniqueness)",
                     "type": "string"
                 },
                 "ownerId": {

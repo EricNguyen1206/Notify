@@ -61,3 +61,50 @@ func (h *UserHandler) GetProfile(c *gin.Context) {
 
 	c.JSON(http.StatusOK, profile)
 }
+
+// SearchUsersByUsername godoc
+// @Summary Search users by username
+// @Description Search for users by username (partial match for channel creation)
+// @Tags users
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param username query string true "Username to search for"
+// @Success 200 {array} models.UserResponse "List of users found"
+// @Failure 400 {object} models.ErrorResponse "Bad request - invalid username"
+// @Failure 401 {object} models.ErrorResponse "Unauthorized - invalid or missing token"
+// @Failure 500 {object} models.ErrorResponse "Internal server error"
+// @Router /users/search [get]
+func (h *UserHandler) SearchUsersByUsername(c *gin.Context) {
+	username := c.Query("username")
+	if username == "" {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Code:    http.StatusBadRequest,
+			Message: "Username parameter is required",
+			Details: "Please provide a username to search for",
+		})
+		return
+	}
+
+	// Basic username validation
+	if len(username) < 2 {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Code:    http.StatusBadRequest,
+			Message: "Username too short",
+			Details: "Username must be at least 2 characters long",
+		})
+		return
+	}
+
+	users, err := h.userService.SearchUsersByUsername(username)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Code:    http.StatusInternalServerError,
+			Message: "Failed to search users",
+			Details: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, users)
+}
