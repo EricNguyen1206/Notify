@@ -83,17 +83,18 @@ func (r *UserRepository) Update(user *models.User) error {
 	// Defer a rollback in case anything fails
 	defer tx.Rollback()
 
-	// Update user using raw SQL
+	// Update user using raw SQL with avatar support
 	query := `
 		UPDATE users 
-		SET email = $1, username = $2, password = $3
-		WHERE id = $4 AND deleted_at IS NULL
+		SET email = $1, username = $2, password = $3, avatar = $4
+		WHERE id = $5 AND deleted_at IS NULL
 	`
 
 	result, err := tx.Exec(query,
 		user.Email,
 		user.Username,
 		user.Password,
+		user.Avatar,
 		user.ID,
 	)
 

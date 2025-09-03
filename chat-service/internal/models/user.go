@@ -57,3 +57,12 @@ type UpdateUserRequest struct {
 	Password *string `json:"password,omitempty" binding:"omitempty,min=6"`
 	Avatar   *string `json:"avatar,omitempty"` // Optional avatar URL
 }
+
+// UpdateProfileRequest represents the request for updating user profile
+// Requires current password for authentication
+type UpdateProfileRequest struct {
+	Username        *string `json:"username,omitempty" binding:"omitempty,min=3,max=50"`
+	Avatar          *string `json:"avatar,omitempty"` // Optional avatar URL
+	Password        *string `json:"password,omitempty" binding:"omitempty,min=6"`
+	CurrentPassword string  `json:"current_password" binding:"required"` // Required current password for verification
+}

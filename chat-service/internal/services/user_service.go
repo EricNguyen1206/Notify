@@ -174,3 +174,46 @@ func (s *UserService) SearchUsersByUsername(username string) ([]models.UserRespo
 
 	return responses, nil
 }
+
+// UpdateProfile updates the user's profile information
+func (s *UserService) UpdateProfile(userID uint, req *models.UpdateProfileRequest) (*models.UserResponse, error) {
+	// Get current user
+	user, err := s.repo.FindByID(userID)
+	if err != nil {
+		return nil, ErrUserNotFound
+	}
+
+	// Verify current password
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.CurrentPassword)); err != nil {
+		return nil, errors.New("current password is incorrect")
+	}
+
+	// Update fields if provided
+	if req.Username != nil {
+		user.Username = *req.Username
+	}
+	if req.Avatar != nil {
+		user.Avatar = *req.Avatar
+	}
+	if req.Password != nil {
+		// Hash new password
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(*req.Password), bcrypt.DefaultCost)
+		if err != nil {
+			return nil, fmt.Errorf("failed to hash new password: %w", err)
+		}
+		user.Password = string(hashedPassword)
+	}
+
+	// Save updated user
+	if err := s.repo.Update(user); err != nil {
+		return nil, fmt.Errorf("failed to update user: %w", err)
+	}
+
+	return &models.UserResponse{
+		ID:        user.ID,
+		Email:     user.Email,
+		Username:  user.Username,
+		CreatedAt: user.CreatedAt,
+		Avatar:    user.Avatar,
+	}, nil
+}

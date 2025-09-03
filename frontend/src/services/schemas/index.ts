@@ -18,6 +18,7 @@ export * from './chatServiceInternalModelsLoginRequest';
 export * from './chatServiceInternalModelsLoginResponse';
 export * from './chatServiceInternalModelsPaginatedChatResponse';
 export * from './chatServiceInternalModelsRegisterRequest';
+export * from './chatServiceInternalModelsUpdateProfileRequest';
 export * from './chatServiceInternalModelsUser';
 export * from './chatServiceInternalModelsUserChannelsResponse';
 export * from './chatServiceInternalModelsUserResponse';

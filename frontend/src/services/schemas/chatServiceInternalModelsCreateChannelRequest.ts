@@ -8,7 +8,8 @@
 import type { ChatServiceInternalModelsCreateChannelRequestType } from './chatServiceInternalModelsCreateChannelRequestType';
 
 export interface ChatServiceInternalModelsCreateChannelRequest {
-  name: string;
+  /** Optional for direct messages, required for group */
+  name?: string;
   type: ChatServiceInternalModelsCreateChannelRequestType;
   /**
    * Minimum 2, maximum 4 users
