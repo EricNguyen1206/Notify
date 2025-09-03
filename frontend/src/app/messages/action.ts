@@ -102,12 +102,10 @@ export const useChannelFiltering = (searchQuery: string) => {
  * This ensures the connection is established only once
  */
 export const useWebSocketConnection = (userId: number | null) => {
-  const { connect, disconnect, isConnected, isConnecting, isReconnecting, connectionState, error, client } =
-    useSocketStore();
+  const { isConnected, connectionState, error } = useSocketStore();
 
   // Use ref to track if component is mounted to prevent state updates after unmount
   const isMountedRef = useRef(true);
-  const connectionAttemptedRef = useRef(false);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -116,53 +114,12 @@ export const useWebSocketConnection = (userId: number | null) => {
     };
   }, []);
 
-  useEffect(() => {
-    // Only attempt connection once per userId and if component is mounted
-    if (
-      userId &&
-      !isConnected() &&
-      !isConnecting() &&
-      !isReconnecting() &&
-      !connectionAttemptedRef.current &&
-      isMountedRef.current
-    ) {
-      connectionAttemptedRef.current = true;
-      console.log("Initiating WebSocket connection for user:", userId);
-
-      // Convert userId to string for the new API
-      connect(String(userId)).catch((err) => {
-        console.error("Failed to connect WebSocket:", err);
-        if (isMountedRef.current) {
-          connectionAttemptedRef.current = false; // Allow retry on error
-        }
-      });
-    }
-
-    // Reset connection attempt flag when userId changes
-    if (!userId) {
-      connectionAttemptedRef.current = false;
-    }
-  }, [userId]); // Remove connection state functions from dependencies to prevent loops
-
-  // Separate cleanup effect that only runs on unmount
-  useEffect(() => {
-    return () => {
-      // Only disconnect if we're unmounting and there's no userId
-      // This prevents disconnection during normal navigation
-      if (!userId) {
-        console.log("Component unmounting without userId, disconnecting WebSocket");
-        disconnect();
-      }
-    };
-  }, []); // Empty dependency array - only runs on mount/unmount
-
   return {
     isConnected: isConnected(),
-    isConnecting: isConnecting(),
-    isReconnecting: isReconnecting(),
+    isConnecting: connectionState === "connecting",
+    isReconnecting: false, // Simplified store doesn't have reconnecting state
     connectionState,
     error,
-    client,
   };
 };
 

@@ -1,25 +1,30 @@
 import { useEffect, useState } from "react";
 
 export const useScreenWidth = () => {
-  const [screenWidth, setScreenWidth] = useState(0);
+  const [screenWidth, setScreenWidth] = useState<number | null>(null);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
+
     const handleResize = () => {
       setScreenWidth(window.innerWidth);
     };
 
-    // Check if window object is available (client-side)
-    if (typeof window !== "undefined") {
-      // Set initial screen width
-      setScreenWidth(window.innerWidth);
+    // Set initial screen width
+    setScreenWidth(window.innerWidth);
 
-      window.addEventListener("resize", handleResize);
+    window.addEventListener("resize", handleResize);
 
-      return () => {
-        window.removeEventListener("resize", handleResize);
-      };
-    }
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
   }, []);
 
-  return screenWidth;
+  // Return a default value during SSR to prevent hydration mismatch
+  if (!isClient) {
+    return 1024; // Default desktop width
+  }
+
+  return screenWidth || 1024;
 };

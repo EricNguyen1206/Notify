@@ -1,7 +1,7 @@
 "use client";
 
-import { useWebSocketConnection } from "@/app/messages/action";
-import { memo, useEffect } from "react";
+import { memo, useEffect, useRef } from "react";
+import { useSocketStore } from "@/store/useSocketStore";
 
 interface MessagesWebSocketProviderProps {
   userId: number;
@@ -9,17 +9,32 @@ interface MessagesWebSocketProviderProps {
 }
 
 function MessagesWebSocketProvider({ userId, children }: MessagesWebSocketProviderProps) {
-  // Always establish connection, but the useWebSocketConnection hook handles deduplication
-  const connectionState = useWebSocketConnection(userId);
+  const { connect, disconnect, isConnected } = useSocketStore();
+  const hasConnected = useRef(false);
 
-  // Log connection state changes for debugging
+  // Establish WebSocket connection only once when component mounts
   useEffect(() => {
-    if (connectionState.isConnected) {
-      console.log("WebSocket connected for user:", userId);
-    } else if (connectionState.error) {
-      console.error("WebSocket connection error for user:", userId, connectionState.error);
+    const userIdString = userId.toString();
+
+    console.log("TEST Establishing WebSocket connection for user:", userIdString);
+
+    // Only connect if we haven't connected yet and we're not already connected
+    if (!hasConnected.current && !isConnected()) {
+      hasConnected.current = true;
+      connect(userIdString).catch((error: any) => {
+        console.error("Failed to establish WebSocket connection:", error);
+        // Reset the flag on error so we can try again if needed
+        hasConnected.current = false;
+      });
     }
-  }, [connectionState.isConnected, connectionState.error, userId]);
+
+    // Cleanup on unmount
+    return () => {
+      console.log("TEST Cleaning up WebSocket connection");
+      hasConnected.current = false;
+      disconnect();
+    };
+  }, [userId]); // Only depend on userId, not connectionState
 
   return <>{children}</>;
 }

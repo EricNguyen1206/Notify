@@ -1,678 +1,523 @@
+/**
+ * Centralized WebSocket store for chat functionality
+ * All WebSocket logic is handled directly in this hook for simplicity and maintainability
+ */
+
 import { create } from "zustand";
-import {
-  ChannelMessageData,
-  ErrorData,
-  MemberJoinLeaveData,
-  MessageType,
-  MessageTypeValues,
-  TypingIndicatorData,
-  UserStatusData,
-  WebSocketMessage,
-  ConnectionState,
-  TypeSafeWebSocketClient,
-  WebSocketClientConfig,
-  createWebSocketMessage,
-  isChannelMessage,
-  isTypingIndicator,
-  isErrorMessage,
-} from "../services/websocket";
-import { useChannelStore } from "./useChannelStore";
+import { devtools } from "zustand/middleware";
 import { useChatStore } from "./useChatStore";
+import { useChannelStore } from "./useChannelStore";
 
-// Enhanced WebSocket message interface for backward compatibility
-export interface WsMessage {
+// WebSocket connection states
+export enum ConnectionState {
+  DISCONNECTED = "disconnected",
+  CONNECTING = "connecting",
+  CONNECTED = "connected",
+  ERROR = "error",
+}
+
+// WebSocket message types - aligned with backend
+export enum MessageType {
+  CONNECT = "connection.connect",
+  DISCONNECT = "connection.disconnect",
+  CHANNEL_JOIN = "channel.join",
+  CHANNEL_LEAVE = "channel.leave",
+  CHANNEL_MESSAGE = "channel.message",
+  ERROR = "error",
+}
+
+// WebSocket message interfaces - aligned with backend
+export interface WebSocketMessage {
   id: string;
-  content: string;
-  senderId: string;
-  senderName: string;
-  timestamp: string;
-  type: MessageTypeValues;
-  chatId: string;
-}
-
-// Typing indicator state
-export interface TypingState {
-  channelId: string;
-  userId: string;
-  isTyping: boolean;
+  type: MessageType;
+  data: any;
   timestamp: number;
+  user_id?: string;
 }
 
-// Enhanced Socket State with type-safe WebSocket client
-interface SocketState {
-  // WebSocket client instance
-  client: TypeSafeWebSocketClient | null;
+export interface ChannelMessageData {
+  channel_id: string;
+  text?: string | null;
+  url?: string | null;
+  fileName?: string | null;
+}
 
+export interface ChannelJoinLeaveData {
+  channel_id: string;
+}
+
+export interface ErrorData {
+  code: string;
+  message: string;
+}
+
+export interface ConnectionData {
+  client_id?: string;
+  status?: string;
+}
+
+// Chat message interface for internal use
+export interface ChatMessage {
+  id: number;
+  channelId: number;
+  senderId: number;
+  senderName: string;
+  senderAvatar: string;
+  text: string;
+  createdAt: string;
+  type: string;
+  url?: string;
+  fileName?: string;
+}
+
+// WebSocket configuration
+export interface WebSocketConfig {
+  reconnectInterval: number;
+  maxReconnectAttempts: number;
+  connectionTimeout: number;
+}
+
+// Main socket store state interface
+interface SocketState {
   // Connection state
   connectionState: ConnectionState;
-  error: ErrorData | null;
+  error: string | null;
+  isConnecting: boolean;
+
+  // WebSocket instance
+  ws: WebSocket | null;
+  userId: string;
+  url: string;
+
+  // Reconnection logic
+  reconnectAttempts: number;
+  reconnectTimer: NodeJS.Timeout | null;
+  isIntentionalDisconnect: boolean;
+  connectionPromise: { resolve: () => void; reject: (error: any) => void } | null;
 
   // Configuration
-  config: WebSocketClientConfig;
+  config: WebSocketConfig;
 
-  // Internal state for channel switching
-  _channelSwitchState: {
-    lastSwitchTime: number;
-    pendingChannelId: string | null;
-    isProcessing: boolean;
-  };
-
-  // Message data
-  messages: WebSocketMessage[];
-  typingUsers: Record<string, TypingState[]>; // channelId -> typing users
-
-  // User data
-  connectedUsers: Record<string, UserStatusData>; // userId -> status
-
-  // Computed functions
-  isConnected: () => boolean;
-  isConnecting: () => boolean;
-  isReconnecting: () => boolean;
-  getTypingUsersInChannel: (channelId: string) => TypingState[];
-
-  // Configuration actions
-  updateConfig: (config: Partial<WebSocketClientConfig>) => void;
-
-  // Connection actions
+  // Actions
   connect: (userId: string) => Promise<void>;
   disconnect: () => void;
-
-  // Channel actions
+  sendMessage: (channelId: string, text: string, url?: string, fileName?: string) => void;
   joinChannel: (channelId: string) => void;
   leaveChannel: (channelId: string) => void;
-  switchChannel: (newChannelId: string | null) => void; // Method for channel switching
-  leaveAllChannels: () => void; // Method to leave all channels
+  isConnected: () => boolean;
 
-  // Message actions
-  sendMessage: (channelId: string, msg: string, url?: string, fileName?: string) => void;
-  sendTypingIndicator: (channelId: string, isTyping: boolean) => void;
-
-  // Internal event handlers
-  setupEventListeners: () => void;
-  clearTypingIndicator: (channelId: string, userId: string) => void;
+  // Internal methods
+  handleMessage: (message: WebSocketMessage) => void;
+  attemptReconnect: () => void;
 }
 
-// Default WebSocket configuration with improved backoff strategy
-const DEFAULT_WS_CONFIG: WebSocketClientConfig = {
-  reconnectAttempts: 8, // Increased from 5 to allow more attempts
-  reconnectDelay: 1000,
-  maxReconnectDelay: 60000, // Cap at 1 minute instead of 30 seconds
-  heartbeatInterval: 30000,
-  connectionTimeout: 10000,
-  messageQueueLimit: 100,
-  messageCacheSize: 1000,
-  enableJitter: true,
-};
+export const useSocketStore = create<SocketState>()(
+  devtools(
+    (set, get) => ({
+      // Initial state
+      connectionState: ConnectionState.DISCONNECTED,
+      error: null,
+      isConnecting: false,
 
-// Global connection rate limiting
-let lastGlobalConnectionAttempt = 0;
-const GLOBAL_CONNECTION_RATE_LIMIT = 2000; // 2 seconds between any connection attempts
+      // WebSocket instance
+      ws: null,
+      userId: "",
+      url: "",
 
-export const useSocketStore = create<SocketState>((set, get) => ({
-  // Initial state
-  client: null,
-  connectionState: ConnectionState.DISCONNECTED,
-  error: null,
-  config: DEFAULT_WS_CONFIG,
-  _channelSwitchState: {
-    lastSwitchTime: 0,
-    pendingChannelId: null,
-    isProcessing: false,
-  },
-  messages: [],
-  typingUsers: {},
-  connectedUsers: {},
+      // Reconnection logic
+      reconnectAttempts: 0,
+      reconnectTimer: null,
+      isIntentionalDisconnect: false,
+      connectionPromise: null,
 
-  // Computed functions
-  isConnected: () => {
-    const { client, connectionState } = get();
-    console.log("TEST isConnected", connectionState, client?.isConnected());
-    return connectionState === ConnectionState.CONNECTED && client?.isConnected() === true;
-  },
-
-  isConnecting: () => {
-    return get().connectionState === ConnectionState.CONNECTING;
-  },
-
-  isReconnecting: () => {
-    return get().connectionState === ConnectionState.RECONNECTING;
-  },
-
-  getTypingUsersInChannel: (channelId: string) => {
-    return get().typingUsers[channelId] || [];
-  },
-
-  // Configuration actions
-  updateConfig: (newConfig: Partial<WebSocketClientConfig>) => {
-    set((state) => ({
-      config: { ...state.config, ...newConfig },
-    }));
-  },
-
-  // Connection actions
-  connect: async (userId: string) => {
-    const { client, isConnected, isConnecting, isReconnecting, config } = get();
-    const now = Date.now();
-
-    // Global rate limiting check
-    if (now - lastGlobalConnectionAttempt < GLOBAL_CONNECTION_RATE_LIMIT) {
-      const waitTime = GLOBAL_CONNECTION_RATE_LIMIT - (now - lastGlobalConnectionAttempt);
-      console.log(`Global connection rate limited, waiting ${waitTime}ms`);
-      return;
-    }
-
-    // Enhanced connection state validation
-    if (isConnected() || isConnecting() || isReconnecting()) {
-      console.log(`WebSocket connection attempt skipped - current state: ${get().connectionState}`);
-      return;
-    }
-
-    // Only run on client side
-    if (typeof window === "undefined") {
-      console.log("Server side detected, skipping WebSocket connection");
-      return;
-    }
-
-    // Update global rate limiting timestamp
-    lastGlobalConnectionAttempt = now;
-
-    // Clean up existing client if it exists and is not in a valid state
-    if (client) {
-      const clientConnected = client.isConnected();
-      if (clientConnected) {
-        console.log("Client already connected, skipping connection attempt");
-        return;
-      }
-      console.log("Cleaning up existing client before creating new one");
-      client.disconnect();
-      set({ client: null, error: null });
-    }
-
-    try {
-      const baseWsUrl = process.env.NEXT_PUBLIC_SOCKET_URL ?? "ws://localhost:8080/api/v1";
-
-      // If an existing client is present, attempt to reuse it based on its state
-      if (client) {
-        const state = client.getConnectionState();
-        if (
-          state === ConnectionState.CONNECTED ||
-          state === ConnectionState.CONNECTING ||
-          state === ConnectionState.RECONNECTING
-        ) {
-          console.log("Existing client is active or connecting; skipping new connection");
-          return;
-        }
-        // For DISCONNECTED/ERROR, reuse the client instance and reconnect
-        console.log("Reusing existing client instance; reconnecting...");
-        set({ connectionState: ConnectionState.CONNECTING, error: null });
-        get().setupEventListeners();
-        await client.connect(`${baseWsUrl}/ws`, { userId });
-        const clientState = client.getConnectionState();
-        if (get().connectionState !== clientState) set({ connectionState: clientState });
-        return;
-      }
-
-      console.log("Creating new TypeSafeWebSocketClient for userId:", userId);
-
-      // Create new client with configuration
-      const newClient = new TypeSafeWebSocketClient(config);
-
-      // Update state with new client
-      set({
-        client: newClient,
-        connectionState: ConnectionState.CONNECTING,
-        error: null,
-      });
-
-      // Set up event listeners before connecting
-      get().setupEventListeners();
+      // Configuration
+      config: {
+        reconnectInterval: 3000,
+        maxReconnectAttempts: 5,
+        connectionTimeout: 10000,
+      },
 
       // Connect to WebSocket
-      await newClient.connect(`${baseWsUrl}/ws`, { userId });
+      connect: async (userId: string) => {
+        const { ws, connectionState, config } = get();
 
-      // Manually sync state after connection attempt
-      const clientState = newClient.getConnectionState();
-      if (get().connectionState !== clientState) {
-        console.log(`Syncing connection state: store=${get().connectionState} -> client=${clientState}`);
-        set({ connectionState: clientState });
-      }
-    } catch (error) {
-      console.error("Failed to create or connect WebSocket:", error);
-      set({
-        error: {
-          code: "CONNECTION_FAILED",
-          message: "Failed to create WebSocket connection",
-          details: error instanceof Error ? error.message : "Unknown error",
-        },
-        client: null,
-        connectionState: ConnectionState.ERROR,
-      });
-    }
-  },
+        // Prevent multiple connection attempts
+        if (connectionState === ConnectionState.CONNECTING) {
+          throw new Error("Connection already in progress");
+        }
 
-  setupEventListeners: () => {
-    const { client } = get();
-    if (!client) return;
+        if (connectionState === ConnectionState.CONNECTED && ws?.readyState === WebSocket.OPEN) {
+          return;
+        }
 
-    // Set up event listeners using the proper WebSocketEventListeners interface
-    client.setEventListeners({
-      // Connection events
-      onConnect: () => {
-        set({ error: null, connectionState: ConnectionState.CONNECTED });
+        try {
+          set({
+            connectionState: ConnectionState.CONNECTING,
+            error: null,
+            isConnecting: true,
+            userId,
+            isIntentionalDisconnect: false,
+          });
+
+          const baseWsUrl = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:8080";
+          const url = `${baseWsUrl}/ws?userId=${userId}`;
+
+          set({ url });
+
+          return new Promise<void>((resolve, reject) => {
+            try {
+              const wsInstance = new WebSocket(url);
+              set({ ws: wsInstance, connectionPromise: { resolve, reject } });
+
+              const connectionTimeout = setTimeout(() => {
+                if (get().connectionState === ConnectionState.CONNECTING) {
+                  wsInstance.close();
+                  const timeoutError = new Error("Connection timeout");
+                  const { connectionPromise } = get();
+                  if (connectionPromise) {
+                    connectionPromise.reject(timeoutError);
+                    set({ connectionPromise: null });
+                  }
+                }
+              }, config.connectionTimeout);
+
+              wsInstance.onopen = () => {
+                clearTimeout(connectionTimeout);
+              };
+
+              wsInstance.onmessage = (event) => {
+                try {
+                  const message: WebSocketMessage = JSON.parse(event.data);
+                  get().handleMessage(message);
+                } catch (error) {
+                  console.error("Failed to parse WebSocket message:", error);
+                }
+              };
+
+              wsInstance.onerror = (error) => {
+                clearTimeout(connectionTimeout);
+                set({
+                  connectionState: ConnectionState.ERROR,
+                  connectionPromise: null,
+                });
+
+                const { connectionPromise } = get();
+                if (connectionPromise) {
+                  connectionPromise.reject(error);
+                }
+              };
+
+              wsInstance.onclose = (event) => {
+                clearTimeout(connectionTimeout);
+
+                const { connectionState, connectionPromise, isIntentionalDisconnect } = get();
+
+                // If we were still waiting for connection confirmation, reject the promise
+                if (connectionState === ConnectionState.CONNECTING && connectionPromise) {
+                  const closeError = new Error(`WebSocket closed before confirmation: ${event.reason || event.code}`);
+                  connectionPromise.reject(closeError);
+                  set({ connectionPromise: null });
+                }
+
+                if (connectionState === ConnectionState.CONNECTED) {
+                  // Only attempt reconnection if disconnect was not intentional
+                  if (!isIntentionalDisconnect) {
+                    get().attemptReconnect();
+                  }
+                }
+
+                set({
+                  connectionState: ConnectionState.DISCONNECTED,
+                  ws: null,
+                  isIntentionalDisconnect: false,
+                });
+              };
+            } catch (error) {
+              reject(error);
+            }
+          });
+        } catch (error) {
+          console.error("Failed to connect to WebSocket:", error);
+          set({
+            connectionState: ConnectionState.ERROR,
+            error: error instanceof Error ? error.message : "Connection failed",
+            isConnecting: false,
+          });
+          throw error;
+        }
       },
 
-      onDisconnect: () => {
-        set({ connectionState: ConnectionState.DISCONNECTED });
-      },
+      // Disconnect from WebSocket
+      disconnect: () => {
+        const { ws, reconnectTimer } = get();
 
-      onError: (error) => {
+        set({ isIntentionalDisconnect: true });
+
+        // Clear reconnection timer
+        if (reconnectTimer) {
+          clearTimeout(reconnectTimer);
+          set({ reconnectTimer: null });
+        }
+
+        // Clear connection promise if exists
+        const { connectionPromise } = get();
+        if (connectionPromise) {
+          connectionPromise.reject(new Error("Connection cancelled"));
+          set({ connectionPromise: null });
+        }
+
+        if (ws) {
+          ws.close();
+        }
+
         set({
-          error: {
-            code: "WEBSOCKET_ERROR",
-            message: "WebSocket connection error",
-            details: error.toString(),
-          },
-          connectionState: ConnectionState.ERROR,
+          connectionState: ConnectionState.DISCONNECTED,
+          error: null,
+          isConnecting: false,
+          ws: null,
+          reconnectAttempts: 0,
         });
       },
 
-      onConnectionStateChange: (state) => {
-        // Mirror client's internal connection state to the store to avoid duplicate connection attempts
-        set({ connectionState: state });
-      },
+      // Send a message
+      sendMessage: (channelId: string, text: string, url?: string, fileName?: string) => {
+        const { ws, connectionState } = get();
+        if (!ws || connectionState !== ConnectionState.CONNECTED || ws.readyState !== WebSocket.OPEN) {
+          throw new Error("WebSocket not connected");
+        }
 
-      // Message handling
-      onMessage: (message: WebSocketMessage) => {
-        set((state) => {
-          const max = state.config.messageCacheSize ?? 1000;
-          const next = [...state.messages, message];
-          if (next.length > max) next.splice(0, next.length - max);
-          return { messages: next };
-        });
-      },
-
-      // Channel message handling
-      onChannelMessage: (message: WebSocketMessage & { data: ChannelMessageData }) => {
-        console.info("Channel message received:", message);
-
-        const channelMessage = message.data;
-        const activeChannelId = useChannelStore.getState().activeChannelId;
-
-        // Transform and add to chat store if it's for the active channel
-        if (activeChannelId && channelMessage.channel_id === activeChannelId.toString()) {
-          const transformedMessage = {
-            id: Number(message.id.split("-")[1]) || Date.now(), // Extract numeric ID or use timestamp
-            channelId: Number(channelMessage.channel_id),
-            createdAt: new Date(message.timestamp).toISOString(),
-            senderId: Number(message.user_id),
-            senderName: "Unknown", // Will need to be populated from user data
-            senderAvatar: "",
-            text: channelMessage.text || "",
-            type: "channel",
-            url: channelMessage.url || undefined,
-            fileName: channelMessage.fileName || undefined,
+        try {
+          const message: WebSocketMessage = {
+            id: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+            type: MessageType.CHANNEL_MESSAGE,
+            data: {
+              channel_id: channelId,
+              text,
+              url: url || null,
+              fileName: fileName || null,
+            } as ChannelMessageData,
+            timestamp: Date.now(),
+            user_id: get().userId,
           };
 
-          useChatStore.getState().addMessageToChannel(channelMessage.channel_id.toString(), transformedMessage);
+          ws.send(JSON.stringify(message));
+        } catch (error) {
+          console.error("Failed to send message:", error);
+          set({ error: error instanceof Error ? error.message : "Failed to send message" });
+          throw error;
         }
       },
 
-      // Typing indicator handling
-      onTypingIndicator: (message: WebSocketMessage & { data: TypingIndicatorData }) => {
-        const { channel_id, is_typing } = message.data;
-        const userId = message.user_id;
+      // Join a channel
+      joinChannel: (channelId: string) => {
+        const { ws, connectionState } = get();
+        if (!ws || connectionState !== ConnectionState.CONNECTED || ws.readyState !== WebSocket.OPEN) {
+          throw new Error("WebSocket not connected");
+        }
 
-        if (!userId) return; // Skip if no user ID
+        try {
+          const message: WebSocketMessage = {
+            id: `join-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+            type: MessageType.CHANNEL_JOIN,
+            data: { channel_id: channelId },
+            timestamp: Date.now(),
+            user_id: get().userId,
+          };
 
-        if (is_typing) {
-          // Add typing indicator
-          set((state) => {
-            const channelTyping = state.typingUsers[channel_id] || [];
-            const existingIndex = channelTyping.findIndex((t) => t.userId === userId);
+          ws.send(JSON.stringify(message));
 
-            const newTypingState: TypingState = {
-              channelId: channel_id,
-              userId,
-              isTyping: true,
-              timestamp: message.timestamp,
-            };
+          // Track joined channel for automatic re-join on reconnect
+          try {
+            const channelStore = useChannelStore.getState();
+            channelStore.addJoinedChannel(channelId);
+          } catch {}
+        } catch (error) {
+          console.error("Failed to join channel:", error);
+          set({ error: error instanceof Error ? error.message : "Failed to join channel" });
+          throw error;
+        }
+      },
 
-            if (existingIndex >= 0) {
-              channelTyping[existingIndex] = newTypingState;
-            } else {
-              channelTyping.push(newTypingState);
-            }
+      // Leave a channel
+      leaveChannel: (channelId: string) => {
+        const { ws, connectionState } = get();
+        if (!ws || connectionState !== ConnectionState.CONNECTED) {
+          return; // Don't throw error on disconnect
+        }
 
-            return {
-              typingUsers: {
-                ...state.typingUsers,
-                [channel_id]: channelTyping,
-              },
-            };
+        try {
+          const message: WebSocketMessage = {
+            id: `leave-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+            type: MessageType.CHANNEL_LEAVE,
+            data: { channel_id: channelId },
+            timestamp: Date.now(),
+            user_id: get().userId,
+          };
+
+          ws.send(JSON.stringify(message));
+
+          // Untrack joined channel so it isn't auto re-joined later
+          try {
+            const channelStore = useChannelStore.getState();
+            channelStore.removeJoinedChannel(channelId);
+          } catch {}
+        } catch (error) {
+          console.error("Failed to leave channel:", error);
+          // Don't set error for leave operations as they're not critical
+        }
+      },
+
+      // Check if connected
+      isConnected: () => {
+        const { ws, connectionState } = get();
+        return connectionState === ConnectionState.CONNECTED && ws?.readyState === WebSocket.OPEN;
+      },
+
+      // Handle incoming WebSocket messages
+      handleMessage: (message: WebSocketMessage) => {
+        // Handle connection confirmation
+        if (message.type === MessageType.CONNECT) {
+          set({
+            connectionState: ConnectionState.CONNECTED,
+            reconnectAttempts: 0,
+            isConnecting: false,
           });
-        } else {
-          // Remove typing indicator
-          get().clearTypingIndicator(channel_id, userId);
-        }
-      },
 
-      // Member join/leave handling
-      onMemberJoin: (message: WebSocketMessage & { data: MemberJoinLeaveData }) => {
-        console.info("Member joined:", message.data);
-        // Could update channel member list here
-      },
-
-      onMemberLeave: (message: WebSocketMessage & { data: MemberJoinLeaveData }) => {
-        console.info("Member left:", message.data);
-        // Could update channel member list here
-      },
-
-      // User status handling
-      onUserStatus: (message: WebSocketMessage & { data: UserStatusData }) => {
-        const userData = message.data;
-        if (!message.user_id) return; // Skip if no user ID
-
-        set((state) => ({
-          connectedUsers: {
-            ...state.connectedUsers,
-            [message.user_id!]: userData,
-          },
-        }));
-      },
-
-      // User notification handling
-      onUserNotification: (message: WebSocketMessage) => {
-        console.info("User notification:", message.data);
-        // Could trigger UI notifications here
-      },
-    });
-  },
-
-  // Message actions
-  sendMessage: (channelId: string, msg: string, url?: string, fileName?: string) => {
-    console.log("Sending message:", msg);
-    const { client, isConnected } = get();
-
-    if (!isConnected() || !channelId || !client) {
-      console.log("Cannot send message: client not connected or invalid channelId");
-      return;
-    }
-
-    try {
-      client.sendChannelMessage(channelId, msg, url, fileName);
-    } catch (error) {
-      console.error("Error sending message:", error);
-      set({
-        error: {
-          code: "SEND_MESSAGE_FAILED",
-          message: "Failed to send message",
-          details: error instanceof Error ? error.message : "Unknown error",
-        },
-      });
-    }
-  },
-
-  sendTypingIndicator: (channelId: string, isTyping: boolean) => {
-    const { client, isConnected } = get();
-
-    if (!isConnected() || !channelId || !client) {
-      return;
-    }
-
-    try {
-      client.sendTypingIndicator(channelId, isTyping);
-    } catch (error) {
-      console.error("Error sending typing indicator:", error);
-    }
-  },
-
-  // Channel actions
-  joinChannel: (channelId: string) => {
-    const timestamp = Date.now();
-    console.log(`[${timestamp}] joinChannel called for:`, channelId);
-
-    const { client, isConnected } = get();
-    const channelStore = useChannelStore.getState();
-
-    if (!isConnected() || !channelId || !client) {
-      console.log(`[${timestamp}] Cannot join channel: client not connected or invalid channelId`);
-      return;
-    }
-
-    // Check if already in this channel using channel store
-    if (channelStore.isInChannel(channelId)) {
-      console.log(`[${timestamp}] Already in channel:`, channelId);
-      return;
-    }
-
-    try {
-      console.log(`[${timestamp}] Sending WebSocket join message for channel:`, channelId);
-      client.joinChannel(channelId);
-
-      // Update channel store to track joined channel
-      console.log(`[${timestamp}] Updating channel store state for joined channel:`, channelId);
-      channelStore.addJoinedChannel(channelId);
-      channelStore.setCurrentChannelId(channelId);
-      console.log(`[${timestamp}] Successfully joined channel:`, channelId);
-    } catch (error) {
-      console.error(`[${timestamp}] Error joining channel:`, error);
-      set({
-        error: {
-          code: "JOIN_CHANNEL_FAILED",
-          message: "Failed to join channel",
-          details: error instanceof Error ? error.message : "Unknown error",
-        },
-      });
-    }
-  },
-
-  leaveChannel: (channelId: string) => {
-    const timestamp = Date.now();
-    console.log(`[${timestamp}] leaveChannel called for:`, channelId);
-
-    const { client, isConnected } = get();
-    const channelStore = useChannelStore.getState();
-
-    if (!isConnected() || !channelId || !client) {
-      console.log(`[${timestamp}] Cannot leave channel: client not connected or invalid channelId`);
-      return;
-    }
-
-    // Check if actually in this channel using channel store
-    if (!channelStore.isInChannel(channelId)) {
-      console.log(`[${timestamp}] Not in channel:`, channelId);
-      return;
-    }
-
-    try {
-      console.log(`[${timestamp}] Sending WebSocket leave message for channel:`, channelId);
-      client.sendMessage(MessageType.CHANNEL_LEAVE, { channel_id: channelId });
-
-      // Update channel store to remove from joined channels
-      console.log(`[${timestamp}] Updating channel store state for left channel:`, channelId);
-      channelStore.removeJoinedChannel(channelId);
-
-      // Clear typing indicators for this channel
-      set((state) => {
-        const newTypingUsers = { ...state.typingUsers };
-        delete newTypingUsers[channelId];
-        return { typingUsers: newTypingUsers };
-      });
-
-      console.log(`[${timestamp}] Successfully left channel:`, channelId);
-    } catch (error) {
-      console.error(`[${timestamp}] Error leaving channel:`, error);
-      set({
-        error: {
-          code: "LEAVE_CHANNEL_FAILED",
-          message: "Failed to leave channel",
-          details: error instanceof Error ? error.message : "Unknown error",
-        },
-      });
-    }
-  },
-
-  // New method for proper channel switching with debouncing
-  switchChannel: (newChannelId: string | null) => {
-    const timestamp = Date.now();
-    const state = get();
-    const switchState = state._channelSwitchState;
-
-    console.log(`[${timestamp}] switchChannel called with:`, newChannelId, {
-      isProcessing: switchState.isProcessing,
-      lastSwitchTime: switchState.lastSwitchTime,
-      pendingChannelId: switchState.pendingChannelId,
-    });
-
-    // Enhanced debouncing with longer delay to prevent rapid switches
-    const timeSinceLastSwitch = timestamp - switchState.lastSwitchTime;
-    const debounceDelay = 200; // Increased from 100ms to 200ms
-
-    if (switchState.isProcessing || timeSinceLastSwitch < debounceDelay) {
-      console.log(
-        `[${timestamp}] Debouncing channel switch (${timeSinceLastSwitch}ms since last, need ${debounceDelay}ms)`
-      );
-
-      // Update pending channel if it's different
-      if (switchState.pendingChannelId !== newChannelId) {
-        set((state) => ({
-          _channelSwitchState: {
-            ...state._channelSwitchState,
-            pendingChannelId: newChannelId,
-          },
-        }));
-
-        // Clear any existing pending timeout
-        if (switchState.pendingChannelId !== null) {
-          console.log(`[${timestamp}] Clearing previous pending switch`);
-        }
-
-        // Schedule the pending switch with longer delay
-        setTimeout(() => {
-          const currentState = get();
-          const currentSwitchState = currentState._channelSwitchState;
-
-          // Only execute if this is still the pending channel and we're not processing
-          if (currentSwitchState.pendingChannelId === newChannelId && !currentSwitchState.isProcessing) {
-            console.log(`[${Date.now()}] Executing pending channel switch to:`, newChannelId);
-            get().switchChannel(newChannelId);
-          } else {
-            console.log(`[${Date.now()}] Skipping pending switch - state changed`);
+          const { connectionPromise } = get();
+          if (connectionPromise) {
+            connectionPromise.resolve();
+            set({ connectionPromise: null });
           }
-        }, debounceDelay + 50); // Additional buffer
-      }
-      return;
-    }
 
-    const channelStore = useChannelStore.getState();
-    const currentChannelId = channelStore.getCurrentChannelId();
+          // After reconnect, automatically re-join previously joined channels
+          try {
+            const channelStore = useChannelStore.getState();
+            const channelsToRejoin = channelStore.getJoinedChannels();
+            if (channelsToRejoin.length > 0) {
+              const { ws } = get();
+              if (ws && ws.readyState === WebSocket.OPEN) {
+                channelsToRejoin.forEach((channelId) => {
+                  const joinMsg: WebSocketMessage = {
+                    id: `rejoin-${channelId}-${Date.now()}`,
+                    type: MessageType.CHANNEL_JOIN,
+                    data: { channel_id: channelId },
+                    timestamp: Date.now(),
+                    user_id: get().userId,
+                  };
+                  try {
+                    ws.send(JSON.stringify(joinMsg));
+                  } catch (err) {
+                    console.error("Failed to auto re-join channel", channelId, err);
+                  }
+                });
+              }
+            }
+          } catch (err) {
+            console.error("Auto re-join channels failed:", err);
+          }
+          return;
+        }
 
-    if (!state.isConnected()) {
-      console.log(`[${timestamp}] Cannot switch channel: not connected`);
-      return;
-    }
+        // Handle error messages
+        if (message.type === MessageType.ERROR) {
+          console.error("Received error message:", message.data);
+          set({ error: (message.data as ErrorData).message });
+          return;
+        }
 
-    // If switching to the same channel, do nothing
-    if (currentChannelId === newChannelId) {
-      console.log(`[${timestamp}] Already in target channel:`, newChannelId);
-      return;
-    }
+        // Handle channel messages
+        if (message.type === MessageType.CHANNEL_MESSAGE) {
+          const messageData = message.data;
 
-    // Mark as processing and update state
-    set(() => ({
-      _channelSwitchState: {
-        lastSwitchTime: timestamp,
-        pendingChannelId: null,
-        isProcessing: true,
+          if (!messageData) {
+            console.error("Invalid channel message data:", messageData);
+            return;
+          }
+
+          const chatMessage: ChatMessage = {
+            id: messageData.id,
+            channelId: messageData.ChannelID || messageData.channelId,
+            senderId: messageData.SenderID || messageData.senderId,
+            senderName: messageData.Sender?.Username || messageData.Sender?.username || "Unknown",
+            senderAvatar: messageData.Sender?.Avatar || messageData.Sender?.avatar || "",
+            text: messageData.Text || messageData.text || "",
+            createdAt: messageData.CreatedAt || new Date().toISOString(),
+            type: "group",
+            url: messageData.URL || undefined,
+            fileName: messageData.FileName || undefined,
+          };
+
+          // Add message to chat store
+          const chatStore = useChatStore.getState();
+          chatStore.upsertMessageToChannel(String(chatMessage.channelId), chatMessage);
+
+          // Dispatch custom event for components to listen to
+          window.dispatchEvent(
+            new CustomEvent("chat-message", {
+              detail: { message: chatMessage, channelId: chatMessage.channelId },
+            })
+          );
+        }
+
+        // Dispatch ack events for join/leave to coordinate UI flows
+        if (message.type === MessageType.CHANNEL_LEAVE) {
+          const chanId = Number(message.data?.channel_id ?? message.data?.ChannelID ?? message.data?.channelId);
+          if (!Number.isNaN(chanId)) {
+            window.dispatchEvent(
+              new CustomEvent("ws-channel-leave-ack", {
+                detail: { channelId: chanId, userId: message.user_id },
+              })
+            );
+          }
+          return;
+        }
+
+        if (message.type === MessageType.CHANNEL_JOIN) {
+          const chanId = Number(message.data?.channel_id ?? message.data?.ChannelID ?? message.data?.channelId);
+          if (!Number.isNaN(chanId)) {
+            window.dispatchEvent(
+              new CustomEvent("ws-channel-join-ack", {
+                detail: { channelId: chanId, userId: message.user_id },
+              })
+            );
+          }
+          return;
+        }
       },
-    }));
 
-    console.log(`[${timestamp}] Executing channel switch from "${currentChannelId}" to "${newChannelId}"`);
+      // Attempt reconnection with exponential backoff
+      attemptReconnect: () => {
+        const { reconnectAttempts, config, userId } = get();
 
-    try {
-      // Leave current channel if we're in one
-      if (currentChannelId) {
-        console.log(`[${timestamp}] Leaving current channel:`, currentChannelId);
-        get().leaveChannel(currentChannelId);
-      }
+        if (reconnectAttempts >= config.maxReconnectAttempts) {
+          set({ connectionState: ConnectionState.ERROR });
+          return;
+        }
 
-      // Join new channel if specified
-      if (newChannelId) {
-        console.log(`[${timestamp}] Joining new channel:`, newChannelId);
-        get().joinChannel(newChannelId);
-      } else {
-        // Just update current channel to null if no new channel
-        console.log(`[${timestamp}] Setting current channel to null`);
-        channelStore.setCurrentChannelId(null);
-      }
+        const newAttempts = reconnectAttempts + 1;
+        set({ reconnectAttempts: newAttempts });
 
-      console.log(`[${timestamp}] Channel switch completed successfully`);
-    } catch (error) {
-      console.error(`[${timestamp}] Error during channel switch:`, error);
-    } finally {
-      // Clear processing flag
-      set((state) => ({
-        _channelSwitchState: {
-          ...state._channelSwitchState,
-          isProcessing: false,
-        },
-      }));
+        // Add exponential backoff to prevent aggressive reconnection
+        const delay = config.reconnectInterval * Math.pow(2, newAttempts - 1);
+
+        const reconnectTimer = setTimeout(() => {
+          // Only attempt reconnection if we're still disconnected
+          if (get().connectionState === ConnectionState.DISCONNECTED) {
+            console.log("TEST Reconnect attempt", userId);
+            get()
+              .connect(userId)
+              .catch((error) => {
+                console.error("Reconnection failed:", error);
+                // Don't immediately retry, let the timer handle it
+              });
+          }
+        }, delay);
+
+        set({ reconnectTimer });
+      },
+    }),
+    {
+      name: "socket-store",
     }
-  },
-
-  // New method to leave all channels (useful for disconnect)
-  leaveAllChannels: () => {
-    console.log("Leaving all channels");
-    const channelStore = useChannelStore.getState();
-    const joinedChannels = channelStore.getJoinedChannels();
-
-    // Leave each joined channel
-    joinedChannels.forEach((channelId: string) => {
-      get().leaveChannel(channelId);
-    });
-  },
-
-  disconnect: () => {
-    const { client } = get();
-    if (!client) return;
-
-    console.log("Disconnecting WebSocket");
-
-    // Prevent further auto-reconnects and tear down cleanly
-    try {
-      // Leave all channels before disconnecting
-      get().leaveAllChannels();
-    } catch {}
-
-    // Clear channel store state
-    try {
-      const channelStore = useChannelStore.getState();
-      channelStore.clearJoinedChannels();
-    } catch {}
-
-    client.disconnect();
-    set({
-      client: null,
-      error: null,
-      connectionState: ConnectionState.DISCONNECTED,
-      messages: [],
-      typingUsers: {},
-      connectedUsers: {},
-    });
-  },
-
-  // Utility functions
-  clearTypingIndicator: (channelId: string, userId: string) => {
-    set((state) => {
-      const channelTyping = state.typingUsers[channelId] || [];
-      const filteredTyping = channelTyping.filter((t) => t.userId !== userId);
-
-      return {
-        typingUsers: {
-          ...state.typingUsers,
-          [channelId]: filteredTyping,
-        },
-      };
-    });
-  },
-}));
+  )
+);
