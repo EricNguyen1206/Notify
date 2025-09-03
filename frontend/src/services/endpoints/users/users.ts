@@ -6,22 +6,27 @@
  * OpenAPI spec version: 1.0
  */
 import {
+  useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
   DefinedUseQueryResult,
+  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
 
 import type {
   ChatServiceInternalModelsErrorResponse,
+  ChatServiceInternalModelsUpdateProfileRequest,
   ChatServiceInternalModelsUserResponse,
   GetUsersSearchParams
 } from '../../schemas';
@@ -120,6 +125,70 @@ export function useGetUsersProfile<TData = Awaited<ReturnType<typeof getUsersPro
 
 
 /**
+ * Update the current user's profile information (username, avatar, password)
+ * @summary Update user profile
+ */
+export const putUsersProfile = (
+    chatServiceInternalModelsUpdateProfileRequest: ChatServiceInternalModelsUpdateProfileRequest,
+ ) => {
+      
+      
+      return axiosInstance<ChatServiceInternalModelsUserResponse>(
+      {url: `/users/profile`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: chatServiceInternalModelsUpdateProfileRequest
+    },
+      );
+    }
+  
+
+
+export const getPutUsersProfileMutationOptions = <TError = ChatServiceInternalModelsErrorResponse | ChatServiceInternalModelsErrorResponse | ChatServiceInternalModelsErrorResponse | ChatServiceInternalModelsErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof putUsersProfile>>, TError,{data: ChatServiceInternalModelsUpdateProfileRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof putUsersProfile>>, TError,{data: ChatServiceInternalModelsUpdateProfileRequest}, TContext> => {
+
+const mutationKey = ['putUsersProfile'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof putUsersProfile>>, {data: ChatServiceInternalModelsUpdateProfileRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  putUsersProfile(data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PutUsersProfileMutationResult = NonNullable<Awaited<ReturnType<typeof putUsersProfile>>>
+    export type PutUsersProfileMutationBody = ChatServiceInternalModelsUpdateProfileRequest
+    export type PutUsersProfileMutationError = ChatServiceInternalModelsErrorResponse | ChatServiceInternalModelsErrorResponse | ChatServiceInternalModelsErrorResponse | ChatServiceInternalModelsErrorResponse
+
+    /**
+ * @summary Update user profile
+ */
+export const usePutUsersProfile = <TError = ChatServiceInternalModelsErrorResponse | ChatServiceInternalModelsErrorResponse | ChatServiceInternalModelsErrorResponse | ChatServiceInternalModelsErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof putUsersProfile>>, TError,{data: ChatServiceInternalModelsUpdateProfileRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof putUsersProfile>>,
+        TError,
+        {data: ChatServiceInternalModelsUpdateProfileRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getPutUsersProfileMutationOptions(options);
+
+      return useMutation(mutationOptions , queryClient);
+    }
+    /**
  * Search for users by username (partial match for channel creation)
  * @summary Search users by username
  */

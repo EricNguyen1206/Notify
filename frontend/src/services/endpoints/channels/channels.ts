@@ -352,7 +352,7 @@ export const usePutChannelsId = <TError = ChatServiceInternalModelsErrorResponse
       return useMutation(mutationOptions , queryClient);
     }
     /**
- * Delete a channel (only channel owner can delete)
+ * Delete a channel (only channel owner can delete). This will remove all channel members and perform soft delete on the channel.
  * @summary Delete channel
  */
 export const deleteChannelsId = (
@@ -368,7 +368,7 @@ export const deleteChannelsId = (
   
 
 
-export const getDeleteChannelsIdMutationOptions = <TError = ChatServiceInternalModelsErrorResponse | ChatServiceInternalModelsErrorResponse,
+export const getDeleteChannelsIdMutationOptions = <TError = ChatServiceInternalModelsErrorResponse | ChatServiceInternalModelsErrorResponse | ChatServiceInternalModelsErrorResponse | ChatServiceInternalModelsErrorResponse,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteChannelsId>>, TError,{id: number}, TContext>, }
 ): UseMutationOptions<Awaited<ReturnType<typeof deleteChannelsId>>, TError,{id: number}, TContext> => {
 
@@ -395,12 +395,12 @@ const {mutation: mutationOptions} = options ?
 
     export type DeleteChannelsIdMutationResult = NonNullable<Awaited<ReturnType<typeof deleteChannelsId>>>
     
-    export type DeleteChannelsIdMutationError = ChatServiceInternalModelsErrorResponse | ChatServiceInternalModelsErrorResponse
+    export type DeleteChannelsIdMutationError = ChatServiceInternalModelsErrorResponse | ChatServiceInternalModelsErrorResponse | ChatServiceInternalModelsErrorResponse | ChatServiceInternalModelsErrorResponse
 
     /**
  * @summary Delete channel
  */
-export const useDeleteChannelsId = <TError = ChatServiceInternalModelsErrorResponse | ChatServiceInternalModelsErrorResponse,
+export const useDeleteChannelsId = <TError = ChatServiceInternalModelsErrorResponse | ChatServiceInternalModelsErrorResponse | ChatServiceInternalModelsErrorResponse | ChatServiceInternalModelsErrorResponse,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteChannelsId>>, TError,{id: number}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof deleteChannelsId>>,

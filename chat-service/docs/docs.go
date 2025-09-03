@@ -330,7 +330,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Delete a channel (only channel owner can delete)",
+                "description": "Delete a channel (only channel owner can delete). This will remove all channel members and perform soft delete on the channel.",
                 "consumes": [
                     "application/json"
                 ],
@@ -360,8 +360,20 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "400": {
+                        "description": "Bad request - channel not found or user is not owner",
+                        "schema": {
+                            "$ref": "#/definitions/chat-service_internal_models.ErrorResponse"
+                        }
+                    },
                     "401": {
                         "description": "Unauthorized - invalid or missing token",
+                        "schema": {
+                            "$ref": "#/definitions/chat-service_internal_models.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - only channel owner can delete channel",
                         "schema": {
                             "$ref": "#/definitions/chat-service_internal_models.ErrorResponse"
                         }
@@ -668,6 +680,67 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update the current user's profile information (username, avatar, password)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Update user profile",
+                "parameters": [
+                    {
+                        "description": "Profile update request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/chat-service_internal_models.UpdateProfileRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Profile updated successfully",
+                        "schema": {
+                            "$ref": "#/definitions/chat-service_internal_models.UserResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - invalid input data",
+                        "schema": {
+                            "$ref": "#/definitions/chat-service_internal_models.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - invalid or missing token",
+                        "schema": {
+                            "$ref": "#/definitions/chat-service_internal_models.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - current password is incorrect",
+                        "schema": {
+                            "$ref": "#/definitions/chat-service_internal_models.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/chat-service_internal_models.ErrorResponse"
+                        }
+                    }
+                }
             }
         },
         "/users/search": {
@@ -860,12 +933,12 @@ const docTemplate = `{
         "chat-service_internal_models.CreateChannelRequest": {
             "type": "object",
             "required": [
-                "name",
                 "type",
                 "userIds"
             ],
             "properties": {
                 "name": {
+                    "description": "Optional for direct messages, required for group",
                     "type": "string"
                 },
                 "type": {
@@ -973,6 +1046,31 @@ const docTemplate = `{
             ],
             "properties": {
                 "email": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string",
+                    "minLength": 6
+                },
+                "username": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "minLength": 3
+                }
+            }
+        },
+        "chat-service_internal_models.UpdateProfileRequest": {
+            "type": "object",
+            "required": [
+                "current_password"
+            ],
+            "properties": {
+                "avatar": {
+                    "description": "Optional avatar URL",
+                    "type": "string"
+                },
+                "current_password": {
+                    "description": "Required current password for verification",
                     "type": "string"
                 },
                 "password": {

@@ -88,6 +88,7 @@ func (r *Router) SetupRoutes() {
 		users.Use(r.rateLimitMW.RateLimit(100, time.Minute)) // 100 requests per minute
 		{
 			users.GET("/profile", r.userHandler.GetProfile)
+			users.PUT("/profile", r.userHandler.UpdateProfile)
 			users.GET("/search", r.userHandler.SearchUsersByUsername)
 		}
 
