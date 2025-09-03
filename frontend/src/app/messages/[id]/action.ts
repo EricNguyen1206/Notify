@@ -2,6 +2,7 @@
 
 import { useScreenDimensions } from "@/hooks/useScreenDimensions";
 import { useGetMessagesChannelId } from "@/services/endpoints/chats/chats";
+import { useGetChannelsId } from "@/services/endpoints/channels/channels";
 import { ChatServiceInternalModelsChatResponse } from "@/services/schemas";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useChannelStore } from "@/store/useChannelStore";
@@ -136,6 +137,26 @@ export const useChatData = (channelId: number | undefined) => {
     optimisticChats,
     setOptimisticChats,
     addMessageToChannel,
+  };
+};
+
+// Hook for getting channel details including member count
+export const useChannelDetails = (channelId: number | undefined) => {
+  const { data: channelData, isLoading: channelLoading } = useGetChannelsId(channelId ?? 0, {
+    query: {
+      enabled: !!channelId,
+    },
+  });
+
+  const memberCount = useMemo(() => {
+    if (!channelData?.data?.members) return 0;
+    return channelData.data.members.length;
+  }, [channelData?.data?.members]);
+
+  return {
+    channelData,
+    channelLoading,
+    memberCount,
   };
 };
 
@@ -298,6 +319,7 @@ export const useChatPage = () => {
   const { screenHeight, isOverFlow, updateOverflow } = useScreenDimensions(720);
   const { channelId, currentChannel, connectionState } = useChannelNavigation();
   const { chats, chatsLoading } = useChatData(channelId);
+  const { channelData, channelLoading, memberCount } = useChannelDetails(channelId);
   const { containerRef, mainRef, scrollToBottom, scrollToBottomOnUpdate } = useScrollBehavior();
   const { formData, setFormData } = useFormState();
   const messageSending = useMessageSending(channelId, sessionUser, setFormData, scrollToBottom);
@@ -328,6 +350,9 @@ export const useChatPage = () => {
     // Channel data
     channelId,
     currentChannel,
+    channelData,
+    channelLoading,
+    memberCount,
 
     // Chat data
     chats,

@@ -13,6 +13,8 @@ const DirectMessagesPage = () => {
     user,
     channelId,
     currentChannel,
+    channelData,
+    memberCount,
     containerRef,
     mainRef,
     chats,
@@ -29,7 +31,10 @@ const DirectMessagesPage = () => {
         name={String(currentChannel?.name)}
         isGroup={currentChannel?.type === "group"}
         avatar={currentChannel?.avatar ?? ""}
-        participantCount={currentChannel?.members?.length ?? 0}
+        participantCount={memberCount}
+        members={channelData?.data?.members}
+        ownerId={channelData?.data?.ownerId}
+        currentUserId={user?.id}
       />
 
       {/* Connection status indicator */}

@@ -6,7 +6,7 @@ A modern real-time chat application built with Go backend and Next.js frontend, 
 
 ## Getting Started
 
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. Please refer to the [Makefile Guide](MAKEFILE_GUIDE.md) for detailed instructions on how to set up the project.
+These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. Please refer to the [Makefile Guide](./_docs/MAKEFILE_GUIDE.md) for detailed instructions on how to set up the project.
 
 ## High-level Architecture
 

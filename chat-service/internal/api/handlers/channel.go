@@ -166,20 +166,39 @@ func (h *ChannelHandler) UpdateChannel(c *gin.Context) {
 
 // DeleteChannel godoc
 // @Summary Delete channel
-// @Description Delete a channel (only channel owner can delete)
+// @Description Delete a channel (only channel owner can delete). This will remove all channel members and perform soft delete on the channel.
 // @Tags channels
 // @Accept json
 // @Produce json
 // @Security BearerAuth
 // @Param id path int true "Channel ID"
 // @Success 200 {object} map[string]string "Channel deleted successfully"
+// @Failure 400 {object} models.ErrorResponse "Bad request - channel not found or user is not owner"
 // @Failure 401 {object} models.ErrorResponse "Unauthorized - invalid or missing token"
+// @Failure 403 {object} models.ErrorResponse "Forbidden - only channel owner can delete channel"
 // @Failure 500 {object} models.ErrorResponse "Internal server error"
 // @Router /channels/{id} [delete]
 func (h *ChannelHandler) DeleteChannel(c *gin.Context) {
 	userID := c.MustGet("user_id").(uint)
 	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err := h.channelService.DeleteChannel(userID, uint(id)); err != nil {
+		// Check specific error types to return appropriate HTTP status codes
+		if err.Error() == "channel not found" {
+			c.JSON(http.StatusNotFound, models.ErrorResponse{
+				Code:    http.StatusNotFound,
+				Message: "Channel not found",
+				Details: err.Error(),
+			})
+			return
+		}
+		if err.Error() == "only channel owner can delete channel" {
+			c.JSON(http.StatusForbidden, models.ErrorResponse{
+				Code:    http.StatusForbidden,
+				Message: "Forbidden",
+				Details: err.Error(),
+			})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Code:    http.StatusInternalServerError,
 			Message: "Delete failed",
