@@ -152,3 +152,25 @@ func (s *UserService) GetUserByEmail(email string) (*models.UserResponse, error)
 		CreatedAt: user.CreatedAt,
 	}, nil
 }
+
+// SearchUsersByUsername searches for users by username (partial match)
+func (s *UserService) SearchUsersByUsername(username string) ([]models.UserResponse, error) {
+	users, err := s.repo.SearchUsersByUsername(username)
+	if err != nil {
+		return nil, fmt.Errorf("failed to search users: %w", err)
+	}
+
+	// Convert to response format
+	responses := make([]models.UserResponse, len(users))
+	for i, user := range users {
+		responses[i] = models.UserResponse{
+			ID:        user.ID,
+			Email:     user.Email,
+			Username:  user.Username,
+			CreatedAt: user.CreatedAt,
+			Avatar:    user.Avatar,
+		}
+	}
+
+	return responses, nil
+}

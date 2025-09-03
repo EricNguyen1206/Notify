@@ -5,12 +5,12 @@ definitions:
       created_at:
         type: string
       deleted_at:
-        $ref: '#/definitions/gorm.DeletedAt'
+        $ref: "#/definitions/gorm.DeletedAt"
       id:
         type: integer
       members:
         items:
-          $ref: '#/definitions/chat-service_internal_models.User'
+          $ref: "#/definitions/chat-service_internal_models.User"
         type: array
       name:
         description: Name of the channel
@@ -33,7 +33,7 @@ definitions:
       members:
         description: List of members in the channel
         items:
-          $ref: '#/definitions/chat-service_internal_models.User'
+          $ref: "#/definitions/chat-service_internal_models.User"
         type: array
       name:
         type: string
@@ -88,6 +88,27 @@ definitions:
         description: optional URL for media
         type: string
     type: object
+  chat-service_internal_models.CreateChannelRequest:
+    properties:
+      name:
+        type: string
+      type:
+        enum:
+          - direct
+          - group
+        type: string
+      userIds:
+        description: Minimum 2, maximum 4 users
+        items:
+          type: integer
+        maxItems: 4
+        minItems: 2
+        type: array
+    required:
+      - name
+      - type
+      - userIds
+    type: object
   chat-service_internal_models.DirectChannelResponse:
     properties:
       avatar:
@@ -118,21 +139,21 @@ definitions:
       password:
         type: string
     required:
-    - email
-    - password
+      - email
+      - password
     type: object
   chat-service_internal_models.LoginResponse:
     properties:
       token:
         type: string
       user:
-        $ref: '#/definitions/chat-service_internal_models.UserResponse'
+        $ref: "#/definitions/chat-service_internal_models.UserResponse"
     type: object
   chat-service_internal_models.PaginatedChatResponse:
     properties:
       items:
         items:
-          $ref: '#/definitions/chat-service_internal_models.ChatResponse'
+          $ref: "#/definitions/chat-service_internal_models.ChatResponse"
         type: array
       nextCursor:
         type: integer
@@ -151,9 +172,9 @@ definitions:
         minLength: 3
         type: string
     required:
-    - email
-    - password
-    - username
+      - email
+      - password
+      - username
     type: object
   chat-service_internal_models.User:
     properties:
@@ -164,12 +185,12 @@ definitions:
         type: string
       channels:
         items:
-          $ref: '#/definitions/chat-service_internal_models.Channel'
+          $ref: "#/definitions/chat-service_internal_models.Channel"
         type: array
       created_at:
         type: string
       deleted_at:
-        $ref: '#/definitions/gorm.DeletedAt'
+        $ref: "#/definitions/gorm.DeletedAt"
       email:
         description: Unique email for the user
         type: string
@@ -186,12 +207,12 @@ definitions:
       direct:
         description: List of channels of type 'direct'
         items:
-          $ref: '#/definitions/chat-service_internal_models.DirectChannelResponse'
+          $ref: "#/definitions/chat-service_internal_models.DirectChannelResponse"
         type: array
       group:
         description: List of channels of type 'group'
         items:
-          $ref: '#/definitions/chat-service_internal_models.ChannelResponse'
+          $ref: "#/definitions/chat-service_internal_models.ChannelResponse"
         type: array
     type: object
   chat-service_internal_models.UserResponse:
@@ -225,143 +246,141 @@ paths:
   /auth/login:
     post:
       consumes:
-      - application/json
+        - application/json
       description: Authenticate user with email and password
       parameters:
-      - description: User login credentials
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/chat-service_internal_models.LoginRequest'
+        - description: User login credentials
+          in: body
+          name: request
+          required: true
+          schema:
+            $ref: "#/definitions/chat-service_internal_models.LoginRequest"
       produces:
-      - application/json
+        - application/json
       responses:
         "200":
           description: Login successful - returns JWT token and user data
           schema:
-            $ref: '#/definitions/chat-service_internal_models.LoginResponse'
+            $ref: "#/definitions/chat-service_internal_models.LoginResponse"
         "400":
           description: Bad request - invalid input data
           schema:
-            $ref: '#/definitions/chat-service_internal_models.ErrorResponse'
+            $ref: "#/definitions/chat-service_internal_models.ErrorResponse"
         "401":
           description: Unauthorized - invalid credentials
           schema:
-            $ref: '#/definitions/chat-service_internal_models.ErrorResponse'
+            $ref: "#/definitions/chat-service_internal_models.ErrorResponse"
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/chat-service_internal_models.ErrorResponse'
+            $ref: "#/definitions/chat-service_internal_models.ErrorResponse"
       summary: User login
       tags:
-      - auth
+        - auth
   /auth/register:
     post:
       consumes:
-      - application/json
+        - application/json
       description: Register a new user with username, email, and password
       parameters:
-      - description: User registration data
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/chat-service_internal_models.RegisterRequest'
+        - description: User registration data
+          in: body
+          name: request
+          required: true
+          schema:
+            $ref: "#/definitions/chat-service_internal_models.RegisterRequest"
       produces:
-      - application/json
+        - application/json
       responses:
         "201":
           description: User created successfully
           schema:
-            $ref: '#/definitions/chat-service_internal_models.UserResponse'
+            $ref: "#/definitions/chat-service_internal_models.UserResponse"
         "400":
           description: Bad request - invalid input data
           schema:
-            $ref: '#/definitions/chat-service_internal_models.ErrorResponse'
+            $ref: "#/definitions/chat-service_internal_models.ErrorResponse"
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/chat-service_internal_models.ErrorResponse'
+            $ref: "#/definitions/chat-service_internal_models.ErrorResponse"
       summary: Register a new user
       tags:
-      - auth
+        - auth
   /channels/:
     get:
       consumes:
-      - application/json
+        - application/json
       description: Get all channels that the current user is a member of, separated
         by type
       produces:
-      - application/json
+        - application/json
       responses:
         "200":
           description: Object with direct and group channel lists
           schema:
-            $ref: '#/definitions/chat-service_internal_models.UserChannelsResponse'
+            $ref: "#/definitions/chat-service_internal_models.UserChannelsResponse"
         "401":
           description: Unauthorized - invalid or missing token
           schema:
-            $ref: '#/definitions/chat-service_internal_models.ErrorResponse'
+            $ref: "#/definitions/chat-service_internal_models.ErrorResponse"
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/chat-service_internal_models.ErrorResponse'
+            $ref: "#/definitions/chat-service_internal_models.ErrorResponse"
       security:
-      - BearerAuth: []
+        - BearerAuth: []
       summary: Get user's channels
       tags:
-      - channels
+        - channels
     post:
       consumes:
-      - application/json
-      description: Create a new channel with the specified name
+        - application/json
+      description: Create a new channel with the specified name and selected users
       parameters:
-      - description: Channel creation data
-        in: body
-        name: request
-        required: true
-        schema:
-          additionalProperties:
-            type: string
-          type: object
+        - description: Channel creation data with user selection
+          in: body
+          name: request
+          required: true
+          schema:
+            $ref: "#/definitions/chat-service_internal_models.CreateChannelRequest"
       produces:
-      - application/json
+        - application/json
       responses:
         "200":
           description: Channel created successfully
           schema:
-            $ref: '#/definitions/chat-service_internal_models.ChannelResponse'
+            $ref: "#/definitions/chat-service_internal_models.ChannelResponse"
         "400":
           description: Bad request - invalid input data
           schema:
-            $ref: '#/definitions/chat-service_internal_models.ErrorResponse'
+            $ref: "#/definitions/chat-service_internal_models.ErrorResponse"
         "401":
           description: Unauthorized - invalid or missing token
           schema:
-            $ref: '#/definitions/chat-service_internal_models.ErrorResponse'
+            $ref: "#/definitions/chat-service_internal_models.ErrorResponse"
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/chat-service_internal_models.ErrorResponse'
+            $ref: "#/definitions/chat-service_internal_models.ErrorResponse"
       security:
-      - BearerAuth: []
+        - BearerAuth: []
       summary: Create a new channel
       tags:
-      - channels
+        - channels
   /channels/{id}:
     delete:
       consumes:
-      - application/json
+        - application/json
       description: Delete a channel (only channel owner can delete)
       parameters:
-      - description: Channel ID
-        in: path
-        name: id
-        required: true
-        type: integer
+        - description: Channel ID
+          in: path
+          name: id
+          required: true
+          type: integer
       produces:
-      - application/json
+        - application/json
       responses:
         "200":
           description: Channel deleted successfully
@@ -372,66 +391,66 @@ paths:
         "401":
           description: Unauthorized - invalid or missing token
           schema:
-            $ref: '#/definitions/chat-service_internal_models.ErrorResponse'
+            $ref: "#/definitions/chat-service_internal_models.ErrorResponse"
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/chat-service_internal_models.ErrorResponse'
+            $ref: "#/definitions/chat-service_internal_models.ErrorResponse"
       security:
-      - BearerAuth: []
+        - BearerAuth: []
       summary: Delete channel
       tags:
-      - channels
+        - channels
     get:
       consumes:
-      - application/json
+        - application/json
       description: Get detailed information about a specific channel
       parameters:
-      - description: Channel ID
-        in: path
-        name: id
-        required: true
-        type: integer
+        - description: Channel ID
+          in: path
+          name: id
+          required: true
+          type: integer
       produces:
-      - application/json
+        - application/json
       responses:
         "200":
           description: Channel details retrieved successfully
           schema:
-            $ref: '#/definitions/chat-service_internal_models.ChannelDetailResponse'
+            $ref: "#/definitions/chat-service_internal_models.ChannelDetailResponse"
         "401":
           description: Unauthorized - invalid or missing token
           schema:
-            $ref: '#/definitions/chat-service_internal_models.ErrorResponse'
+            $ref: "#/definitions/chat-service_internal_models.ErrorResponse"
         "404":
           description: Channel not found
           schema:
-            $ref: '#/definitions/chat-service_internal_models.ErrorResponse'
+            $ref: "#/definitions/chat-service_internal_models.ErrorResponse"
       security:
-      - BearerAuth: []
+        - BearerAuth: []
       summary: Get channel by ID
       tags:
-      - channels
+        - channels
     put:
       consumes:
-      - application/json
+        - application/json
       description: Update the name of an existing channel
       parameters:
-      - description: Channel ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Channel update data
-        in: body
-        name: request
-        required: true
-        schema:
-          additionalProperties:
-            type: string
-          type: object
+        - description: Channel ID
+          in: path
+          name: id
+          required: true
+          type: integer
+        - description: Channel update data
+          in: body
+          name: request
+          required: true
+          schema:
+            additionalProperties:
+              type: string
+            type: object
       produces:
-      - application/json
+        - application/json
       responses:
         "200":
           description: Channel updated successfully
@@ -442,41 +461,41 @@ paths:
         "400":
           description: Bad request - invalid input data
           schema:
-            $ref: '#/definitions/chat-service_internal_models.ErrorResponse'
+            $ref: "#/definitions/chat-service_internal_models.ErrorResponse"
         "401":
           description: Unauthorized - invalid or missing token
           schema:
-            $ref: '#/definitions/chat-service_internal_models.ErrorResponse'
+            $ref: "#/definitions/chat-service_internal_models.ErrorResponse"
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/chat-service_internal_models.ErrorResponse'
+            $ref: "#/definitions/chat-service_internal_models.ErrorResponse"
       security:
-      - BearerAuth: []
+        - BearerAuth: []
       summary: Update channel
       tags:
-      - channels
+        - channels
   /channels/{id}/user:
     delete:
       consumes:
-      - application/json
+        - application/json
       description: Remove a user from a channel (only channel owner can remove users)
       parameters:
-      - description: Channel ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: User removal data
-        in: body
-        name: request
-        required: true
-        schema:
-          additionalProperties:
-            type: integer
-          type: object
+        - description: Channel ID
+          in: path
+          name: id
+          required: true
+          type: integer
+        - description: User removal data
+          in: body
+          name: request
+          required: true
+          schema:
+            additionalProperties:
+              type: integer
+            type: object
       produces:
-      - application/json
+        - application/json
       responses:
         "200":
           description: User removed from channel successfully
@@ -487,40 +506,40 @@ paths:
         "400":
           description: Bad request - invalid input data
           schema:
-            $ref: '#/definitions/chat-service_internal_models.ErrorResponse'
+            $ref: "#/definitions/chat-service_internal_models.ErrorResponse"
         "401":
           description: Unauthorized - invalid or missing token
           schema:
-            $ref: '#/definitions/chat-service_internal_models.ErrorResponse'
+            $ref: "#/definitions/chat-service_internal_models.ErrorResponse"
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/chat-service_internal_models.ErrorResponse'
+            $ref: "#/definitions/chat-service_internal_models.ErrorResponse"
       security:
-      - BearerAuth: []
+        - BearerAuth: []
       summary: Remove user from channel
       tags:
-      - channels
+        - channels
     post:
       consumes:
-      - application/json
+        - application/json
       description: Add a user to a channel (only channel owner can add users)
       parameters:
-      - description: Channel ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: User addition data
-        in: body
-        name: request
-        required: true
-        schema:
-          additionalProperties:
-            type: integer
-          type: object
+        - description: Channel ID
+          in: path
+          name: id
+          required: true
+          type: integer
+        - description: User addition data
+          in: body
+          name: request
+          required: true
+          schema:
+            additionalProperties:
+              type: integer
+            type: object
       produces:
-      - application/json
+        - application/json
       responses:
         "200":
           description: User added to channel successfully
@@ -531,32 +550,32 @@ paths:
         "400":
           description: Bad request - invalid input data
           schema:
-            $ref: '#/definitions/chat-service_internal_models.ErrorResponse'
+            $ref: "#/definitions/chat-service_internal_models.ErrorResponse"
         "401":
           description: Unauthorized - invalid or missing token
           schema:
-            $ref: '#/definitions/chat-service_internal_models.ErrorResponse'
+            $ref: "#/definitions/chat-service_internal_models.ErrorResponse"
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/chat-service_internal_models.ErrorResponse'
+            $ref: "#/definitions/chat-service_internal_models.ErrorResponse"
       security:
-      - BearerAuth: []
+        - BearerAuth: []
       summary: Add user to channel
       tags:
-      - channels
+        - channels
     put:
       consumes:
-      - application/json
+        - application/json
       description: Remove the current user from a channel
       parameters:
-      - description: Channel ID
-        in: path
-        name: id
-        required: true
-        type: integer
+        - description: Channel ID
+          in: path
+          name: id
+          required: true
+          type: integer
       produces:
-      - application/json
+        - application/json
       responses:
         "200":
           description: User left channel successfully
@@ -567,87 +586,124 @@ paths:
         "401":
           description: Unauthorized - invalid or missing token
           schema:
-            $ref: '#/definitions/chat-service_internal_models.ErrorResponse'
+            $ref: "#/definitions/chat-service_internal_models.ErrorResponse"
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/chat-service_internal_models.ErrorResponse'
+            $ref: "#/definitions/chat-service_internal_models.ErrorResponse"
       security:
-      - BearerAuth: []
+        - BearerAuth: []
       summary: Leave channel
       tags:
-      - channels
+        - channels
   /messages/channel/{id}:
     get:
       consumes:
-      - application/json
+        - application/json
       description: Get all chat messages for a specific channel (paginated)
       parameters:
-      - description: Channel ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Page size
-        in: query
-        name: limit
-        type: integer
-      - description: Cursor for infinite scroll (timestamp)
-        in: query
-        name: before
-        type: integer
+        - description: Channel ID
+          in: path
+          name: id
+          required: true
+          type: integer
+        - description: Page size
+          in: query
+          name: limit
+          type: integer
+        - description: Cursor for infinite scroll (timestamp)
+          in: query
+          name: before
+          type: integer
       produces:
-      - application/json
+        - application/json
       responses:
         "200":
           description: Paginated chat messages
           schema:
-            $ref: '#/definitions/chat-service_internal_models.PaginatedChatResponse'
+            $ref: "#/definitions/chat-service_internal_models.PaginatedChatResponse"
         "401":
           description: Unauthorized - invalid or missing token
           schema:
-            $ref: '#/definitions/chat-service_internal_models.ErrorResponse'
+            $ref: "#/definitions/chat-service_internal_models.ErrorResponse"
         "404":
           description: Channel not found
           schema:
-            $ref: '#/definitions/chat-service_internal_models.ErrorResponse'
+            $ref: "#/definitions/chat-service_internal_models.ErrorResponse"
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/chat-service_internal_models.ErrorResponse'
+            $ref: "#/definitions/chat-service_internal_models.ErrorResponse"
       security:
-      - BearerAuth: []
+        - BearerAuth: []
       summary: Get chat messages in a channel
       tags:
-      - chats
+        - chats
   /users/profile:
     get:
       consumes:
-      - application/json
+        - application/json
       description: Get the current user's profile information
       produces:
-      - application/json
+        - application/json
       responses:
         "200":
           description: User profile retrieved successfully
           schema:
-            $ref: '#/definitions/chat-service_internal_models.UserResponse'
+            $ref: "#/definitions/chat-service_internal_models.UserResponse"
         "401":
           description: Unauthorized - invalid or missing token
           schema:
-            $ref: '#/definitions/chat-service_internal_models.ErrorResponse'
+            $ref: "#/definitions/chat-service_internal_models.ErrorResponse"
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/chat-service_internal_models.ErrorResponse'
+            $ref: "#/definitions/chat-service_internal_models.ErrorResponse"
       security:
-      - BearerAuth: []
+        - BearerAuth: []
       summary: Get user profile
       tags:
-      - users
+        - users
+  /users/search:
+    get:
+      consumes:
+        - application/json
+      description: Search for users by username (partial match for channel creation)
+      parameters:
+        - description: Username to search for
+          in: query
+          name: username
+          required: true
+          type: string
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: List of users found
+          schema:
+            items:
+              $ref: "#/definitions/chat-service_internal_models.UserResponse"
+            type: array
+        "400":
+          description: Bad request - invalid username
+          schema:
+            $ref: "#/definitions/chat-service_internal_models.ErrorResponse"
+        "401":
+          description: Unauthorized - invalid or missing token
+          schema:
+            $ref: "#/definitions/chat-service_internal_models.ErrorResponse"
+        "500":
+          description: Internal server error
+          schema:
+            $ref: "#/definitions/chat-service_internal_models.ErrorResponse"
+      security:
+        - BearerAuth: []
+      summary: Search users by username
+      tags:
+        - users
 schemes:
-- http
-- https
+  - http
+  - https
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and JWT token.

@@ -8,11 +8,13 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { UserSearchInput } from "@/components/molecules/UserSearchInput";
 import { useCreateChannel } from "@/hooks/useCreateChannel";
+import type { ChatServiceInternalModelsUserResponse } from "@/services/schemas";
 
 interface CreateNewChannelDialogProps {
   openCreateChannel: boolean;
@@ -23,17 +25,12 @@ interface CreateNewChannelDialogProps {
 const CreateNewChannelDialog = (props: CreateNewChannelDialogProps) => {
   const { openCreateChannel, setOpenCreateChannel, children } = props;
 
-  const {
-    formData,
-    loading,
-    createChannel,
-    updateFormData,
-    resetForm
-  } = useCreateChannel({
+  const { formData, loading, createChannel, updateFormData, updateSelectedUsers, resetForm } = useCreateChannel({
+    defaultType: "group",
     onSuccess: () => {
       // Close dialog and reset form on successful creation
       setOpenCreateChannel(false);
-    }
+    },
   });
 
   const handleCreateNewChannel = async (e: FormEvent<HTMLFormElement>) => {
@@ -54,14 +51,11 @@ const CreateNewChannelDialog = (props: CreateNewChannelDialogProps) => {
       <DialogTrigger asChild>
         <div>{children}</div>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Create Channel</DialogTitle>
         </DialogHeader>
-        <form
-          className="flex flex-col gap-8"
-          onSubmit={handleCreateNewChannel}
-        >
+        <form className="flex flex-col gap-6" onSubmit={handleCreateNewChannel}>
           <div className="flex flex-col gap-3">
             <Label htmlFor="name" className="text-[12px] font-bold text-left">
               CHANNEL NAME
@@ -69,25 +63,33 @@ const CreateNewChannelDialog = (props: CreateNewChannelDialogProps) => {
             <Input
               id="name"
               className="col-span-3"
-              placeholder="New category"
+              placeholder="Enter channel name"
               value={formData.name}
               onChange={(e) => {
                 updateFormData({ name: e.target.value });
               }}
             />
           </div>
+
+          <div className="flex flex-col gap-3">
+            <Label className="text-[12px] font-bold text-left">SELECT USERS</Label>
+            <UserSearchInput
+              selectedUsers={formData.selectedUsers}
+              onUsersChange={updateSelectedUsers}
+              maxUsers={4}
+              minUsers={2}
+              disabled={loading}
+            />
+          </div>
+
           <DialogFooter>
             <DialogClose asChild>
               <Button type="button" variant="secondary">
                 Cancel
               </Button>
             </DialogClose>
-            <Button
-              type="submit"
-              variant="default"
-              disabled={loading}
-            >
-              Create Channel
+            <Button type="submit" variant="default" disabled={loading || formData.selectedUsers.length < 2}>
+              {loading ? "Creating..." : "Create Channel"}
             </Button>
           </DialogFooter>
         </form>
@@ -96,4 +98,4 @@ const CreateNewChannelDialog = (props: CreateNewChannelDialogProps) => {
   );
 };
 
-export default CreateNewChannelDialog; 
+export default CreateNewChannelDialog;

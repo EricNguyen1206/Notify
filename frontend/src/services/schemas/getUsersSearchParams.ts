@@ -6,10 +6,9 @@
  * OpenAPI spec version: 1.0
  */
 
+export type GetUsersSearchParams = {
 /**
- * Data structure for channel.join message type
+ * Username to search for
  */
-export interface ChatServiceInternalModelsChannelJoinData {
-  /** ID of the channel to join */
-  channel_id: string;
-}
+username: string;
+};

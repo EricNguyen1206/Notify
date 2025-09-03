@@ -4,6 +4,7 @@ import (
 	"chat-service/internal/models"
 	"chat-service/internal/repositories/postgres"
 	"errors"
+	"fmt"
 
 	"gorm.io/gorm"
 )
@@ -50,27 +51,27 @@ func (s *ChannelService) buildDirectChannelResponse(channel *models.Channel, use
 		return models.DirectChannelResponse{}, err
 	}
 
-	var usrName string
+	var usrEmail string
 	var avatar string
 	if len(friends) == 0 {
-		usrName = "Unknown"
+		usrEmail = "Unknown"
 		avatar = ""
 	} else if len(friends) == 1 {
-		usrName = friends[0].Username
+		usrEmail = friends[0].Email
 		avatar = friends[0].Avatar
 	} else {
 		// Multiple friends - avoid showing current user as channel name
 		if friends[0].ID == userID {
-			usrName = friends[1].Username
+			usrEmail = friends[1].Email
 			avatar = friends[1].Avatar
 		} else {
-			usrName = friends[0].Username
+			usrEmail = friends[0].Email
 			avatar = friends[0].Avatar
 		}
 	}
 	resp := models.DirectChannelResponse{
 		ID:      channel.ID,
-		Name:    usrName,
+		Name:    usrEmail,
 		Avatar:  avatar,
 		Type:    channel.Type,
 		OwnerID: channel.OwnerID,
@@ -92,6 +93,58 @@ func (s *ChannelService) CreateChannel(name string, ownerID uint, chanType strin
 		Members: []*models.User{owner},
 		Type:    chanType,
 	}
+	err = s.repo.Create(channel)
+	return channel, err
+}
+
+// CreateChannelWithUsers creates a new channel with specified users
+func (s *ChannelService) CreateChannelWithUsers(name string, ownerID uint, chanType string, userIDs []uint) (*models.Channel, error) {
+	// Validate owner exists
+	_, err := s.userRepo.FindByID(ownerID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("owner not found")
+		}
+		return nil, errors.New("failed to find owner: " + err.Error())
+	}
+
+	// Validate all users exist
+	users := make([]*models.User, 0, len(userIDs))
+	for _, userID := range userIDs {
+		user, err := s.userRepo.FindByID(userID)
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil, fmt.Errorf("user with ID %d not found", userID)
+			}
+			return nil, fmt.Errorf("failed to find user %d: %w", userID, err)
+		}
+		users = append(users, user)
+	}
+
+	// Auto-generate name for direct messages if not provided
+	channelName := name
+	if chanType == models.ChannelTypeDirect && (name == "" || name == "Direct Message with User") {
+		// Find the other user (not the owner) to use their email as channel name
+		var otherUser *models.User
+		for _, user := range users {
+			if user.ID != ownerID {
+				otherUser = user
+				break
+			}
+		}
+		if otherUser != nil {
+			channelName = otherUser.Email
+		}
+	}
+
+	// Create channel with all users
+	channel := &models.Channel{
+		Name:    channelName,
+		OwnerID: ownerID,
+		Members: users,
+		Type:    chanType,
+	}
+
 	err = s.repo.Create(channel)
 	return channel, err
 }

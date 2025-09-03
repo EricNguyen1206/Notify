@@ -28,6 +28,13 @@ type UpdateChannelRequest struct {
 	Name string `json:"name" binding:"required"`
 }
 
+// CreateChannelRequest represents the request for creating a new channel with user selection
+type CreateChannelRequest struct {
+	Name    string `json:"name" binding:"omitempty"` // Optional for direct messages, required for group
+	Type    string `json:"type" binding:"required,oneof=direct group"`
+	UserIDs []uint `json:"userIds" binding:"required,min=2,max=4"` // Minimum 2, maximum 4 users
+}
+
 type ChannelDetailResponse struct {
 	ID        uint      `json:"id"`
 	Name      string    `json:"name"`

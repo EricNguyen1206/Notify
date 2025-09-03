@@ -158,7 +158,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Create a new channel with the specified name",
+                "description": "Create a new channel with the specified name and selected users",
                 "consumes": [
                     "application/json"
                 ],
@@ -171,15 +171,12 @@ const docTemplate = `{
                 "summary": "Create a new channel",
                 "parameters": [
                     {
-                        "description": "Channel creation data",
+                        "description": "Channel creation data with user selection",
                         "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/chat-service_internal_models.CreateChannelRequest"
                         }
                     }
                 ],
@@ -672,6 +669,64 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/users/search": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Search for users by username (partial match for channel creation)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Search users by username",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Username to search for",
+                        "name": "username",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of users found",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/chat-service_internal_models.UserResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - invalid username",
+                        "schema": {
+                            "$ref": "#/definitions/chat-service_internal_models.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - invalid or missing token",
+                        "schema": {
+                            "$ref": "#/definitions/chat-service_internal_models.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/chat-service_internal_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -799,6 +854,35 @@ const docTemplate = `{
                 "url": {
                     "description": "optional URL for media",
                     "type": "string"
+                }
+            }
+        },
+        "chat-service_internal_models.CreateChannelRequest": {
+            "type": "object",
+            "required": [
+                "name",
+                "type",
+                "userIds"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "direct",
+                        "group"
+                    ]
+                },
+                "userIds": {
+                    "description": "Minimum 2, maximum 4 users",
+                    "type": "array",
+                    "maxItems": 4,
+                    "minItems": 2,
+                    "items": {
+                        "type": "integer"
+                    }
                 }
             }
         },

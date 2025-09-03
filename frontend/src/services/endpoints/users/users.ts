@@ -22,7 +22,8 @@ import type {
 
 import type {
   ChatServiceInternalModelsErrorResponse,
-  ChatServiceInternalModelsUserResponse
+  ChatServiceInternalModelsUserResponse,
+  GetUsersSearchParams
 } from '../../schemas';
 
 import { axiosInstance } from '../../axios-config';
@@ -108,6 +109,95 @@ export function useGetUsersProfile<TData = Awaited<ReturnType<typeof getUsersPro
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getGetUsersProfileQueryOptions(options)
+
+  const query = useQuery(queryOptions , queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+/**
+ * Search for users by username (partial match for channel creation)
+ * @summary Search users by username
+ */
+export const getUsersSearch = (
+    params: GetUsersSearchParams,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosInstance<ChatServiceInternalModelsUserResponse[]>(
+      {url: `/users/search`, method: 'GET',
+        params, signal
+    },
+      );
+    }
+  
+
+export const getGetUsersSearchQueryKey = (params?: GetUsersSearchParams,) => {
+    return [`/users/search`, ...(params ? [params]: [])] as const;
+    }
+
+    
+export const getGetUsersSearchQueryOptions = <TData = Awaited<ReturnType<typeof getUsersSearch>>, TError = ChatServiceInternalModelsErrorResponse | ChatServiceInternalModelsErrorResponse | ChatServiceInternalModelsErrorResponse>(params: GetUsersSearchParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsersSearch>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetUsersSearchQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUsersSearch>>> = ({ signal }) => getUsersSearch(params, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getUsersSearch>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetUsersSearchQueryResult = NonNullable<Awaited<ReturnType<typeof getUsersSearch>>>
+export type GetUsersSearchQueryError = ChatServiceInternalModelsErrorResponse | ChatServiceInternalModelsErrorResponse | ChatServiceInternalModelsErrorResponse
+
+
+export function useGetUsersSearch<TData = Awaited<ReturnType<typeof getUsersSearch>>, TError = ChatServiceInternalModelsErrorResponse | ChatServiceInternalModelsErrorResponse | ChatServiceInternalModelsErrorResponse>(
+ params: GetUsersSearchParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsersSearch>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getUsersSearch>>,
+          TError,
+          Awaited<ReturnType<typeof getUsersSearch>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetUsersSearch<TData = Awaited<ReturnType<typeof getUsersSearch>>, TError = ChatServiceInternalModelsErrorResponse | ChatServiceInternalModelsErrorResponse | ChatServiceInternalModelsErrorResponse>(
+ params: GetUsersSearchParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsersSearch>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getUsersSearch>>,
+          TError,
+          Awaited<ReturnType<typeof getUsersSearch>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetUsersSearch<TData = Awaited<ReturnType<typeof getUsersSearch>>, TError = ChatServiceInternalModelsErrorResponse | ChatServiceInternalModelsErrorResponse | ChatServiceInternalModelsErrorResponse>(
+ params: GetUsersSearchParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsersSearch>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Search users by username
+ */
+
+export function useGetUsersSearch<TData = Awaited<ReturnType<typeof getUsersSearch>>, TError = ChatServiceInternalModelsErrorResponse | ChatServiceInternalModelsErrorResponse | ChatServiceInternalModelsErrorResponse>(
+ params: GetUsersSearchParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsersSearch>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetUsersSearchQueryOptions(params,options)
 
   const query = useQuery(queryOptions , queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

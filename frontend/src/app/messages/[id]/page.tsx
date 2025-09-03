@@ -7,12 +7,12 @@ import MessageInput from "@/components/organisms/MessageInput";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useChatPage } from "./action";
 import { ConnectionState } from "@/store/useSocketStore";
-import { useEffect } from "react";
 
 const DirectMessagesPage = () => {
   const {
     user,
     channelId,
+    currentChannel,
     containerRef,
     mainRef,
     chats,
@@ -21,13 +21,16 @@ const DirectMessagesPage = () => {
     isConnected,
     connectionState,
   } = useChatPage();
-  useEffect(() => {
-    console.log("TEST chats", chats);
-  }, [chats]);
 
   return (
     <div className="w-full h-full flex flex-col bg-background">
-      <ChatHeader id={String(channelId)} name={String(channelId)} isGroup={true} avatar="" participantCount={10} />
+      <ChatHeader
+        id={String(channelId)}
+        name={String(currentChannel?.name)}
+        isGroup={currentChannel?.type === "group"}
+        avatar={currentChannel?.avatar ?? ""}
+        participantCount={currentChannel?.members?.length ?? 0}
+      />
 
       {/* Connection status indicator */}
       {connectionState === ConnectionState.CONNECTING && (

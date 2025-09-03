@@ -52,12 +52,12 @@ func (h *ChannelHandler) GetUserChannels(c *gin.Context) {
 
 // CreateChannel godoc
 // @Summary Create a new channel
-// @Description Create a new channel with the specified name
+// @Description Create a new channel with the specified name and selected users
 // @Tags channels
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param request body map[string]string true "Channel creation data"
+// @Param request body models.CreateChannelRequest true "Channel creation data with user selection"
 // @Success 200 {object} models.ChannelResponse "Channel created successfully"
 // @Failure 400 {object} models.ErrorResponse "Bad request - invalid input data"
 // @Failure 401 {object} models.ErrorResponse "Unauthorized - invalid or missing token"
@@ -65,10 +65,8 @@ func (h *ChannelHandler) GetUserChannels(c *gin.Context) {
 // @Router /channels/ [post]
 func (h *ChannelHandler) CreateChannel(c *gin.Context) {
 	userID := c.MustGet("user_id").(uint)
-	var req struct {
-		Name string `json:"name"`
-		Type string `json:"type"` // Optional: specify channel type if needed
-	}
+
+	var req models.CreateChannelRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Code:    http.StatusBadRequest,
@@ -77,7 +75,45 @@ func (h *ChannelHandler) CreateChannel(c *gin.Context) {
 		})
 		return
 	}
-	channel, err := h.channelService.CreateChannel(req.Name, userID, req.Type)
+
+	// Validate user selection constraints
+	if len(req.UserIDs) < 2 {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Code:    http.StatusBadRequest,
+			Message: "At least 2 users must be selected",
+			Details: "Minimum 2 users required for channel creation",
+		})
+		return
+	}
+
+	if len(req.UserIDs) > 4 {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Code:    http.StatusBadRequest,
+			Message: "Maximum 4 users allowed",
+			Details: "Cannot select more than 4 users for a channel",
+		})
+		return
+	}
+
+	// Ensure the current user is included in the user list
+	userIncluded := false
+	for _, id := range req.UserIDs {
+		if id == userID {
+			userIncluded = true
+			break
+		}
+	}
+
+	if !userIncluded {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Code:    http.StatusBadRequest,
+			Message: "Current user must be included in channel",
+			Details: "You must include yourself when creating a channel",
+		})
+		return
+	}
+
+	channel, err := h.channelService.CreateChannelWithUsers(req.Name, userID, req.Type, req.UserIDs)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Code:    http.StatusInternalServerError,
