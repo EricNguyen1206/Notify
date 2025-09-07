@@ -1,0 +1,191 @@
+# =============================================================================
+# Notify Chat Application - Production Docker Compose
+# =============================================================================
+# Production-optimized Docker Compose configuration
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+version: "3.8"
+
+services:
+  # Frontend Service (Next.js) - Production Optimized
+  frontend:
+    build:
+      context: ../../frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+        NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL}
+    container_name: notify-frontend-prod
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+      - NEXT_PUBLIC_WS_URL=${NEXT_PUBLIC_WS_URL}
+      - NEXT_TELEMETRY_DISABLED=1
+    depends_on:
+      - app
+    networks:
+      - notify-network
+    restart: unless-stopped
+    # Production: Remove port exposure (only accessible via nginx)
+    # ports:
+    #   - "3000:3000"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "0.5"
+        reservations:
+          memory: 256M
+          cpus: "0.25"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Chat Service (Go Backend) - Production Optimized
+  app:
+    build:
+      context: ../../chat-service
+      dockerfile: Dockerfile
+    container_name: notify-chat-service-prod
+    environment:
+      - POSTGRES_URL=${POSTGRES_URL}
+      - REDIS_URL=${REDIS_URL}
+      - NOTIFY_JWT_SECRET=${NOTIFY_JWT_SECRET}
+      - NOTIFY_HOST=0.0.0.0
+      - NOTIFY_PORT=8080
+      - NOTIFY_JWT_EXPIRE=${NOTIFY_JWT_EXPIRE}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
+    depends_on:
+      - db
+      - redis
+    networks:
+      - notify-network
+    restart: unless-stopped
+    # Production: Remove port exposure (only accessible via nginx)
+    # ports:
+    #   - "8080:8080"
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "1.0"
+        reservations:
+          memory: 512M
+          cpus: "0.5"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/kaithhealthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Nginx Reverse Proxy - Production Optimized
+  nginx:
+    image: nginx:alpine
+    container_name: notify-nginx-prod
+    ports:
+      - "80:80"
+      - "443:443" # HTTPS support (configure SSL certificates)
+    volumes:
+      - ../nginx.conf:/etc/nginx/nginx.conf:ro
+      # Add SSL certificates volume for HTTPS
+      # - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - frontend
+      - app
+    networks:
+      - notify-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.5"
+        reservations:
+          memory: 128M
+          cpus: "0.25"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # PostgreSQL Database - Production Optimized
+  db:
+    image: postgres:15-alpine
+    container_name: notify-chat-db-prod
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      # Production optimizations
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
+    # Production: Remove port exposure (only accessible internally)
+    # ports:
+    #   - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Add backup volume
+      - ./backups:/backups
+    networks:
+      - notify-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "1.0"
+        reservations:
+          memory: 512M
+          cpus: "0.5"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Redis Cache - Production Optimized
+  redis:
+    image: redis:7-alpine
+    container_name: notify-chat-redis-prod
+    # Production: Remove port exposure (only accessible internally)
+    # ports:
+    #   - "6380:6379"
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-}
+    volumes:
+      - redisdata:/data
+    networks:
+      - notify-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "0.5"
+        reservations:
+          memory: 256M
+          cpus: "0.25"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  pgdata:
+    driver: local
+  redisdata:
+    driver: local
+
+networks:
+  notify-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

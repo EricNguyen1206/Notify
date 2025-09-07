@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 // External libraries
 import { useTransition } from "react";
