@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 
 func NewPostgresConnection(dburi string) (*gorm.DB, error) {
 	// Configure GORM with even more strict settings for statement handling
+	slog.Info("Connecting to database...", "dburi", dburi)
 	db, err := gorm.Open(postgres.Open(dburi), &gorm.Config{
 		DisableForeignKeyConstraintWhenMigrating: true,
 		PrepareStmt:                              false, // Explicitly disable prepared statements
@@ -33,7 +35,7 @@ func NewPostgresConnection(dburi string) (*gorm.DB, error) {
 
 	// Additional cleanup of stale connections
 	if err := cleanupStaleConnections(sqlDB); err != nil {
-		log.Printf("TEST Warning: failed to cleanup stale connections: %v", err)
+		slog.Warn("Warning: failed to cleanup stale connections", "error", err)
 	}
 
 	// Auto migrate the schema with proper error handling
@@ -46,7 +48,7 @@ func NewPostgresConnection(dburi string) (*gorm.DB, error) {
 		// Check if the error is about existing tables
 		if strings.Contains(err.Error(), "already exists") {
 			// If tables exist, we can continue as the schema is already set up
-			log.Println("Tables already exist, continuing with existing schema")
+			slog.Info("Tables already exist, continuing with existing schema")
 		} else {
 			return nil, fmt.Errorf("failed to migrate database: %v", err)
 		}

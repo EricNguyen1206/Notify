@@ -20,6 +20,7 @@ func CORS() gin.HandlerFunc {
 			"http://127.0.0.1:3000",           // Alternative localhost
 			"http://127.0.0.1",                // Alternative localhost (Nginx)
 			"https://notify-chat.netlify.app", // Production deployment
+			"https://kaithhealth.com",         // Production deployment
 		}
 		// Add custom origins from environment variable if set
 		if customOrigins := os.Getenv("ALLOWED_ORIGINS"); customOrigins != "" {
