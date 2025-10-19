@@ -1,0 +1,179 @@
+// WebSocket Message Types - Migrated from Go version
+
+export enum MessageType {
+  // Connection events
+  CONNECTION_CONNECT = "connection.connect",
+  CONNECTION_DISCONNECT = "connection.disconnect",
+
+  // Channel events
+  CHANNEL_JOIN = "channel.join",
+  CHANNEL_LEAVE = "channel.leave",
+  CHANNEL_MESSAGE = "channel.message",
+
+  // Error
+  ERROR = "error",
+}
+
+// Base message structure
+export interface WebSocketMessage {
+  id: string;
+  type: MessageType;
+  data: any;
+  timestamp: number;
+  user_id?: number;
+}
+
+// Data structures for different message types
+export interface ConnectData {
+  user_id: number;
+  username: string;
+  message: string;
+}
+
+export interface ChannelMessageData {
+  channel_id: number;
+  sender_id: number;
+  sender_name: string;
+  sender_avatar?: string;
+  text?: string;
+  url?: string;
+  file_name?: string;
+  message_type: "text" | "image" | "file";
+}
+
+export interface ChannelJoinLeaveData {
+  channel_id: number;
+  user_id: number;
+  username: string;
+  action: "join" | "leave";
+}
+
+export interface ErrorData {
+  code: string;
+  message: string;
+  details?: any;
+}
+
+// Message constructors
+export function newMessage(type: MessageType, data: any, userId?: number): WebSocketMessage {
+  return {
+    id: generateMessageId(),
+    type,
+    data,
+    timestamp: Date.now(),
+    user_id: userId,
+  };
+}
+
+export function newConnectMessage(userId: number, username: string): WebSocketMessage {
+  return newMessage(
+    MessageType.CONNECTION_CONNECT,
+    {
+      user_id: userId,
+      username,
+      message: `User ${username} connected`,
+    },
+    userId
+  );
+}
+
+export function newErrorMessage(code: string, message: string, details?: any): WebSocketMessage {
+  return newMessage(MessageType.ERROR, {
+    code,
+    message,
+    details,
+  });
+}
+
+export function newChannelMessage(
+  channelId: number,
+  senderId: number,
+  senderName: string,
+  senderAvatar: string | undefined,
+  text?: string,
+  url?: string,
+  fileName?: string
+): WebSocketMessage {
+  let messageType: "text" | "image" | "file" = "text";
+  if (url && fileName) {
+    const extension = fileName.split(".").pop()?.toLowerCase();
+    if (["jpg", "jpeg", "png", "gif", "webp"].includes(extension || "")) {
+      messageType = "image";
+    } else {
+      messageType = "file";
+    }
+  }
+
+  return newMessage(
+    MessageType.CHANNEL_MESSAGE,
+    {
+      channel_id: channelId,
+      sender_id: senderId,
+      sender_name: senderName,
+      sender_avatar: senderAvatar,
+      text,
+      url,
+      file_name: fileName,
+      message_type: messageType,
+    },
+    senderId
+  );
+}
+
+export function newJoinChannelMessage(channelId: number, userId: number, username: string): WebSocketMessage {
+  return newMessage(
+    MessageType.CHANNEL_JOIN,
+    {
+      channel_id: channelId,
+      user_id: userId,
+      username,
+      action: "join",
+    },
+    userId
+  );
+}
+
+export function newLeaveChannelMessage(channelId: number, userId: number, username: string): WebSocketMessage {
+  return newMessage(
+    MessageType.CHANNEL_LEAVE,
+    {
+      channel_id: channelId,
+      user_id: userId,
+      username,
+      action: "leave",
+    },
+    userId
+  );
+}
+
+// Utility function to generate unique message ID
+function generateMessageId(): string {
+  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+}
+
+// Type guards for message validation
+export function isConnectMessage(message: WebSocketMessage): message is WebSocketMessage & { data: ConnectData } {
+  return message.type === MessageType.CONNECTION_CONNECT;
+}
+
+export function isChannelMessage(
+  message: WebSocketMessage
+): message is WebSocketMessage & { data: ChannelMessageData } {
+  return message.type === MessageType.CHANNEL_MESSAGE;
+}
+
+export function isChannelJoinMessage(
+  message: WebSocketMessage
+): message is WebSocketMessage & { data: ChannelJoinLeaveData } {
+  return message.type === MessageType.CHANNEL_JOIN;
+}
+
+export function isChannelLeaveMessage(
+  message: WebSocketMessage
+): message is WebSocketMessage & { data: ChannelJoinLeaveData } {
+  return message.type === MessageType.CHANNEL_LEAVE;
+}
+
+export function isErrorMessage(message: WebSocketMessage): message is WebSocketMessage & { data: ErrorData } {
+  return message.type === MessageType.ERROR;
+}

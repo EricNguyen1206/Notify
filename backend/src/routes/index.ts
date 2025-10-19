@@ -4,11 +4,14 @@ import { authRoutes } from "./auth.routes";
 import { userRoutes } from "./user.routes";
 import { channelRoutes } from "./channel.routes";
 import { messageRoutes } from "./message.routes";
-import { websocketRoutes } from "./websocket.routes";
+import websocketRoutes, { initializeWebSocketRoutes } from "./websocket.routes";
 import { generalRateLimit, authRateLimit } from "@/middleware/rateLimit/rateLimit.middleware";
 import { authenticateToken } from "@/middleware/auth/auth.middleware";
 
 export const setupRoutes = (app: Application, io: SocketIOServer): void => {
+  // Initialize WebSocket routes
+  initializeWebSocketRoutes(io);
+
   // API version prefix
   const apiPrefix = "/api/v1";
 
@@ -21,5 +24,5 @@ export const setupRoutes = (app: Application, io: SocketIOServer): void => {
   app.use(`${apiPrefix}/messages`, generalRateLimit, authenticateToken, messageRoutes);
 
   // WebSocket routes
-  app.use(`${apiPrefix}/ws`, websocketRoutes(io));
+  app.use(`${apiPrefix}/ws`, websocketRoutes);
 };

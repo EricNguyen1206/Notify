@@ -8,9 +8,14 @@ import { createServer } from "http";
 import { Server as SocketIOServer } from "socket.io";
 import { config } from "@/config/config";
 import { initializeDatabase, closeDatabase } from "@/config/database";
+import { initializeRedis, closeRedis } from "@/config/redis";
 import { setupRoutes } from "@/routes";
 import { errorHandler } from "@/middleware/errorHandler";
 import { notFoundHandler } from "@/middleware/notFoundHandler";
+import { WebSocketHandler } from "@/websocket/websocket.handler";
+import { ChannelService } from "@/services/channel/channel.service";
+import { MessageService } from "@/services/message/message.service";
+import { RedisService } from "@/services/redis/redis.service";
 import { logger } from "@/utils/logger";
 
 class App {
@@ -30,6 +35,7 @@ class App {
 
     this.initializeMiddlewares();
     this.initializeRoutes();
+    this.initializeWebSocket();
     this.initializeErrorHandling();
   }
 
@@ -73,6 +79,20 @@ class App {
     setupRoutes(this.app, this.io);
   }
 
+  private initializeWebSocket(): void {
+    // Initialize services
+    const channelService = new ChannelService();
+    const messageService = new MessageService();
+    const redisService = new RedisService();
+
+    // Initialize WebSocket handler
+    const wsHandler = new WebSocketHandler(this.io, channelService, messageService, redisService);
+
+    this.io.on("connection", (socket) => {
+      wsHandler.handleConnection(socket);
+    });
+  }
+
   private initializeErrorHandling(): void {
     this.app.use(notFoundHandler);
     this.app.use(errorHandler);
@@ -82,6 +102,9 @@ class App {
     try {
       // Initialize database
       await initializeDatabase();
+
+      // Initialize Redis
+      await initializeRedis();
 
       // Start server
       this.server.listen(config.app.port, config.app.host, () => {
@@ -107,6 +130,9 @@ class App {
 
         await closeDatabase();
         logger.info("Database connection closed");
+
+        await closeRedis();
+        logger.info("Redis connection closed");
 
         process.exit(0);
       });

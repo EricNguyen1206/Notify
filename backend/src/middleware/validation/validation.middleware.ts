@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from "express";
-import { validate, ValidationError } from "class-validator";
+import { validate, ValidationError as ClassValidationError } from "class-validator";
 import { plainToClass } from "class-transformer";
+import { logger } from "@/utils/logger";
+import { ValidationError } from "@/utils/errors";
 
 export const validateDto = (dtoClass: any) => {
   return async (req: Request, res: Response, next: NextFunction) => {
@@ -9,26 +11,26 @@ export const validateDto = (dtoClass: any) => {
       const errors = await validate(dto);
 
       if (errors.length > 0) {
-        const errorMessages = errors.map((error: ValidationError) => {
+        const errorMessages = errors.map((error: ClassValidationError) => {
           return Object.values(error.constraints || {}).join(", ");
         });
 
-        res.status(400).json({
-          code: 400,
-          message: "Validation Error",
-          details: errorMessages.join("; "),
-        });
-        return;
+        logger.warn("Validation failed:", { errors: errorMessages, body: req.body });
+
+        // Throw ValidationError to be handled by error handler
+        throw new ValidationError(errorMessages.join("; "));
       }
 
+      // Replace req.body with validated and transformed data
       req.body = dto;
       next();
     } catch (error) {
-      res.status(400).json({
-        code: 400,
-        message: "Validation Error",
-        details: "Invalid request data",
-      });
+      if (error instanceof ValidationError) {
+        next(error);
+      } else {
+        logger.error("Validation middleware error:", error);
+        next(new ValidationError("Validation failed"));
+      }
     }
   };
 };

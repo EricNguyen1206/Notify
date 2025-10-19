@@ -12,10 +12,11 @@ export const AppDataSource = new DataSource({
   username: config.database.username,
   password: config.database.password,
   database: config.database.name,
-  synchronize: config.database.synchronize,
+  synchronize: false, // Use migrations instead
   logging: config.database.logging,
   entities: [User, Channel, Chat, ChannelMember],
   migrations: ["src/migrations/*.ts"],
+  migrationsRun: false, // Don't auto-run migrations
   subscribers: ["src/subscribers/*.ts"],
   ssl: config.database.ssl ? { rejectUnauthorized: false } : false,
 });

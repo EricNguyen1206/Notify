@@ -1,53 +1,83 @@
 import { Request, Response, NextFunction } from "express";
 import { logger } from "@/utils/logger";
-import { ErrorResponse } from "@/types/response/auth.response";
+import {
+  ValidationError,
+  UnauthorizedError,
+  ForbiddenError,
+  NotFoundError,
+  ConflictError,
+  RateLimitError,
+  InternalServerError,
+  isOperationalError,
+} from "@/utils/errors";
 
-export const errorHandler = (error: any, req: Request, res: Response, next: NextFunction): void => {
+export const errorHandler = (error: Error, req: Request, res: Response, next: NextFunction): void => {
   logger.error("Error occurred:", {
     error: error.message,
     stack: error.stack,
     url: req.url,
     method: req.method,
     ip: req.ip,
+    userAgent: req.get("User-Agent"),
   });
 
   // Default error response
   let statusCode = 500;
-  let message = "Internal Server Error";
-  let details: string | undefined;
+  let message = "Internal server error";
+  let field: string | undefined;
 
   // Handle specific error types
-  if (error.name === "ValidationError") {
-    statusCode = 400;
-    message = "Validation Error";
-    details = error.message;
-  } else if (error.name === "UnauthorizedError") {
-    statusCode = 401;
-    message = "Unauthorized";
-    details = "Invalid or missing authentication token";
-  } else if (error.name === "ForbiddenError") {
-    statusCode = 403;
-    message = "Forbidden";
-    details = "Insufficient permissions";
-  } else if (error.name === "NotFoundError") {
-    statusCode = 404;
-    message = "Not Found";
-    details = error.message;
-  } else if (error.name === "ConflictError") {
-    statusCode = 409;
-    message = "Conflict";
-    details = error.message;
-  } else if (error.statusCode) {
+  if (error instanceof ValidationError) {
     statusCode = error.statusCode;
     message = error.message;
-    details = error.details;
+    field = error.field;
+  } else if (error instanceof UnauthorizedError) {
+    statusCode = error.statusCode;
+    message = error.message;
+  } else if (error instanceof ForbiddenError) {
+    statusCode = error.statusCode;
+    message = error.message;
+  } else if (error instanceof NotFoundError) {
+    statusCode = error.statusCode;
+    message = error.message;
+  } else if (error instanceof ConflictError) {
+    statusCode = error.statusCode;
+    message = error.message;
+  } else if (error instanceof RateLimitError) {
+    statusCode = error.statusCode;
+    message = error.message;
+  } else if (error instanceof InternalServerError) {
+    statusCode = error.statusCode;
+    message = error.message;
+  } else if (isOperationalError(error)) {
+    // Handle other operational errors
+    statusCode = (error as any).statusCode || 500;
+    message = error.message;
   }
 
-  const errorResponse: ErrorResponse = {
-    code: statusCode,
+  // Prepare error response
+  const errorResponse: any = {
+    success: false,
     message,
-    details,
+    timestamp: new Date().toISOString(),
+    path: req.url,
+    method: req.method,
   };
+
+  // Add field information for validation errors
+  if (field) {
+    errorResponse.field = field;
+  }
+
+  // Add stack trace in development
+  if (process.env.NODE_ENV === "development") {
+    errorResponse.stack = error.stack;
+  }
+
+  // Add request ID if available
+  if ((req as any).id) {
+    errorResponse.requestId = (req as any).id;
+  }
 
   res.status(statusCode).json(errorResponse);
 };
