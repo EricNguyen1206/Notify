@@ -5,7 +5,7 @@ import { logger } from "@/utils/logger";
 import { ValidationError } from "@notify/shared";
 
 export const validateDto = (dtoClass: any) => {
-  return async (req: Request, res: Response, next: NextFunction) => {
+  return async (req: Request, _res: Response, next: NextFunction) => {
     try {
       const dto = plainToClass(dtoClass, req.body);
       const errors = await validate(dto);

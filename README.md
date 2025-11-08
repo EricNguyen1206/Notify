@@ -263,7 +263,6 @@ Notify/
 │       │   └── index.ts
 │       └── package.json
 │
-├── deployments/                 # Deployment configurations
 ├── package.json                 # Root workspace config
 ├── pnpm-workspace.yaml          # Workspace definition
 ├── turbo.json                   # Turborepo configuration
@@ -317,13 +316,13 @@ The frontend is built with Next.js 15 and modern React patterns:
   - UI/UX implementation
 
 ### Deployment Architecture
-Production-ready deployment with Docker and orchestration:
+Production-ready deployment to cloud platforms:
 
-- **📁 [Deployment Documentation](./deployments/README.md)**
-  - Docker containerization
-  - Docker Compose orchestration
-  - Nginx configuration
-  - SSL/HTTPS setup
+- **📁 [Deployment Documentation](./_docs/DEPLOYMENT.md)**
+  - Vercel deployment (frontend)
+  - Render.com deployment (backend)
+  - Environment configuration
+  - Database and Redis setup
   - Monitoring and health checks
 
 ### Database Schema
@@ -396,13 +395,6 @@ pnpm --filter @notify/api dev
 - **Frontend**: http://localhost:3000
 - **Backend API**: http://localhost:8080
 - **API Documentation**: http://localhost:8080/swagger/ (if configured)
-
-### 6. Docker Development (Alternative)
-```bash
-cd deployments/docker
-cp env.example .env
-docker compose up -d
-```
 
 ## 💻 Development
 
@@ -490,7 +482,7 @@ This project supports deployment to modern cloud platforms:
 - **Database**: PostgreSQL on Render.com or managed service
 - **Cache**: Redis on Render.com or managed service
 
-**📖 [Complete Deployment Guide](./DEPLOYMENT.md)**
+**📖 [Complete Deployment Guide](./_docs/DEPLOYMENT.md)**
 
 ### Quick Deployment
 
@@ -507,35 +499,16 @@ This project supports deployment to modern cloud platforms:
 5. Set build command: `cd ../.. && pnpm install && pnpm --filter @notify/api build`
 6. Set start command: `cd ../.. && pnpm --filter @notify/api start`
 
-### Docker Deployment (Alternative)
-```bash
-cd deployments/docker
-./setup.sh        # Automated production setup
-```
-
-### SSL/HTTPS Setup
-```bash
-# Generate SSL certificates
-mkdir ssl
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-  -keyout ssl/key.pem -out ssl/cert.pem
-
-# Update nginx configuration
-cp ../nginx-ssl.conf ../nginx.conf
-docker compose restart nginx
-```
-
 ### Monitoring and Health Checks
-```bash
-# Check service health
-docker compose ps
 
-# View logs
-docker compose logs -f
+**Vercel:**
+- Go to **Deployments** → Click deployment → **Logs**
+- Monitor build and runtime logs
 
-# Test deployment
-./test-deployment.sh
-```
+**Render.com:**
+- Go to your service → **Logs** tab
+- Monitor for errors and performance
+- Check health endpoints if configured
 
 ## 📚 API Documentation
 

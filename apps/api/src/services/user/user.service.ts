@@ -22,7 +22,7 @@ export class UserService {
         id: user.id,
         username: user.username,
         email: user.email,
-        avatar: user.avatar,
+        ...(user.avatar !== undefined && { avatar: user.avatar }),
         createdAt: user.createdAt,
       };
     } catch (error) {
@@ -66,7 +66,7 @@ export class UserService {
         id: updatedUser.id,
         username: updatedUser.username,
         email: updatedUser.email,
-        avatar: updatedUser.avatar,
+        ...(updatedUser.avatar !== undefined && { avatar: updatedUser.avatar }),
         createdAt: updatedUser.createdAt,
       };
     } catch (error) {
@@ -87,7 +87,7 @@ export class UserService {
         id: user.id,
         username: user.username,
         email: user.email,
-        avatar: user.avatar,
+        ...(user.avatar !== undefined && { avatar: user.avatar }),
         createdAt: user.createdAt,
       }));
     } catch (error) {

@@ -1,5 +1,5 @@
 export * from './user';
-export * from './channel';
+export * from './conversation';
 export * from './message';
 export * from './auth';
 export * from './server';

@@ -1,25 +1,56 @@
 import { DataSource } from "typeorm";
 import { config } from "./config";
 import { User } from "@/entities/User";
-import { Channel } from "@/entities/Channel";
+import { Conversation } from "@/entities/Conversation";
 import { Message } from "@/entities/Message";
-import { ChannelMember } from "@/entities/ChannelMember";
+import { ConversationMember } from "@/entities/ConversationMember";
 import { Session } from "@/entities/Session";
 
+// Parse database URL if provided, otherwise use individual config
+const getDatabaseConfig = () => {
+  if (config.database.url) {
+    // Parse PostgreSQL connection string: postgresql://username:password@host:port/database
+    // Also supports postgres:// protocol
+    try {
+      const url = new URL(config.database.url);
+      const sslMode = url.searchParams.get("sslmode");
+      const requiresSSL = sslMode === "require" || sslMode === "prefer" || config.database.ssl;
+      
+      return {
+        type: "postgres" as const,
+        host: url.hostname,
+        port: parseInt(url.port || "5432", 10),
+        username: decodeURIComponent(url.username),
+        password: decodeURIComponent(url.password || ""),
+        database: url.pathname.slice(1), // Remove leading '/'
+        ssl: requiresSSL ? { rejectUnauthorized: false } : false,
+      };
+    } catch (error) {
+      console.error("Failed to parse DATABASE_URL:", error);
+      throw new Error("Invalid DATABASE_URL format. Expected: postgresql://username:password@host:port/database");
+    }
+  }
+
+  // Fallback to individual config
+  return {
+    type: "postgres" as const,
+    host: config.database.host,
+    port: config.database.port,
+    username: config.database.username,
+    password: config.database.password,
+    database: config.database.name,
+    ssl: config.database.ssl ? { rejectUnauthorized: false } : false,
+  };
+};
+
 export const AppDataSource = new DataSource({
-  type: "postgres",
-  host: config.database.host,
-  port: config.database.port,
-  username: config.database.username,
-  password: config.database.password,
-  database: config.database.name,
+  ...getDatabaseConfig(),
   synchronize: false, // Use migrations instead
   logging: config.database.logging,
-  entities: [User, Channel, Message, ChannelMember, Session],
+  entities: [User, Conversation, Message, ConversationMember, Session],
   migrations: ["src/migrations/*.ts"],
   migrationsRun: false, // Don't auto-run migrations
   subscribers: ["src/subscribers/*.ts"],
-  ssl: config.database.ssl ? { rejectUnauthorized: false } : false,
 });
 
 export const initializeDatabase = async (): Promise<void> => {

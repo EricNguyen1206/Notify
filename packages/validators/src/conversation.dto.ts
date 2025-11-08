@@ -1,12 +1,12 @@
 import { IsString, IsEnum, IsArray, IsNumber, Min, Max } from "class-validator";
-import { ChannelType } from "@notify/types";
+import { ConversationType } from "@notify/types";
 
-export class CreateChannelDto {
+export class CreateConversationDto {
   @IsString()
   name?: string;
 
-  @IsEnum(ChannelType)
-  type: ChannelType;
+  @IsEnum(ConversationType)
+  type: ConversationType;
 
   @IsArray()
   @IsNumber({}, { each: true })
@@ -15,17 +15,17 @@ export class CreateChannelDto {
   userIds: number[];
 }
 
-export class UpdateChannelDto {
+export class UpdateConversationDto {
   @IsString()
   name: string;
 }
 
-export class AddUserToChannelDto {
+export class AddUserToConversationDto {
   @IsNumber()
   userId: number;
 }
 
-export class RemoveUserFromChannelDto {
+export class RemoveUserFromConversationDto {
   @IsNumber()
   userId: number;
 }

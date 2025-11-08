@@ -4,22 +4,22 @@ export class RegisterDto {
   @IsString()
   @MinLength(3)
   @MaxLength(50)
-  username: string;
+  username!: string;
 
   @IsEmail()
-  email: string;
+  email!: string;
 
   @IsString()
   @MinLength(6)
-  password: string;
+  password!: string;
 }
 
 export class LoginDto {
   @IsEmail()
-  email: string;
+  email!: string;
 
   @IsString()
-  password: string;
+  password!: string;
 }
 
 export class UpdateProfileDto {
@@ -36,5 +36,5 @@ export class UpdateProfileDto {
   password?: string;
 
   @IsString()
-  currentPassword: string;
+  currentPassword!: string;
 }

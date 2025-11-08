@@ -275,6 +275,6 @@ make health
 - Commands are designed to be idempotent when possible
 
 For more detailed information about specific components, see:
-- [Frontend README](frontend/README.md)
-- [Backend README](chat-service/README.md)
-- [Deployment README](deployments/README.md)
+- [Frontend README](../apps/web/README.md)
+- [Backend README](../apps/api/README.md)
+- [Deployment Guide](./DEPLOYMENT.md)

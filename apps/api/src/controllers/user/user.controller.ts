@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { Response } from "express";
 import { UserService } from "@/services/user/user.service";
 import { AuthenticatedRequest } from "@/middleware/auth/auth.middleware";
 import { logger } from "@/utils/logger";

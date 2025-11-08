@@ -1,9 +1,10 @@
 import { Request, Response } from "express";
 import { Server as SocketIOServer } from "socket.io";
 import { WebSocketHandler } from "@/websocket/websocket.handler";
-import { ChannelService } from "@/services/channel/channel.service";
+import { ConversationService } from "@/services/conversation/conversation.service";
 import { MessageService } from "@/services/message/message.service";
 import { RedisService } from "@/services/redis/redis.service";
+import { newMessage, MessageType } from "@/websocket/message-types";
 import { logger } from "@/utils/logger";
 
 export class WebSocketController {
@@ -11,12 +12,12 @@ export class WebSocketController {
 
   constructor(io: SocketIOServer) {
     // Initialize services
-    const channelService = new ChannelService();
+    const conversationService = new ConversationService();
     const messageService = new MessageService();
     const redisService = new RedisService();
 
     // Initialize WebSocket handler
-    this.wsHandler = new WebSocketHandler(io, channelService, messageService, redisService);
+    this.wsHandler = new WebSocketHandler(io, conversationService, messageService, redisService);
   }
 
   // Handle WebSocket connection
@@ -25,15 +26,15 @@ export class WebSocketController {
   }
 
   // Get WebSocket statistics
-  async getWebSocketStats(req: Request, res: Response): Promise<void> {
+  async getWebSocketStats(_req: Request, res: Response): Promise<void> {
     try {
       const hub = this.wsHandler.getHub();
 
       const stats = {
         connectedUsers: hub.getConnectedUsers().length,
-        totalChannels: hub["channels"].size,
-        channelMembers: Array.from(hub["channels"].entries()).map(([channelId, members]) => ({
-          channelId: parseInt(channelId),
+        totalConversations: hub["conversations"].size,
+        conversationMembers: Array.from(hub["conversations"].entries()).map(([conversationId, members]) => ({
+          conversationId: parseInt(conversationId),
           memberCount: members.size,
         })),
       };
@@ -51,34 +52,43 @@ export class WebSocketController {
     }
   }
 
-  // Get channel members
-  async getChannelMembers(req: Request, res: Response): Promise<void> {
+  // Get conversation members
+  async getConversationMembers(req: Request, res: Response): Promise<void> {
     try {
-      const { channelId } = req.params;
-      const channelIdNum = parseInt(channelId);
-
-      if (isNaN(channelIdNum)) {
+      const { conversationId } = req.params;
+      
+      if (!conversationId) {
         res.status(400).json({
           success: false,
-          message: "Invalid channel ID",
+          message: "Conversation ID is required",
+        });
+        return;
+      }
+      
+      const conversationIdNum = parseInt(conversationId);
+
+      if (isNaN(conversationIdNum)) {
+        res.status(400).json({
+          success: false,
+          message: "Invalid conversation ID",
         });
         return;
       }
 
       const hub = this.wsHandler.getHub();
-      const members = hub.getChannelMembers(channelIdNum);
-      const memberCount = hub.getChannelMemberCount(channelIdNum);
+      const members = hub.getConversationMembers(conversationIdNum);
+      const memberCount = hub.getConversationMemberCount(conversationIdNum);
 
       res.status(200).json({
         success: true,
         data: {
-          channelId: channelIdNum,
+          conversationId: conversationIdNum,
           members,
           memberCount,
         },
       });
     } catch (error) {
-      logger.error("Get channel members error:", error);
+      logger.error("Get conversation members error:", error);
       res.status(500).json({
         success: false,
         message: "Internal server error",
@@ -86,17 +96,26 @@ export class WebSocketController {
     }
   }
 
-  // Broadcast message to channel (admin only)
-  async broadcastToChannel(req: Request, res: Response): Promise<void> {
+  // Broadcast message to conversation (admin only)
+  async broadcastToConversation(req: Request, res: Response): Promise<void> {
     try {
-      const { channelId } = req.params;
-      const { message, type = "admin" } = req.body;
-      const channelIdNum = parseInt(channelId);
-
-      if (isNaN(channelIdNum)) {
+      const { conversationId } = req.params;
+      
+      if (!conversationId) {
         res.status(400).json({
           success: false,
-          message: "Invalid channel ID",
+          message: "Conversation ID is required",
+        });
+        return;
+      }
+      
+      const { message } = req.body;
+      const conversationIdNum = parseInt(conversationId);
+
+      if (isNaN(conversationIdNum)) {
+        res.status(400).json({
+          success: false,
+          message: "Invalid conversation ID",
         });
         return;
       }
@@ -111,27 +130,23 @@ export class WebSocketController {
 
       const hub = this.wsHandler.getHub();
 
-      // Create admin message
-      const adminMessage = {
-        id: `admin-${Date.now()}`,
-        type: "admin.message",
-        data: {
-          channel_id: channelIdNum,
-          message,
-          type,
-          timestamp: Date.now(),
-        },
-        timestamp: Date.now(),
-      };
+      // Create admin message using the message-types helper
+      const adminMessage = newMessage(MessageType.CONVERSATION_MESSAGE, {
+        conversation_id: conversationIdNum,
+        sender_id: 0, // System/admin user
+        sender_name: "System",
+        text: message,
+        message_type: "text" as const,
+      });
 
-      await hub.broadcastToChannel(channelIdNum, adminMessage);
+      await hub.broadcastToConversation(conversationIdNum, adminMessage);
 
       res.status(200).json({
         success: true,
         message: "Message broadcasted successfully",
       });
     } catch (error) {
-      logger.error("Broadcast to channel error:", error);
+      logger.error("Broadcast to conversation error:", error);
       res.status(500).json({
         success: false,
         message: "Internal server error",
@@ -140,7 +155,7 @@ export class WebSocketController {
   }
 
   // Get connected users
-  async getConnectedUsers(req: Request, res: Response): Promise<void> {
+  async getConnectedUsers(_req: Request, res: Response): Promise<void> {
     try {
       const hub = this.wsHandler.getHub();
       const connectedUsers = hub.getConnectedUsers();
@@ -165,6 +180,15 @@ export class WebSocketController {
   async disconnectUser(req: Request, res: Response): Promise<void> {
     try {
       const { userId } = req.params;
+      
+      if (!userId) {
+        res.status(400).json({
+          success: false,
+          message: "User ID is required",
+        });
+        return;
+      }
+      
       const userIdNum = parseInt(userId);
 
       if (isNaN(userIdNum)) {

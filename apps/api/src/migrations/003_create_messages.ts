@@ -1,4 +1,4 @@
-import { MigrationInterface, QueryRunner, Table, Index, ForeignKey, Check } from "typeorm";
+import { MigrationInterface, QueryRunner, Table, Index, ForeignKey } from "typeorm";
 
 export class CreateMessages1700000003 implements MigrationInterface {
   name = "CreateMessages1700000003";

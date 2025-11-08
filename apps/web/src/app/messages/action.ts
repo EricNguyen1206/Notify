@@ -1,12 +1,12 @@
 import { useGetChannels } from "@/services/endpoints/channels/channels";
-import { EnhancedChannel, useChannelStore } from "@/store/useChannelStore";
+import { EnhancedConversation, useConversationStore } from "@/store/useConversationStore";
 import { useSocketStore } from "@/store/useSocketStore";
 import { useEffect, useMemo, useState, useRef } from "react";
 
 /**
- * Hook for managing channel search functionality
+ * Hook for managing conversation search functionality
  */
-export const useChannelSearch = () => {
+export const useConversationSearch = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
   const clearSearch = () => setSearchQuery("");
@@ -19,11 +19,11 @@ export const useChannelSearch = () => {
 };
 
 /**
- * Transforms API channel data to EnhancedChannel format
+ * Transforms API conversation data to EnhancedConversation format
  */
-const transformChannelData = (channels: any[], type: "group" | "direct"): EnhancedChannel[] => {
+const transformConversationData = (conversations: any[], type: "group" | "direct"): EnhancedConversation[] => {
   return (
-    channels?.map(
+    conversations?.map(
       (ch) =>
         ({
           id: ch.id ?? 0,
@@ -35,64 +35,64 @@ const transformChannelData = (channels: any[], type: "group" | "direct"): Enhanc
           lastActivity: new Date(),
           unreadCount: 0,
           members: [],
-        }) as EnhancedChannel
+        }) as EnhancedConversation
     ) ?? []
   );
 };
 
 /**
- * Hook for managing channel data fetching and transformation
+ * Hook for managing conversation data fetching and transformation
  */
-export const useChannelData = () => {
-  const { setGroupChannels, setDirectChannels } = useChannelStore();
+export const useConversationData = () => {
+  const { setGroupConversations, setDirectConversations } = useConversationStore();
 
-  // Fetch channels data
+  // Fetch conversations data
   const {
-    data: channelsData,
-    isLoading: isChannelsLoading,
-    error: channelsError,
-    refetch: refetchChannels,
+    data: conversationsData,
+    isLoading: isConversationsLoading,
+    error: conversationsError,
+    refetch: refetchConversations,
   } = useGetChannels();
 
-  // Transform and set channel data when it changes
+  // Transform and set conversation data when it changes
   useEffect(() => {
-    if (channelsData?.data) {
-      const groupChannels = transformChannelData(channelsData.data.group || [], "group");
-      const directChannels = transformChannelData(channelsData.data.direct || [], "direct");
+    if (conversationsData?.data) {
+      const groupConversations = transformConversationData(conversationsData.data.group || [], "group");
+      const directConversations = transformConversationData(conversationsData.data.direct || [], "direct");
 
-      setGroupChannels(groupChannels);
-      setDirectChannels(directChannels);
+      setGroupConversations(groupConversations);
+      setDirectConversations(directConversations);
     } else {
-      setGroupChannels([]);
-      setDirectChannels([]);
+      setGroupConversations([]);
+      setDirectConversations([]);
     }
-  }, [channelsData, setGroupChannels, setDirectChannels]);
+  }, [conversationsData, setGroupConversations, setDirectConversations]);
 
   return {
-    isChannelsLoading,
-    channelsError,
-    refetchChannels,
+    isConversationsLoading,
+    conversationsError,
+    refetchConversations,
   };
 };
 
 /**
- * Hook for filtering channels based on search query
+ * Hook for filtering conversations based on search query
  */
-export const useChannelFiltering = (searchQuery: string) => {
-  const { groupChannels, directChannels } = useChannelStore();
+export const useConversationFiltering = (searchQuery: string) => {
+  const { groupConversations, directConversations } = useConversationStore();
 
-  const filteredChannels = useMemo(
-    () => groupChannels.filter((chan) => chan.name.toLowerCase().includes(searchQuery.toLowerCase())),
-    [groupChannels, searchQuery]
+  const filteredConversations = useMemo(
+    () => groupConversations.filter((conv) => conv.name.toLowerCase().includes(searchQuery.toLowerCase())),
+    [groupConversations, searchQuery]
   );
 
   const filteredDirectMessages = useMemo(
-    () => directChannels.filter((chat) => chat.name.toLowerCase().includes(searchQuery.toLowerCase())),
-    [directChannels, searchQuery]
+    () => directConversations.filter((chat) => chat.name.toLowerCase().includes(searchQuery.toLowerCase())),
+    [directConversations, searchQuery]
   );
 
   return {
-    filteredChannels,
+    filteredConversations,
     filteredDirectMessages,
   };
 };
@@ -129,13 +129,13 @@ export const useWebSocketConnection = (userId: number | null) => {
  */
 export const useSidebarActions = (userId?: number) => {
   // Search functionality
-  const { searchQuery, setSearchQuery, clearSearch } = useChannelSearch();
+  const { searchQuery, setSearchQuery, clearSearch } = useConversationSearch();
 
-  // Channel data management
-  const { isChannelsLoading, channelsError, refetchChannels } = useChannelData();
+  // Conversation data management
+  const { isConversationsLoading, conversationsError, refetchConversations } = useConversationData();
 
-  // Channel filtering
-  const { filteredChannels, filteredDirectMessages } = useChannelFiltering(searchQuery);
+  // Conversation filtering
+  const { filteredConversations, filteredDirectMessages } = useConversationFiltering(searchQuery);
 
   // WebSocket connection (optional - only if userId provided)
   const webSocketConnection = userId ? useWebSocketConnection(userId) : null;
@@ -146,12 +146,12 @@ export const useSidebarActions = (userId?: number) => {
     setSearchQuery,
     clearSearch,
 
-    // Channel data
-    filteredChannels,
+    // Conversation data
+    filteredConversations,
     filteredDirectMessages,
-    isChannelsLoading,
-    channelsError,
-    refetchChannels,
+    isConversationsLoading,
+    conversationsError,
+    refetchConversations,
 
     // WebSocket (if applicable)
     webSocketConnection,
@@ -159,29 +159,29 @@ export const useSidebarActions = (userId?: number) => {
 };
 
 /**
- * Utility functions for channel operations
+ * Utility functions for conversation operations
  */
-export const channelUtils = {
+export const conversationUtils = {
   /**
-   * Get channel by ID from store
+   * Get conversation by ID from store
    */
-  getChannelById: (channelId: number): EnhancedChannel | null => {
-    const { groupChannels, directChannels } = useChannelStore.getState();
-    return [...groupChannels, ...directChannels].find((ch) => ch.id === channelId) || null;
+  getConversationById: (conversationId: number): EnhancedConversation | null => {
+    const { groupConversations, directConversations } = useConversationStore.getState();
+    return [...groupConversations, ...directConversations].find((conv) => conv.id === conversationId) || null;
   },
 
   /**
-   * Format channel name for display
+   * Format conversation name for display
    */
-  formatChannelName: (channel: EnhancedChannel): string => {
-    return channel.type === "group" ? `#${channel.name}` : channel.name;
+  formatConversationName: (conversation: EnhancedConversation): string => {
+    return conversation.type === "group" ? `#${conversation.name}` : conversation.name;
   },
 
   /**
-   * Get unread count for a channel
+   * Get unread count for a conversation
    */
-  getUnreadCount: (channelId: number): number => {
-    const { unreadCounts } = useChannelStore.getState();
-    return unreadCounts[channelId] || 0;
+  getUnreadCount: (conversationId: number): number => {
+    const { unreadCounts } = useConversationStore.getState();
+    return unreadCounts[conversationId] || 0;
   },
 };

@@ -1,13 +1,13 @@
 import { Router } from "express";
 import { MessageController } from "@/controllers/message/message.controller";
 import { validateDto } from "@/middleware/validation/validation.middleware";
-import { SendMessageDto, GetMessagesDto } from "@notify/validators";
+import { SendMessageDto } from "@notify/validators";
 
 const router = Router();
 const messageController = new MessageController();
 
-// Get channel messages
-router.get("/channel/:id", messageController.getChannelMessages.bind(messageController));
+// Get conversation messages
+router.get("/conversation/:id", messageController.getConversationMessages.bind(messageController));
 
 // Create message
 router.post("/", validateDto(SendMessageDto), messageController.createMessage.bind(messageController));

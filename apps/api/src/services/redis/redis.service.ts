@@ -65,82 +65,82 @@ export class RedisService {
   }
 
   // =============================================================================
-  // Channel Management
+  // Conversation Management
   // =============================================================================
 
-  async joinChannel(userId: string, channelId: string): Promise<void> {
+  async joinConversation(userId: string, conversationId: string): Promise<void> {
     const pipeline = this.client.multi();
 
-    // Add user to channel members set
-    pipeline.sAdd(`channel:${channelId}:members`, userId);
+    // Add user to conversation members set
+    pipeline.sAdd(`conversation:${conversationId}:members`, userId);
 
-    // Add channel to user's channels set
-    pipeline.sAdd(`user:${userId}:channels`, channelId);
+    // Add conversation to user's conversations set
+    pipeline.sAdd(`user:${userId}:conversations`, conversationId);
 
-    // Update channel member count
-    pipeline.sCard(`channel:${channelId}:members`);
+    // Update conversation member count
+    pipeline.sCard(`conversation:${conversationId}:members`);
 
     await pipeline.exec();
 
     // Publish join event
     const joinEvent = {
-      type: "channel.member.join",
+      type: "conversation.member.join",
       user_id: userId,
-      channel_id: channelId,
+      conversation_id: conversationId,
       timestamp: Date.now(),
     };
 
-    await this.publishChannelEvent(channelId, joinEvent);
+    await this.publishConversationEvent(conversationId, joinEvent);
 
-    logger.debug("User joined channel", { userId, channelId });
+    logger.debug("User joined conversation", { userId, conversationId });
   }
 
-  async leaveChannel(userId: string, channelId: string): Promise<void> {
+  async leaveConversation(userId: string, conversationId: string): Promise<void> {
     const pipeline = this.client.multi();
 
-    // Remove user from channel members set
-    pipeline.sRem(`channel:${channelId}:members`, userId);
+    // Remove user from conversation members set
+    pipeline.sRem(`conversation:${conversationId}:members`, userId);
 
-    // Remove channel from user's channels set
-    pipeline.sRem(`user:${userId}:channels`, channelId);
+    // Remove conversation from user's conversations set
+    pipeline.sRem(`user:${userId}:conversations`, conversationId);
 
     await pipeline.exec();
 
     // Publish leave event
     const leaveEvent = {
-      type: "channel.member.leave",
+      type: "conversation.member.leave",
       user_id: userId,
-      channel_id: channelId,
+      conversation_id: conversationId,
       timestamp: Date.now(),
     };
 
-    await this.publishChannelEvent(channelId, leaveEvent);
+    await this.publishConversationEvent(conversationId, leaveEvent);
 
-    logger.debug("User left channel", { userId, channelId });
+    logger.debug("User left conversation", { userId, conversationId });
   }
 
-  async getChannelMembers(channelId: string): Promise<string[]> {
-    return await this.client.sMembers(`channel:${channelId}:members`);
+  async getConversationMembers(conversationId: string): Promise<string[]> {
+    return await this.client.sMembers(`conversation:${conversationId}:members`);
   }
 
-  async isUserInChannel(userId: string, channelId: string): Promise<boolean> {
-    return await this.client.sIsMember(`channel:${channelId}:members`, userId);
+  async isUserInConversation(userId: string, conversationId: string): Promise<boolean> {
+    return await this.client.sIsMember(`conversation:${conversationId}:members`, userId);
   }
 
   // =============================================================================
   // PubSub Operations
   // =============================================================================
 
-  async publishChannelMessage(channelId: string, message: any): Promise<void> {
+  async publishConversationMessage(conversationId: string, message: any): Promise<void> {
     const data = JSON.stringify(message);
-    await this.client.publish(`chat:channel:${channelId}`, data);
-    logger.debug("Published channel message", { channelId });
+    await this.client.publish(`chat:conversation:${conversationId}`, data);
+    logger.debug("Published conversation message", { conversationId });
   }
 
-  async publishChannelEvent(channelId: string, event: any): Promise<void> {
+  async publishConversationEvent(conversationId: string, event: any): Promise<void> {
     const data = JSON.stringify(event);
-    await this.client.publish(`channel:${channelId}:events`, data);
-    logger.debug("Published channel event", { channelId });
+    await this.client.publish(`conversation:${conversationId}:events`, data);
+    logger.debug("Published conversation event", { conversationId });
   }
 
   async publishUserNotification(userId: string, notification: any): Promise<void> {
@@ -149,14 +149,18 @@ export class RedisService {
     logger.debug("Published user notification", { userId });
   }
 
-  subscribe(channels: string[]) {
-    const pubsub = this.client.subscribe(channels);
+  subscribe(channels: string[]): ReturnType<RedisClientType["duplicate"]> {
+    const pubsub = this.client.duplicate();
+    // @ts-ignore - subscribe signature varies by Redis client version
+    pubsub.subscribe(...channels);
     logger.debug("Subscribed to channels", { channels });
     return pubsub;
   }
 
-  pSubscribe(patterns: string[]) {
-    const pubsub = this.client.pSubscribe(patterns);
+  pSubscribe(patterns: string[]): ReturnType<RedisClientType["duplicate"]> {
+    const pubsub = this.client.duplicate();
+    // @ts-ignore - pSubscribe signature varies by Redis client version
+    pubsub.pSubscribe(...patterns);
     logger.debug("Pattern subscribed to channels", { patterns });
     return pubsub;
   }

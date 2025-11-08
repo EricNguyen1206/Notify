@@ -11,7 +11,6 @@
 # Project directories
 FRONTEND_DIR := apps/web
 BACKEND_DIR := apps/api
-DOCKER_DIR := deployments/docker
 
 # Colors for output
 RED := \033[0;31m
@@ -53,14 +52,6 @@ help:
 	@echo "  $(GREEN)seed$(NC)                 - Seed database with test data"
 	@echo "  $(GREEN)migrate-seed$(NC)         - Run migrations and seed data"
 	@echo ""
-	@echo "$(YELLOW)Docker & Deployment:$(NC)"
-	@echo "  $(GREEN)docker-build$(NC)         - Build all Docker images"
-	@echo "  $(GREEN)docker-up$(NC)            - Start all services with docker-compose"
-	@echo "  $(GREEN)docker-down$(NC)          - Stop all services"
-	@echo "  $(GREEN)docker-logs$(NC)          - View logs from all services"
-	@echo "  $(GREEN)docker-clean$(NC)         - Clean up containers and volumes"
-	@echo "  $(GREEN)docker-test$(NC)          - Test frontend-backend connectivity"
-	@echo "  $(GREEN)docker-test-auth$(NC)     - Test authentication flow"
 	@echo ""
 	@echo "$(YELLOW)Development Workflow:$(NC)"
 	@echo "  $(GREEN)install$(NC)              - Install all dependencies (frontend + backend)"
@@ -164,51 +155,6 @@ migrate-seed:
 	@echo "$(GREEN)✅ Migration and seeding completed$(NC)"
 
 # =============================================================================
-# DOCKER & DEPLOYMENT COMMANDS
-# =============================================================================
-
-## Build all Docker images using docker-compose
-docker-build:
-	@echo "$(BLUE)🐳 Building all Docker images...$(NC)"
-	@cd $(DOCKER_DIR) && docker compose build
-	@echo "$(GREEN)✅ Docker images built successfully$(NC)"
-
-## Start all services using docker-compose
-docker-up:
-	@echo "$(BLUE)🚀 Starting all services with Docker Compose...$(NC)"
-	@cd $(DOCKER_DIR) && docker compose up -d
-	@echo "$(GREEN)✅ All services started$(NC)"
-	@echo "$(CYAN)🌐 Application available at: http://localhost$(NC)"
-
-## Stop all services
-docker-down:
-	@echo "$(BLUE)🛑 Stopping all services...$(NC)"
-	@cd $(DOCKER_DIR) && docker compose down
-	@echo "$(GREEN)✅ All services stopped$(NC)"
-
-## View logs from all services
-docker-logs:
-	@echo "$(BLUE)📋 Viewing logs from all services...$(NC)"
-	@cd $(DOCKER_DIR) && docker compose logs -f
-
-## Clean up Docker containers and volumes
-docker-clean:
-	@echo "$(YELLOW)⚠️  Cleaning up Docker containers and volumes...$(NC)"
-	@cd $(DOCKER_DIR) && docker compose down -v --remove-orphans
-	@docker system prune -f
-	@echo "$(GREEN)✅ Docker cleanup completed$(NC)"
-
-## Test frontend-backend connectivity
-docker-test:
-	@echo "$(BLUE)🔍 Testing frontend-backend connectivity...$(NC)"
-	@cd $(DOCKER_DIR) && ./test-connection.sh
-
-## Test authentication flow
-docker-test-auth:
-	@echo "$(BLUE)🔐 Testing authentication flow...$(NC)"
-	@cd $(DOCKER_DIR) && ./test-auth.sh
-
-# =============================================================================
 # DEVELOPMENT WORKFLOW COMMANDS
 # =============================================================================
 
@@ -258,14 +204,6 @@ health:
 	@echo "$(CYAN)Backend Health:$(NC)"
 	@curl -s http://localhost:8080/kaithhealthcheck 2>/dev/null | jq . || echo "$(RED)❌ Backend not responding$(NC)"
 	@echo ""
-	@echo "$(CYAN)Nginx Health:$(NC)"
-	@curl -s -I http://localhost:80 2>/dev/null | head -1 || echo "$(RED)❌ Nginx not responding$(NC)"
-	@echo ""
-
-## Show status of all Docker services
-status:
-	@echo "$(BLUE)📊 Docker services status:$(NC)"
-	@cd $(DOCKER_DIR) && docker compose ps
 
 ## Complete project setup (install + migrate + seed)
 setup: install migrate-seed
@@ -308,12 +246,12 @@ docs:
 	@echo "$(CYAN)📖 Documentation available at: http://localhost:8080/swagger/index.html$(NC)"
 
 ## Quick development setup for new contributors
-quick-start: install docker-up migrate-seed
+quick-start: install migrate-seed
 	@echo "$(GREEN)🎉 Quick start completed!$(NC)"
-	@echo "$(CYAN)🌐 Application: http://localhost$(NC)"
+	@echo "$(CYAN)🎨 Frontend: http://localhost:3000$(NC)"
+	@echo "$(CYAN)🔧 Backend API: http://localhost:8080$(NC)"
 	@echo "$(CYAN)📖 API Docs: http://localhost:8080/swagger/index.html$(NC)"
-	@echo "$(CYAN)🗄️  Database: localhost:5433 (postgres/postgres)$(NC)"
-	@echo "$(CYAN)⚡ Redis: localhost:6380$(NC)"
+	@echo "$(CYAN)💡 Run 'make dev' to start development servers$(NC)"
 
 ## Check prerequisites and environment
 check-env:
@@ -330,10 +268,8 @@ check-env:
 	@echo "$(CYAN)Checking project structure:$(NC)"
 	@test -d $(FRONTEND_DIR) && echo "$(GREEN)✅ Frontend directory$(NC)" || echo "$(RED)❌ Frontend directory missing$(NC)"
 	@test -d $(BACKEND_DIR) && echo "$(GREEN)✅ Backend directory$(NC)" || echo "$(RED)❌ Backend directory missing$(NC)"
-	@test -d $(DOCKER_DIR) && echo "$(GREEN)✅ Docker directory$(NC)" || echo "$(RED)❌ Docker directory missing$(NC)"
 	@test -f $(FRONTEND_DIR)/package.json && echo "$(GREEN)✅ Frontend package.json$(NC)" || echo "$(RED)❌ Frontend package.json missing$(NC)"
 	@test -f $(BACKEND_DIR)/package.json && echo "$(GREEN)✅ Backend package.json$(NC)" || echo "$(RED)❌ Backend package.json missing$(NC)"
-	@test -f $(DOCKER_DIR)/docker-compose.yml && echo "$(GREEN)✅ Docker compose file$(NC)" || echo "$(RED)❌ Docker compose file missing$(NC)"
 	@command -v pnpm >/dev/null 2>&1 && echo "$(GREEN)✅ pnpm$(NC)" || echo "$(RED)❌ pnpm not found$(NC)"
 
 ## Show project information and useful URLs
@@ -344,18 +280,12 @@ info:
 	@echo "$(YELLOW)Project Structure:$(NC)"
 	@echo "  📁 $(FRONTEND_DIR)/     - Next.js frontend application"
 	@echo "  📁 $(BACKEND_DIR)/      - Express + TypeScript backend service"
-	@echo "  📁 $(DOCKER_DIR)/       - Docker deployment configuration"
 	@echo "  📁 packages/            - Shared packages (types, validators, shared)"
 	@echo ""
 	@echo "$(YELLOW)Development URLs:$(NC)"
-	@echo "  🌐 Main Application:    http://localhost:80"
-	@echo "  🎨 Frontend (Direct):   http://localhost:3000"
+	@echo "  🎨 Frontend:            http://localhost:3000"
 	@echo "  🔧 Backend API:         http://localhost:8080"
 	@echo "  📚 API Documentation:   http://localhost:8080/swagger/index.html"
-	@echo ""
-	@echo "$(YELLOW)Database & Cache:$(NC)"
-	@echo "  🗄️  PostgreSQL:         localhost:5433 (user: postgres, pass: postgres)"
-	@echo "  ⚡ Redis:              localhost:6380"
 	@echo ""
 	@echo "$(YELLOW)Useful Commands:$(NC)"
 	@echo "  make help              - Show all available commands"
@@ -372,17 +302,6 @@ info:
 validate-dirs:
 	@test -d $(FRONTEND_DIR) || (echo "$(RED)❌ Frontend directory not found: $(FRONTEND_DIR)$(NC)" && exit 1)
 	@test -d $(BACKEND_DIR) || (echo "$(RED)❌ Backend directory not found: $(BACKEND_DIR)$(NC)" && exit 1)
-	@test -d $(DOCKER_DIR) || (echo "$(RED)❌ Docker directory not found: $(DOCKER_DIR)$(NC)" && exit 1)
-
-## Validate that Docker is running
-validate-docker:
-	@docker info >/dev/null 2>&1 || (echo "$(RED)❌ Docker is not running. Please start Docker first.$(NC)" && exit 1)
-
-# Add validation to docker commands
-docker-build: validate-dirs validate-docker
-docker-up: validate-dirs validate-docker
-docker-down: validate-dirs validate-docker
-docker-logs: validate-dirs validate-docker
 
 # Add validation to frontend commands
 frontend-install: validate-dirs
@@ -400,7 +319,6 @@ backend-build: validate-dirs
 
 .PHONY: help frontend-install frontend-dev frontend-build frontend-test frontend-lint api-sync api-generate \
         backend-install backend-dev backend-build backend-test migrate seed migrate-seed \
-        docker-build docker-up docker-down docker-logs docker-clean \
         install dev test build clean health status setup \
         api-full db-reset dev-tools integration-test docs quick-start check-env info \
-        validate-dirs validate-docker
+        validate-dirs

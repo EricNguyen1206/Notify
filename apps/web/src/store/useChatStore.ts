@@ -2,8 +2,8 @@ import { create } from "zustand";
 
 export interface Message {
   id: number;
-  /** channel */
-  channelId: number;
+  /** conversation */
+  conversationId: number;
   /** timestamp of when the message was created */
   createdAt: string;
   /** optional file name for media */
@@ -25,29 +25,29 @@ export interface Message {
 }
 
 export interface ChatState {
-  channels: Record<string, Message[]>;
-  addMessageToChannel: (channelId: string, msg: Message) => void;
-  upsertMessageToChannel: (channelId: string, msg: Message) => void;
+  conversations: Record<string, Message[]>;
+  addMessageToConversation: (conversationId: string, msg: Message) => void;
+  upsertMessageToConversation: (conversationId: string, msg: Message) => void;
 }
 
 export const useChatStore = create<ChatState>((set) => ({
-  channels: {},
+  conversations: {},
 
-  addMessageToChannel: (channelId: string, msg: Message) => {
+  addMessageToConversation: (conversationId: string, msg: Message) => {
     if (msg.senderId) {
       set((state) => ({
-        channels: {
-          ...state.channels,
-          [channelId]: [...(state.channels[channelId] || []), msg],
+        conversations: {
+          ...state.conversations,
+          [conversationId]: [...(state.conversations[conversationId] || []), msg],
         },
       }));
     }
   },
   // Insert new or replace near-duplicate (optimistic) messages to prevent duplicates
-  upsertMessageToChannel: (channelId: string, msg: Message) => {
+  upsertMessageToConversation: (conversationId: string, msg: Message) => {
     if (msg.senderId) {
       set((state) => {
-        const list = state.channels[channelId] || [];
+        const list = state.conversations[conversationId] || [];
         const incomingTime = new Date(msg.createdAt).getTime();
 
         // Find exact id match first
@@ -72,9 +72,9 @@ export const useChatStore = create<ChatState>((set) => ({
         }
 
         return {
-          channels: {
-            ...state.channels,
-            [channelId]: next,
+          conversations: {
+            ...state.conversations,
+            [conversationId]: next,
           },
         };
       });

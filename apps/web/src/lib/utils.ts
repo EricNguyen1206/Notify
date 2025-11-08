@@ -1,5 +1,5 @@
-import { Channel } from "@notify/types";
-import { ApplicationFileType, ChannelsData } from "@notify/shared";
+import { Conversation } from "@notify/types";
+import { ApplicationFileType, ConversationsData } from "@notify/shared";
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -174,4 +174,4 @@ export const HomeFooterLinks = [
 ];
 
 // Re-export from shared package for convenience
-export { ApplicationFileType, ChannelsData };
+export { ApplicationFileType, ConversationsData };

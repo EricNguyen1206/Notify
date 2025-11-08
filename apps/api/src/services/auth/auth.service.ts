@@ -38,13 +38,16 @@ export class AuthService {
 
       logger.info("User registered successfully", { userId: savedUser.id, email: savedUser.email });
 
-      return {
+      const response: UserResponse = {
         id: savedUser.id,
         username: savedUser.username,
         email: savedUser.email,
-        avatar: savedUser.avatar,
         createdAt: savedUser.createdAt,
       };
+      if (savedUser.avatar !== undefined) {
+        response.avatar = savedUser.avatar;
+      }
+      return response;
     } catch (error) {
       logger.error("Registration error:", error);
       throw error;
@@ -74,7 +77,7 @@ export class AuthService {
         config.jwt.secret,
         {
           expiresIn: config.jwt.accessExpire,
-        }
+        } as jwt.SignOptions
       );
 
       // Generate refresh token (long-lived, 30 days)
@@ -95,16 +98,20 @@ export class AuthService {
 
       logger.info("User logged in successfully", { userId: user.id, email: user.email });
 
+      const userResponse: UserResponse = {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        createdAt: user.createdAt,
+      };
+      if (user.avatar !== undefined) {
+        userResponse.avatar = user.avatar;
+      }
+      
       return {
         accessToken,
         refreshToken,
-        user: {
-          id: user.id,
-          username: user.username,
-          email: user.email,
-          avatar: user.avatar,
-          createdAt: user.createdAt,
-        },
+        user: userResponse,
       };
     } catch (error) {
       logger.error("Login error:", error);
@@ -141,7 +148,7 @@ export class AuthService {
         config.jwt.secret,
         {
           expiresIn: config.jwt.accessExpire,
-        }
+        } as jwt.SignOptions
       );
 
       logger.info("Access token refreshed", { userId: user.id, sessionId: session.id });

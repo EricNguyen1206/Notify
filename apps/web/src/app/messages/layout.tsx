@@ -57,7 +57,7 @@ export default async function Layout({ children }: { children: React.ReactNode }
                                         </BreadcrumbItem>
                                         <BreadcrumbSeparator className="hidden md:block" />
                                         <BreadcrumbItem>
-                                            <BreadcrumbPage className="font-medium">#channel-id</BreadcrumbPage>
+                                            <BreadcrumbPage className="font-medium">#conversation-id</BreadcrumbPage>
                                         </BreadcrumbItem>
                                     </BreadcrumbList>
                                 </Breadcrumb>

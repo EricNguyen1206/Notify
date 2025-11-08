@@ -8,49 +8,49 @@ import {
   OneToMany,
 } from "typeorm";
 import { Message } from "./Message";
-import { Channel } from "./Channel";
-import { ChannelMember } from "./ChannelMember";
+import { Conversation } from "./Conversation";
+import { ConversationMember } from "./ConversationMember";
 import { Session } from "./Session";
 
 @Entity("users")
 export class User {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column({ unique: true, nullable: false })
-  username: string;
+  username!: string;
 
   @Column({ unique: true, nullable: false })
-  email: string;
+  email!: string;
 
   @Column({ nullable: false })
-  password: string;
+  password!: string;
 
   @Column({ nullable: true })
   avatar?: string;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 
   @DeleteDateColumn()
   deletedAt?: Date;
 
   // Relations
   @OneToMany(() => Message, (message) => message.sender)
-  sentMessages: Message[];
+  sentMessages!: Message[];
 
   @OneToMany(() => Message, (message) => message.receiver)
-  receivedMessages: Message[];
+  receivedMessages!: Message[];
 
-  @OneToMany(() => Channel, (channel) => channel.owner)
-  ownedChannels: Channel[];
+  @OneToMany(() => Conversation, (conversation) => conversation.owner)
+  ownedConversations!: Conversation[];
 
-  @OneToMany(() => ChannelMember, (member) => member.user)
-  channelMemberships: ChannelMember[];
+  @OneToMany(() => ConversationMember, (member) => member.user)
+  conversationMemberships!: ConversationMember[];
 
   @OneToMany(() => Session, (session) => session.user)
-  sessions: Session[];
+  sessions!: Session[];
 }

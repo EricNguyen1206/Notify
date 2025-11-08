@@ -9,7 +9,7 @@ import {
   JoinColumn,
 } from "typeorm";
 import { User } from "./User";
-import { Channel } from "./Channel";
+import { Conversation } from "./Conversation";
 
 export enum MessageType {
   DIRECT = "direct",
@@ -19,16 +19,16 @@ export enum MessageType {
 @Entity("messages")
 export class Message {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column({ nullable: false })
-  senderId: number;
+  senderId!: number;
 
   @Column({ nullable: true })
   receiverId?: number;
 
   @Column({ nullable: true })
-  channelId?: number;
+  conversationId?: number;
 
   @Column({ type: "text", nullable: true })
   text?: string;
@@ -40,10 +40,10 @@ export class Message {
   fileName?: string;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 
   @DeleteDateColumn()
   deletedAt?: Date;
@@ -51,25 +51,25 @@ export class Message {
   // Relations
   @ManyToOne(() => User, (user) => user.sentMessages)
   @JoinColumn({ name: "senderId" })
-  sender: User;
+  sender!: User;
 
   @ManyToOne(() => User, (user) => user.receivedMessages)
   @JoinColumn({ name: "receiverId" })
   receiver?: User;
 
-  @ManyToOne(() => Channel, (channel) => channel.messages)
-  @JoinColumn({ name: "channelId" })
-  channel?: Channel;
+  @ManyToOne(() => Conversation, (conversation) => conversation.messages)
+  @JoinColumn({ name: "conversationId" })
+  conversation?: Conversation;
 
   // Helper method to get message type
   getType(): MessageType {
     if (this.receiverId) {
       return MessageType.DIRECT;
     }
-    if (this.channelId) {
+    if (this.conversationId) {
       return MessageType.CHANNEL;
     }
-    throw new Error("Invalid message: must have either receiverId or channelId");
+    throw new Error("Invalid message: must have either receiverId or conversationId");
   }
 }
 

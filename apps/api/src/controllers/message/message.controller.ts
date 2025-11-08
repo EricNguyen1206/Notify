@@ -9,19 +9,19 @@ export class MessageController {
     this.messageService = new MessageService();
   }
 
-  // Get channel messages with pagination
-  async getChannelMessages(req: Request, res: Response): Promise<void> {
+  // Get conversation messages with pagination
+  async getConversationMessages(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
       const { limit = "20", before } = req.query;
-      const channelId = parseInt(id);
+      const conversationId = parseInt(id || "0");
 
-      logger.info("Get channel messages", { channelId, limit, before });
+      logger.info("Get conversation messages", { conversationId, limit, before });
 
-      if (isNaN(channelId)) {
+      if (isNaN(conversationId)) {
         res.status(400).json({
           success: false,
-          message: "Invalid channel ID",
+          message: "Invalid conversation ID",
         });
         return;
       }
@@ -44,7 +44,7 @@ export class MessageController {
         return;
       }
 
-      const messages = await this.messageService.getChannelMessages(channelId, limitNum, beforeNum);
+      const messages = await this.messageService.getConversationMessages(conversationId, limitNum, beforeNum);
 
       res.status(200).json({
         success: true,
@@ -56,7 +56,7 @@ export class MessageController {
         },
       });
     } catch (error) {
-      logger.error("Get channel messages error:", error);
+      logger.error("Get conversation messages error:", error);
       res.status(500).json({
         success: false,
         message: "Internal server error",
@@ -68,23 +68,23 @@ export class MessageController {
   async createMessage(req: Request, res: Response): Promise<void> {
     try {
       const userId = (req as any).user.id;
-      const { channelId, receiverId, text, url, fileName } = req.body;
+      const { conversationId, receiverId, text, url, fileName } = req.body;
 
-      logger.info("Create message", { userId, channelId, receiverId, text, url, fileName });
+      logger.info("Create message", { userId, conversationId, receiverId, text, url, fileName });
 
       // Validate input
-      if (!channelId && !receiverId) {
+      if (!conversationId && !receiverId) {
         res.status(400).json({
           success: false,
-          message: "Either channelId or receiverId must be provided",
+          message: "Either conversationId or receiverId must be provided",
         });
         return;
       }
 
-      if (channelId && receiverId) {
+      if (conversationId && receiverId) {
         res.status(400).json({
           success: false,
-          message: "Cannot specify both channelId and receiverId",
+          message: "Cannot specify both conversationId and receiverId",
         });
         return;
       }
@@ -98,7 +98,7 @@ export class MessageController {
       }
 
       const message = await this.messageService.createMessage(userId, {
-        channelId,
+        conversationId,
         receiverId,
         text,
         url,
@@ -123,6 +123,15 @@ export class MessageController {
     try {
       const userId = (req as any).user.id;
       const { friendId } = req.params;
+      
+      if (!friendId) {
+        res.status(400).json({
+          success: false,
+          message: "Friend ID is required",
+        });
+        return;
+      }
+      
       const friendIdNum = parseInt(friendId);
 
       logger.info("Get friend messages", { userId, friendId: friendIdNum });
@@ -154,7 +163,7 @@ export class MessageController {
   async getMessageById(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const messageId = parseInt(id);
+      const messageId = parseInt(id || "0");
 
       logger.info("Get message by ID", { messageId });
 
@@ -193,7 +202,7 @@ export class MessageController {
   async deleteMessage(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const messageId = parseInt(id);
+      const messageId = parseInt(id || "0");
 
       logger.info("Delete message", { messageId });
 

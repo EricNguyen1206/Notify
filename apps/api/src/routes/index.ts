@@ -2,8 +2,8 @@ import { Application } from "express";
 import { Server as SocketIOServer } from "socket.io";
 import { authRoutes } from "./auth.routes";
 import { userRoutes } from "./user.routes";
-import { channelRoutes } from "./channel.routes";
-import { messageRoutes } from "./message.routes";
+import { conversationRoutes } from "./conversation.routes";
+import messageRoutes from "./message.routes";
 import websocketRoutes, { initializeWebSocketRoutes } from "./websocket.routes";
 import { generalRateLimit, authRateLimit } from "@/middleware/rateLimit/rateLimit.middleware";
 import { authenticateToken } from "@/middleware/auth/auth.middleware";
@@ -20,7 +20,7 @@ export const setupRoutes = (app: Application, io: SocketIOServer): void => {
 
   // Protected routes (authentication required)
   app.use(`${apiPrefix}/users`, generalRateLimit, authenticateToken, userRoutes);
-  app.use(`${apiPrefix}/channels`, generalRateLimit, authenticateToken, channelRoutes);
+  app.use(`${apiPrefix}/conversations`, generalRateLimit, authenticateToken, conversationRoutes);
   app.use(`${apiPrefix}/messages`, generalRateLimit, authenticateToken, messageRoutes);
 
   // WebSocket routes

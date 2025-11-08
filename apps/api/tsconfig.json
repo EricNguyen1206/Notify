@@ -50,7 +50,8 @@
     "dist",
     "tests",
     "**/*.test.ts",
-    "**/*.spec.ts"
+    "**/*.spec.ts",
+    "src/migrations/**/*"
   ],
   "ts-node": {
     "require": ["tsconfig-paths/register"]

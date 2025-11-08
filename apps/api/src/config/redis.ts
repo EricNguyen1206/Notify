@@ -2,18 +2,31 @@ import { createClient, RedisClientType } from "redis";
 import { config } from "./config";
 import { logger } from "@/utils/logger";
 
+// Parse Redis URL if provided, otherwise use individual config
+const getRedisConfig = () => {
+  if (config.redis.url) {
+    // Use connection string directly
+    return {
+      url: config.redis.url,
+    };
+  }
+
+  // Fallback to individual config
+  return {
+    socket: {
+      host: config.redis.host,
+      port: config.redis.port,
+    },
+    password: config.redis.password || undefined,
+    database: config.redis.db,
+  };
+};
+
 export class RedisConnection {
   private client: RedisClientType;
 
   constructor() {
-    this.client = createClient({
-      socket: {
-        host: config.redis.host,
-        port: config.redis.port,
-      },
-      password: config.redis.password,
-      database: config.redis.db,
-    });
+    this.client = createClient(getRedisConfig() as any);
 
     this.client.on("error", (err) => {
       logger.error("Redis Client Error:", err);

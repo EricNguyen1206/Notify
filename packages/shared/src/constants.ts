@@ -1,4 +1,4 @@
-import { Channel } from "@notify/types";
+import { Conversation } from "@notify/types";
 
 export const ApplicationFileType: string[] = [
   "docx",
@@ -8,7 +8,7 @@ export const ApplicationFileType: string[] = [
   "vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 ];
 
-export const ChannelsData: Channel[] = [
+export const ConversationsData: Conversation[] = [
   {
     id: "1",
     name: "chat-room-1",

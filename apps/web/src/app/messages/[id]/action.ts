@@ -5,123 +5,123 @@ import { useGetMessagesChannelId } from "@/services/endpoints/chats/chats";
 import { useGetChannelsId } from "@/services/endpoints/channels/channels";
 import { ChatServiceInternalModelsChatResponse } from "@/services/schemas";
 import { useAuthStore } from "@/store/useAuthStore";
-import { useChannelStore } from "@/store/useChannelStore";
+import { useConversationStore } from "@/store/useConversationStore";
 import { Message, useChatStore } from "@/store/useChatStore";
 import { ChatMessage, ConnectionState, useSocketStore } from "@/store/useSocketStore";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
 
-// Hook for managing channel navigation and validation
-export const useChannelNavigation = () => {
+// Hook for managing conversation navigation and validation
+export const useConversationNavigation = () => {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const { groupChannels, directChannels, currentChannel, setCurrentChannel } = useChannelStore();
-  const { connectionState, joinChannel, leaveChannel } = useSocketStore();
-  const channelId = params.id ? Number(params.id) : undefined;
+  const { groupConversations, directConversations, currentConversation, setCurrentConversation } = useConversationStore();
+  const { connectionState, joinConversation, leaveConversation } = useSocketStore();
+  const conversationId = params.id ? Number(params.id) : undefined;
 
-  // Memoize channel lookup to avoid recomputation and noisy effects
-  const resolvedChannel = useMemo(() => {
-    if (!channelId) return undefined;
-    return groupChannels.find((ch) => ch.id == channelId) || directChannels.find((ch) => ch.id == channelId);
-  }, [channelId, groupChannels, directChannels]);
+  // Memoize conversation lookup to avoid recomputation and noisy effects
+  const resolvedConversation = useMemo(() => {
+    if (!conversationId) return undefined;
+    return groupConversations.find((conv) => conv.id == conversationId) || directConversations.find((conv) => conv.id == conversationId);
+  }, [conversationId, groupConversations, directConversations]);
 
-  // Avoid redundant setCurrentChannel calls across renders/StrictMode
-  const lastSetChannelIdRef = useRef<number | undefined>(undefined);
+  // Avoid redundant setCurrentConversation calls across renders/StrictMode
+  const lastSetConversationIdRef = useRef<number | undefined>(undefined);
   const lastRedirectedForIdRef = useRef<number | undefined>(undefined);
 
   useEffect(() => {
-    if (!channelId) return;
+    if (!conversationId) return;
 
-    if (!resolvedChannel) {
-      // Redirect only once per channelId that resolves to no channel
-      if (lastRedirectedForIdRef.current !== channelId) {
-        lastRedirectedForIdRef.current = channelId;
+    if (!resolvedConversation) {
+      // Redirect only once per conversationId that resolves to no conversation
+      if (lastRedirectedForIdRef.current !== conversationId) {
+        lastRedirectedForIdRef.current = conversationId;
         router.replace("/messages");
       }
       return;
     }
 
-    // Only update store when channel truly changes
-    if (lastSetChannelIdRef.current !== resolvedChannel.id) {
-      lastSetChannelIdRef.current = resolvedChannel.id;
-      setCurrentChannel(resolvedChannel);
+    // Only update store when conversation truly changes
+    if (lastSetConversationIdRef.current !== resolvedConversation.id) {
+      lastSetConversationIdRef.current = resolvedConversation.id;
+      setCurrentConversation(resolvedConversation);
     }
-  }, [channelId, resolvedChannel, router, setCurrentChannel]);
+  }, [conversationId, resolvedConversation, router, setCurrentConversation]);
 
   // Serialized leave -> ack -> join
-  const joinedChannelIdRef = useRef<number | undefined>(undefined);
-  const pendingJoinChannelIdRef = useRef<number | undefined>(undefined);
+  const joinedConversationIdRef = useRef<number | undefined>(undefined);
+  const pendingJoinConversationIdRef = useRef<number | undefined>(undefined);
   const awaitingLeaveAckRef = useRef<boolean>(false);
 
   useEffect(() => {
     if (connectionState !== ConnectionState.CONNECTED) return;
 
-    const nextId = currentChannel?.id;
-    const prevId = joinedChannelIdRef.current;
+    const nextId = currentConversation?.id;
+    const prevId = joinedConversationIdRef.current;
 
     // If there is no change, do nothing
     if (prevId === nextId) return;
 
-    // If switching channels, send a single leave for the previous channel
+    // If switching conversations, send a single leave for the previous conversation
     if (prevId && prevId !== nextId && !awaitingLeaveAckRef.current) {
       try {
         awaitingLeaveAckRef.current = true;
-        pendingJoinChannelIdRef.current = nextId;
-        leaveChannel(String(prevId));
+        pendingJoinConversationIdRef.current = nextId;
+        leaveConversation(String(prevId));
       } catch {}
       return; // wait for ack
     }
 
-    // If there was no previous joined channel (first join)
+    // If there was no previous joined conversation (first join)
     if (!prevId && nextId && !awaitingLeaveAckRef.current) {
       try {
-        joinChannel(String(nextId));
-        joinedChannelIdRef.current = nextId;
+        joinConversation(String(nextId));
+        joinedConversationIdRef.current = nextId;
       } catch {}
     }
-  }, [connectionState, currentChannel?.id, joinChannel, leaveChannel]);
+  }, [connectionState, currentConversation?.id, joinConversation, leaveConversation]);
 
   // Listen for leave ack, then perform the pending join exactly once
   useEffect(() => {
     const handleLeaveAck = (e: Event) => {
-      const detail = (e as CustomEvent).detail as { channelId: number; userId?: string };
-      const prevId = joinedChannelIdRef.current;
+      const detail = (e as CustomEvent).detail as { conversationId: number; userId?: string };
+      const prevId = joinedConversationIdRef.current;
       if (!awaitingLeaveAckRef.current || !prevId) return;
-      if (Number(detail?.channelId) !== Number(prevId)) return;
+      if (Number(detail?.conversationId) !== Number(prevId)) return;
 
       awaitingLeaveAckRef.current = false;
-      joinedChannelIdRef.current = undefined;
+      joinedConversationIdRef.current = undefined;
 
-      const nextId = pendingJoinChannelIdRef.current;
-      pendingJoinChannelIdRef.current = undefined;
+      const nextId = pendingJoinConversationIdRef.current;
+      pendingJoinConversationIdRef.current = undefined;
       if (connectionState === ConnectionState.CONNECTED && nextId) {
         try {
-          joinChannel(String(nextId));
-          joinedChannelIdRef.current = nextId;
+          joinConversation(String(nextId));
+          joinedConversationIdRef.current = nextId;
         } catch {}
       }
     };
 
-    window.addEventListener("ws-channel-leave-ack", handleLeaveAck as EventListener);
-    return () => window.removeEventListener("ws-channel-leave-ack", handleLeaveAck as EventListener);
-  }, [connectionState, joinChannel]);
+    window.addEventListener("ws-conversation-leave-ack", handleLeaveAck as EventListener);
+    return () => window.removeEventListener("ws-conversation-leave-ack", handleLeaveAck as EventListener);
+  }, [connectionState, joinConversation]);
 
   return {
-    channelId,
-    currentChannel,
+    conversationId,
+    currentConversation,
     connectionState,
   };
 };
 
 // Hook for managing chat data and messages
-export const useChatData = (channelId: number | undefined) => {
-  const { data: chatsData, isLoading: chatsLoading } = useGetMessagesChannelId(channelId ?? 0);
+export const useChatData = (conversationId: number | undefined) => {
+  const { data: chatsData, isLoading: chatsLoading } = useGetMessagesChannelId(conversationId ?? 0);
   const [optimisticChats, setOptimisticChats] = useState<Message[]>([]);
-  const { addMessageToChannel, channels } = useChatStore();
+  const { addMessageToConversation, conversations } = useChatStore();
 
-  // Get messages from chat store for current channel
-  const storeMessages = useMemo(() => (channelId ? channels[String(channelId)] || [] : []), [channels]);
+  // Get messages from chat store for current conversation
+  const storeMessages = useMemo(() => (conversationId ? conversations[String(conversationId)] || [] : []), [conversations]);
   // Transform API data to Message format
   const chats: Message[] = [
     ...(Array.isArray(chatsData?.data.items)
@@ -136,26 +136,26 @@ export const useChatData = (channelId: number | undefined) => {
     chatsLoading,
     optimisticChats,
     setOptimisticChats,
-    addMessageToChannel,
+    addMessageToConversation,
   };
 };
 
-// Hook for getting channel details including member count
-export const useChannelDetails = (channelId: number | undefined) => {
-  const { data: channelData, isLoading: channelLoading } = useGetChannelsId(channelId ?? 0, {
+// Hook for getting conversation details including member count
+export const useConversationDetails = (conversationId: number | undefined) => {
+  const { data: conversationData, isLoading: conversationLoading } = useGetChannelsId(conversationId ?? 0, {
     query: {
-      enabled: !!channelId,
+      enabled: !!conversationId,
     },
   });
 
   const memberCount = useMemo(() => {
-    if (!channelData?.data?.members) return 0;
-    return channelData.data.members.length;
-  }, [channelData?.data?.members]);
+    if (!conversationData?.data?.members) return 0;
+    return conversationData.data.members.length;
+  }, [conversationData?.data?.members]);
 
   return {
-    channelData,
-    channelLoading,
+    conversationData,
+    conversationLoading,
     memberCount,
   };
 };
@@ -232,7 +232,7 @@ export const useFormState = () => {
 
 // Hook for managing message sending (simplified - no typing indicators)
 export const useMessageSending = (
-  channelId: number | undefined,
+  conversationId: number | undefined,
   sessionUser: any,
   setFormData: (data: { message: string }) => void,
   scrollToBottom: () => void
@@ -242,10 +242,10 @@ export const useMessageSending = (
   // Handle sending messages
   const handleSendMessage = useCallback(
     async (message: string) => {
-      if (sessionUser?.id && message !== "" && channelId && isConnected()) {
+      if (sessionUser?.id && message !== "" && conversationId && isConnected()) {
         try {
-          // Convert channelId to string for the new API
-          sendMessage(String(channelId), message);
+          // Convert conversationId to string for the new API
+          sendMessage(String(conversationId), message);
           setFormData({ message: "" });
           scrollToBottom();
         } catch (error) {
@@ -256,7 +256,7 @@ export const useMessageSending = (
         toast.warn("Not connected to chat server");
       }
     },
-    [sessionUser?.id, channelId, isConnected, sendMessage, setFormData, scrollToBottom]
+    [sessionUser?.id, conversationId, isConnected, sendMessage, setFormData, scrollToBottom]
   );
 
   // Show error notifications
@@ -274,19 +274,19 @@ export const useMessageSending = (
 };
 
 // Hook for handling incoming WebSocket messages
-export const useWebSocketMessageHandler = (channelId: number | undefined) => {
-  const { upsertMessageToChannel } = useChatStore();
+export const useWebSocketMessageHandler = (conversationId: number | undefined) => {
+  const { upsertMessageToConversation } = useChatStore();
 
   useEffect(() => {
     const handleChatMessage = (event: CustomEvent<ChatMessage>) => {
       const chatMessage = event.detail;
 
-      // Only process messages for the current channel
-      if (channelId && chatMessage.channelId === channelId) {
+      // Only process messages for the current conversation
+      if (conversationId && chatMessage.conversationId === conversationId) {
         // Transform ChatMessage to Message format
         const message: Message = {
           id: chatMessage.id,
-          channelId: chatMessage.channelId,
+          conversationId: chatMessage.conversationId,
           senderId: chatMessage.senderId,
           senderName: chatMessage.senderName,
           senderAvatar: chatMessage.senderAvatar,
@@ -298,7 +298,7 @@ export const useWebSocketMessageHandler = (channelId: number | undefined) => {
         };
 
         // Add message to chat store
-        upsertMessageToChannel(String(channelId), message);
+        upsertMessageToConversation(String(conversationId), message);
       }
     };
 
@@ -308,7 +308,7 @@ export const useWebSocketMessageHandler = (channelId: number | undefined) => {
     return () => {
       window.removeEventListener("chat-message", handleChatMessage as EventListener);
     };
-  }, [channelId, upsertMessageToChannel]);
+  }, [conversationId, upsertMessageToConversation]);
 };
 
 // Main hook that combines all other hooks
@@ -317,15 +317,15 @@ export const useChatPage = () => {
   const user = useAuthStore((state) => state.user);
 
   const { screenHeight, isOverFlow, updateOverflow } = useScreenDimensions(720);
-  const { channelId, currentChannel, connectionState } = useChannelNavigation();
-  const { chats, chatsLoading } = useChatData(channelId);
-  const { channelData, channelLoading, memberCount } = useChannelDetails(channelId);
+  const { conversationId, currentConversation, connectionState } = useConversationNavigation();
+  const { chats, chatsLoading } = useChatData(conversationId);
+  const { conversationData, conversationLoading, memberCount } = useConversationDetails(conversationId);
   const { containerRef, mainRef, scrollToBottom, scrollToBottomOnUpdate } = useScrollBehavior();
   const { formData, setFormData } = useFormState();
-  const messageSending = useMessageSending(channelId, sessionUser, setFormData, scrollToBottom);
+  const messageSending = useMessageSending(conversationId, sessionUser, setFormData, scrollToBottom);
 
   // Handle incoming WebSocket messages
-  useWebSocketMessageHandler(channelId);
+  useWebSocketMessageHandler(conversationId);
 
   // Scroll effects
   useEffect(() => {
@@ -347,11 +347,15 @@ export const useChatPage = () => {
     sessionUser,
     user,
 
-    // Channel data
-    channelId,
-    currentChannel,
-    channelData,
-    channelLoading,
+    // Conversation data (keeping channelId/currentChannel for backward compatibility with page component)
+    channelId: conversationId,
+    currentChannel: currentConversation,
+    conversationId,
+    currentConversation,
+    channelData: conversationData,
+    conversationData,
+    channelLoading: conversationLoading,
+    conversationLoading,
     memberCount,
 
     // Chat data

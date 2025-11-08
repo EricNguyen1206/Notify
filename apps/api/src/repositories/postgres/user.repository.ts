@@ -82,4 +82,19 @@ export class UserRepository {
       throw error;
     }
   }
+
+  async getFriendsByConversationId(conversationId: number, userId: number): Promise<User[]> {
+    try {
+      return await this.userRepository
+        .createQueryBuilder("user")
+        .innerJoin("user.conversationMemberships", "member")
+        .where("member.conversationId = :conversationId", { conversationId })
+        .andWhere("user.id != :userId", { userId })
+        .andWhere("user.deletedAt IS NULL")
+        .getMany();
+    } catch (error) {
+      logger.error("Get friends by conversation ID error:", error);
+      throw error;
+    }
+  }
 }
