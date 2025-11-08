@@ -10,6 +10,8 @@ export const config = {
     host: process.env.HOST || "localhost",
   },
   database: {
+    url: process.env.DATABASE_URL,
+    // Fallback to individual config if DATABASE_URL not provided
     host: process.env.DB_HOST || "localhost",
     port: parseInt(process.env.DB_PORT || "5432", 10),
     username: process.env.DB_USERNAME || "postgres",
@@ -20,6 +22,8 @@ export const config = {
     ssl: process.env.NODE_ENV === "production",
   },
   redis: {
+    url: process.env.REDIS_URL,
+    // Fallback to individual config if REDIS_URL not provided
     host: process.env.REDIS_HOST || "localhost",
     port: parseInt(process.env.REDIS_PORT || "6379", 10),
     password: process.env.REDIS_PASSWORD || undefined,
