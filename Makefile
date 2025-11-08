@@ -9,8 +9,8 @@
 # =============================================================================
 
 # Project directories
-FRONTEND_DIR := frontend
-BACKEND_DIR := chat-service
+FRONTEND_DIR := apps/web
+BACKEND_DIR := apps/api
 DOCKER_DIR := deployments/docker
 
 # Colors for output
@@ -92,24 +92,24 @@ help:
 ## Install frontend dependencies
 frontend-install:
 	@echo "$(BLUE)📦 Installing frontend dependencies...$(NC)"
-	@cd $(FRONTEND_DIR) && npm install
+	@pnpm install --filter @notify/web
 	@echo "$(GREEN)✅ Frontend dependencies installed$(NC)"
 
 ## Run frontend in development mode
 frontend-dev:
 	@echo "$(BLUE)🚀 Starting frontend development server...$(NC)"
-	@cd $(FRONTEND_DIR) && npm run dev
+	@pnpm --filter @notify/web dev
 
 ## Build frontend for production
 frontend-build:
 	@echo "$(BLUE)🏗️  Building frontend for production...$(NC)"
-	@cd $(FRONTEND_DIR) && npm run build
+	@pnpm --filter @notify/web build
 	@echo "$(GREEN)✅ Frontend build completed$(NC)"
 
 ## Run frontend linting
 frontend-lint:
 	@echo "$(BLUE)🔍 Running frontend linting...$(NC)"
-	@cd $(FRONTEND_DIR) && npm run lint
+	@pnpm --filter @notify/web lint
 	@echo "$(GREEN)✅ Frontend linting completed$(NC)"
 
 ## Sync OpenAPI documentation from backend service
@@ -131,18 +131,18 @@ api-generate:
 ## Install backend dependencies
 backend-install:
 	@echo "$(BLUE)📦 Installing backend dependencies...$(NC)"
-	@cd $(BACKEND_DIR) && make deps
+	@pnpm install --filter @notify/api
 	@echo "$(GREEN)✅ Backend dependencies installed$(NC)"
 
 ## Run backend in development mode with live reload
 backend-dev:
 	@echo "$(BLUE)🚀 Starting backend development server with live reload...$(NC)"
-	@cd $(BACKEND_DIR) && make watch
+	@pnpm --filter @notify/api dev
 
 ## Build backend binary
 backend-build:
 	@echo "$(BLUE)🏗️  Building backend binary...$(NC)"
-	@cd $(BACKEND_DIR) && make build
+	@pnpm --filter @notify/api build
 	@echo "$(GREEN)✅ Backend build completed$(NC)"
 
 ## Run database migrations
@@ -213,7 +213,9 @@ docker-test-auth:
 # =============================================================================
 
 ## Install all dependencies (frontend + backend)
-install: frontend-install backend-install
+install:
+	@echo "$(BLUE)📦 Installing all dependencies...$(NC)"
+	@pnpm install
 	@echo "$(GREEN)✅ All dependencies installed$(NC)"
 
 ## Start both frontend and backend in development mode
@@ -221,23 +223,25 @@ dev:
 	@echo "$(BLUE)🚀 Starting development environment...$(NC)"
 	@echo "$(YELLOW)Note: This will start backend first, then frontend$(NC)"
 	@echo "$(YELLOW)Press Ctrl+C to stop both services$(NC)"
-	@$(MAKE) backend-dev &
-	@sleep 3
-	@$(MAKE) frontend-dev
+	@pnpm dev
 
 ## Run all tests (frontend + backend)
-test: backend-test frontend-test
+test:
+	@echo "$(BLUE)🧪 Running all tests...$(NC)"
+	@pnpm test
 	@echo "$(GREEN)✅ All tests completed$(NC)"
 
 ## Build both frontend and backend
-build: backend-build frontend-build
+build:
+	@echo "$(BLUE)🏗️  Building all packages...$(NC)"
+	@pnpm build
 	@echo "$(GREEN)✅ All builds completed$(NC)"
 
 ## Clean all build artifacts
 clean:
 	@echo "$(BLUE)🧹 Cleaning all build artifacts...$(NC)"
-	@cd $(BACKEND_DIR) && make clean
-	@cd $(FRONTEND_DIR) && rm -rf .next node_modules/.cache
+	@pnpm clean
+	@rm -rf node_modules apps/*/node_modules packages/*/node_modules
 	@echo "$(GREEN)✅ Cleanup completed$(NC)"
 
 # =============================================================================
@@ -317,8 +321,7 @@ check-env:
 	@echo ""
 	@echo "$(CYAN)Checking required tools:$(NC)"
 	@command -v node >/dev/null 2>&1 && echo "$(GREEN)✅ Node.js$(NC)" || echo "$(RED)❌ Node.js not found$(NC)"
-	@command -v npm >/dev/null 2>&1 && echo "$(GREEN)✅ npm$(NC)" || echo "$(RED)❌ npm not found$(NC)"
-	@command -v go >/dev/null 2>&1 && echo "$(GREEN)✅ Go$(NC)" || echo "$(RED)❌ Go not found$(NC)"
+	@command -v pnpm >/dev/null 2>&1 && echo "$(GREEN)✅ pnpm$(NC)" || echo "$(RED)❌ pnpm not found$(NC)"
 	@command -v docker >/dev/null 2>&1 && echo "$(GREEN)✅ Docker$(NC)" || echo "$(RED)❌ Docker not found$(NC)"
 	@command -v docker-compose >/dev/null 2>&1 && echo "$(GREEN)✅ Docker Compose$(NC)" || echo "$(RED)❌ Docker Compose not found$(NC)"
 	@command -v curl >/dev/null 2>&1 && echo "$(GREEN)✅ curl$(NC)" || echo "$(RED)❌ curl not found$(NC)"
@@ -329,8 +332,9 @@ check-env:
 	@test -d $(BACKEND_DIR) && echo "$(GREEN)✅ Backend directory$(NC)" || echo "$(RED)❌ Backend directory missing$(NC)"
 	@test -d $(DOCKER_DIR) && echo "$(GREEN)✅ Docker directory$(NC)" || echo "$(RED)❌ Docker directory missing$(NC)"
 	@test -f $(FRONTEND_DIR)/package.json && echo "$(GREEN)✅ Frontend package.json$(NC)" || echo "$(RED)❌ Frontend package.json missing$(NC)"
-	@test -f $(BACKEND_DIR)/go.mod && echo "$(GREEN)✅ Backend go.mod$(NC)" || echo "$(RED)❌ Backend go.mod missing$(NC)"
+	@test -f $(BACKEND_DIR)/package.json && echo "$(GREEN)✅ Backend package.json$(NC)" || echo "$(RED)❌ Backend package.json missing$(NC)"
 	@test -f $(DOCKER_DIR)/docker-compose.yml && echo "$(GREEN)✅ Docker compose file$(NC)" || echo "$(RED)❌ Docker compose file missing$(NC)"
+	@command -v pnpm >/dev/null 2>&1 && echo "$(GREEN)✅ pnpm$(NC)" || echo "$(RED)❌ pnpm not found$(NC)"
 
 ## Show project information and useful URLs
 info:
@@ -339,8 +343,9 @@ info:
 	@echo ""
 	@echo "$(YELLOW)Project Structure:$(NC)"
 	@echo "  📁 $(FRONTEND_DIR)/     - Next.js frontend application"
-	@echo "  📁 $(BACKEND_DIR)/      - Go backend service"
+	@echo "  📁 $(BACKEND_DIR)/      - Express + TypeScript backend service"
 	@echo "  📁 $(DOCKER_DIR)/       - Docker deployment configuration"
+	@echo "  📁 packages/            - Shared packages (types, validators, shared)"
 	@echo ""
 	@echo "$(YELLOW)Development URLs:$(NC)"
 	@echo "  🌐 Main Application:    http://localhost:80"

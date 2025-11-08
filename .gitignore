@@ -70,3 +70,4 @@ build/
 *.bak
 *.backup
 *.old
+node_modules
