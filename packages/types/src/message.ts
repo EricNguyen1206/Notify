@@ -17,7 +17,7 @@ export interface MessageResponse {
   fileName?: string;
   createdAt: Date;
   receiverId?: number;
-  channelId?: number;
+  conversationId?: number;
 }
 
 export interface PaginatedMessageResponse {
@@ -39,10 +39,10 @@ export interface DirectMessageChatType {
   sended?: string;
 }
 
-export interface ChannelMessageChatType {
+export interface ConversationMessageChatType {
   id?: string;
   user: UserType | any;
-  channelId?: string;
+  conversationId?: string;
   text: string;
   type?: string;
   provider?: string;

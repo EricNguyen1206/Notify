@@ -13,22 +13,22 @@ import { User } from "./User";
 @Entity("sessions")
 export class Session {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column({ nullable: false })
-  userId: number;
+  userId!: number;
 
   @Column({ unique: true, nullable: false, type: "text" })
-  refreshToken: string;
+  refreshToken!: string;
 
   @Column({ type: "timestamp", nullable: false })
-  expiresAt: Date;
+  expiresAt!: Date;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 
   @DeleteDateColumn()
   deletedAt?: Date;
@@ -36,7 +36,7 @@ export class Session {
   // Relations
   @ManyToOne(() => User, (user) => user.sessions)
   @JoinColumn({ name: "userId" })
-  user: User;
+  user!: User;
 
   // Helper method to check if session is expired
   isExpired(): boolean {

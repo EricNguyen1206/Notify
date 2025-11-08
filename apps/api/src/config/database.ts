@@ -1,9 +1,9 @@
 import { DataSource } from "typeorm";
 import { config } from "./config";
 import { User } from "@/entities/User";
-import { Channel } from "@/entities/Channel";
+import { Conversation } from "@/entities/Conversation";
 import { Message } from "@/entities/Message";
-import { ChannelMember } from "@/entities/ChannelMember";
+import { ConversationMember } from "@/entities/ConversationMember";
 import { Session } from "@/entities/Session";
 
 // Parse database URL if provided, otherwise use individual config
@@ -47,7 +47,7 @@ export const AppDataSource = new DataSource({
   ...getDatabaseConfig(),
   synchronize: false, // Use migrations instead
   logging: config.database.logging,
-  entities: [User, Channel, Message, ChannelMember, Session],
+  entities: [User, Conversation, Message, ConversationMember, Session],
   migrations: ["src/migrations/*.ts"],
   migrationsRun: false, // Don't auto-run migrations
   subscribers: ["src/subscribers/*.ts"],

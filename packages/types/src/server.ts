@@ -1,4 +1,4 @@
-import { ChannelType } from './channel';
+import { ConversationType } from './conversation';
 
 // Server Type (Frontend specific)
 export interface ServerType {
@@ -6,6 +6,6 @@ export interface ServerType {
   name: string;
   icon?: string;
   ownerId: string;
-  channels: ChannelType[];
+  conversations: ConversationType[];
 }
 

@@ -5,10 +5,10 @@ export enum MessageType {
   CONNECTION_CONNECT = "connection.connect",
   CONNECTION_DISCONNECT = "connection.disconnect",
 
-  // Channel events
-  CHANNEL_JOIN = "channel.join",
-  CHANNEL_LEAVE = "channel.leave",
-  CHANNEL_MESSAGE = "channel.message",
+  // Conversation events
+  CONVERSATION_JOIN = "conversation.join",
+  CONVERSATION_LEAVE = "conversation.leave",
+  CONVERSATION_MESSAGE = "conversation.message",
 
   // Error
   ERROR = "error",
@@ -30,8 +30,8 @@ export interface ConnectData {
   message: string;
 }
 
-export interface ChannelMessageData {
-  channel_id: number;
+export interface ConversationMessageData {
+  conversation_id: number;
   sender_id: number;
   sender_name: string;
   sender_avatar?: string;
@@ -41,8 +41,8 @@ export interface ChannelMessageData {
   message_type: "text" | "image" | "file";
 }
 
-export interface ChannelJoinLeaveData {
-  channel_id: number;
+export interface ConversationJoinLeaveData {
+  conversation_id: number;
   user_id: number;
   username: string;
   action: "join" | "leave";
@@ -61,7 +61,7 @@ export function newMessage(type: MessageType, data: any, userId?: number): WebSo
     type,
     data,
     timestamp: Date.now(),
-    user_id: userId,
+    ...(userId !== undefined && { user_id: userId }),
   };
 }
 
@@ -86,7 +86,7 @@ export function newErrorMessage(code: string, message: string, details?: any): W
 }
 
 export function newChannelMessage(
-  channelId: number,
+  conversationId: number,
   senderId: number,
   senderName: string,
   senderAvatar: string | undefined,
@@ -105,9 +105,9 @@ export function newChannelMessage(
   }
 
   return newMessage(
-    MessageType.CHANNEL_MESSAGE,
+    MessageType.CONVERSATION_MESSAGE,
     {
-      channel_id: channelId,
+      conversation_id: conversationId,
       sender_id: senderId,
       sender_name: senderName,
       sender_avatar: senderAvatar,
@@ -120,11 +120,11 @@ export function newChannelMessage(
   );
 }
 
-export function newJoinChannelMessage(channelId: number, userId: number, username: string): WebSocketMessage {
+export function newJoinChannelMessage(conversationId: number, userId: number, username: string): WebSocketMessage {
   return newMessage(
-    MessageType.CHANNEL_JOIN,
+    MessageType.CONVERSATION_JOIN,
     {
-      channel_id: channelId,
+      conversation_id: conversationId,
       user_id: userId,
       username,
       action: "join",
@@ -133,11 +133,11 @@ export function newJoinChannelMessage(channelId: number, userId: number, usernam
   );
 }
 
-export function newLeaveChannelMessage(channelId: number, userId: number, username: string): WebSocketMessage {
+export function newLeaveChannelMessage(conversationId: number, userId: number, username: string): WebSocketMessage {
   return newMessage(
-    MessageType.CHANNEL_LEAVE,
+    MessageType.CONVERSATION_LEAVE,
     {
-      channel_id: channelId,
+      conversation_id: conversationId,
       user_id: userId,
       username,
       action: "leave",
@@ -158,20 +158,20 @@ export function isConnectMessage(message: WebSocketMessage): message is WebSocke
 
 export function isChannelMessage(
   message: WebSocketMessage
-): message is WebSocketMessage & { data: ChannelMessageData } {
-  return message.type === MessageType.CHANNEL_MESSAGE;
+): message is WebSocketMessage & { data: ConversationMessageData } {
+  return message.type === MessageType.CONVERSATION_MESSAGE;
 }
 
 export function isChannelJoinMessage(
   message: WebSocketMessage
-): message is WebSocketMessage & { data: ChannelJoinLeaveData } {
-  return message.type === MessageType.CHANNEL_JOIN;
+): message is WebSocketMessage & { data: ConversationJoinLeaveData } {
+  return message.type === MessageType.CONVERSATION_JOIN;
 }
 
 export function isChannelLeaveMessage(
   message: WebSocketMessage
-): message is WebSocketMessage & { data: ChannelJoinLeaveData } {
-  return message.type === MessageType.CHANNEL_LEAVE;
+): message is WebSocketMessage & { data: ConversationJoinLeaveData } {
+  return message.type === MessageType.CONVERSATION_LEAVE;
 }
 
 export function isErrorMessage(message: WebSocketMessage): message is WebSocketMessage & { data: ErrorData } {

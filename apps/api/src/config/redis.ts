@@ -26,7 +26,7 @@ export class RedisConnection {
   private client: RedisClientType;
 
   constructor() {
-    this.client = createClient(getRedisConfig());
+    this.client = createClient(getRedisConfig() as any);
 
     this.client.on("error", (err) => {
       logger.error("Redis Client Error:", err);

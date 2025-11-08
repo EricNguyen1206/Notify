@@ -2,7 +2,7 @@ import { IsString, IsOptional, IsNumber } from "class-validator";
 
 export class SendMessageDto {
   @IsString()
-  channelId: string;
+  conversationId!: string;
 
   @IsOptional()
   @IsString()

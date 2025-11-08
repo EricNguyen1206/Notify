@@ -5,25 +5,17 @@ import { WebSocketController } from "@/controllers/websocket/websocket.controlle
 const router = Router();
 
 // Initialize WebSocket controller
-let wsController: WebSocketController;
+let wsController: WebSocketController | undefined;
 
 export const initializeWebSocketRoutes = (io: SocketIOServer) => {
   wsController = new WebSocketController(io);
+  
+  // Setup routes after controller is initialized
+  router.get("/stats", (req, res) => wsController!.getWebSocketStats(req, res));
+  router.get("/conversations/:conversationId/members", (req, res) => wsController!.getConversationMembers(req, res));
+  router.post("/conversations/:conversationId/broadcast", (req, res) => wsController!.broadcastToConversation(req, res));
+  router.get("/users", (req, res) => wsController!.getConnectedUsers(req, res));
+  router.delete("/users/:userId", (req, res) => wsController!.disconnectUser(req, res));
 };
-
-// WebSocket statistics
-router.get("/stats", wsController?.getWebSocketStats.bind(wsController));
-
-// Get channel members
-router.get("/channels/:channelId/members", wsController?.getChannelMembers.bind(wsController));
-
-// Broadcast message to channel (admin only)
-router.post("/channels/:channelId/broadcast", wsController?.broadcastToChannel.bind(wsController));
-
-// Get connected users
-router.get("/users", wsController?.getConnectedUsers.bind(wsController));
-
-// Disconnect user (admin only)
-router.delete("/users/:userId", wsController?.disconnectUser.bind(wsController));
 
 export default router;

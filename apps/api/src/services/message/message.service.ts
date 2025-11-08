@@ -1,5 +1,4 @@
 import { MessageRepository } from "@/repositories/postgres/message.repository";
-import { Message, MessageType } from "@/entities/Message";
 import { MessageResponse } from "@notify/types";
 import { logger } from "@/utils/logger";
 
@@ -10,12 +9,12 @@ export class MessageService {
     this.messageRepository = new MessageRepository();
   }
 
-  // Get channel messages with pagination
-  async getChannelMessages(channelId: number, limit: number = 20, before?: number): Promise<MessageResponse[]> {
+  // Get conversation messages with pagination
+  async getConversationMessages(conversationId: number, limit: number = 20, before?: number): Promise<MessageResponse[]> {
     try {
-      return await this.messageRepository.getChannelMessages(channelId, limit, before);
+      return await this.messageRepository.getConversationMessages(conversationId, limit, before);
     } catch (error) {
-      logger.error("Get channel messages error:", error);
+      logger.error("Get conversation messages error:", error);
       throw error;
     }
   }
@@ -24,7 +23,7 @@ export class MessageService {
   async createMessage(
     senderId: number,
     data: {
-      channelId?: number;
+      conversationId?: number;
       receiverId?: number;
       text?: string;
       url?: string;
@@ -32,9 +31,9 @@ export class MessageService {
     }
   ): Promise<MessageResponse> {
     try {
-      // Validate that exactly one of receiverId or channelId is set
-      if ((!data.receiverId && !data.channelId) || (data.receiverId && data.channelId)) {
-        throw new Error("Exactly one of receiverId or channelId must be set");
+      // Validate that exactly one of receiverId or conversationId is set
+      if ((!data.receiverId && !data.conversationId) || (data.receiverId && data.conversationId)) {
+        throw new Error("Exactly one of receiverId or conversationId must be set");
       }
 
       // Validate that at least one content field is provided
@@ -42,19 +41,39 @@ export class MessageService {
         throw new Error("At least one content field (text, url, fileName) must be provided");
       }
 
-      const messageResponse = await this.messageRepository.createMessage({
+      const messageData: {
+        senderId: number;
+        receiverId?: number;
+        conversationId?: number;
+        text?: string;
+        url?: string;
+        fileName?: string;
+      } = {
         senderId,
-        receiverId: data.receiverId,
-        channelId: data.channelId,
-        text: data.text,
-        url: data.url,
-        fileName: data.fileName,
-      });
+      };
+      
+      if (data.receiverId !== undefined) {
+        messageData.receiverId = data.receiverId;
+      }
+      if (data.conversationId !== undefined) {
+        messageData.conversationId = data.conversationId;
+      }
+      if (data.text !== undefined) {
+        messageData.text = data.text;
+      }
+      if (data.url !== undefined) {
+        messageData.url = data.url;
+      }
+      if (data.fileName !== undefined) {
+        messageData.fileName = data.fileName;
+      }
+
+      const messageResponse = await this.messageRepository.createMessage(messageData);
 
       logger.info("Message created successfully", {
         messageId: messageResponse.id,
         senderId,
-        channelId: data.channelId,
+        conversationId: data.conversationId,
         receiverId: data.receiverId,
       });
 

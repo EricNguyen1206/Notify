@@ -6,7 +6,7 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { useChatStore } from "./useChatStore";
-import { useChannelStore } from "./useChannelStore";
+import { useConversationStore } from "./useConversationStore";
 
 // WebSocket connection states
 export enum ConnectionState {
@@ -20,9 +20,9 @@ export enum ConnectionState {
 export enum MessageType {
   CONNECT = "connection.connect",
   DISCONNECT = "connection.disconnect",
-  CHANNEL_JOIN = "channel.join",
-  CHANNEL_LEAVE = "channel.leave",
-  CHANNEL_MESSAGE = "channel.message",
+  CONVERSATION_JOIN = "conversation.join",
+  CONVERSATION_LEAVE = "conversation.leave",
+  CONVERSATION_MESSAGE = "conversation.message",
   ERROR = "error",
 }
 
@@ -35,15 +35,15 @@ export interface WebSocketMessage {
   user_id?: string;
 }
 
-export interface ChannelMessageData {
-  channel_id: string;
+export interface ConversationMessageData {
+  conversation_id: string;
   text?: string | null;
   url?: string | null;
   fileName?: string | null;
 }
 
-export interface ChannelJoinLeaveData {
-  channel_id: string;
+export interface ConversationJoinLeaveData {
+  conversation_id: string;
 }
 
 export interface ErrorData {
@@ -59,7 +59,7 @@ export interface ConnectionData {
 // Chat message interface for internal use
 export interface ChatMessage {
   id: number;
-  channelId: number;
+  conversationId: number;
   senderId: number;
   senderName: string;
   senderAvatar: string;
@@ -101,9 +101,9 @@ interface SocketState {
   // Actions
   connect: (userId: string) => Promise<void>;
   disconnect: () => void;
-  sendMessage: (channelId: string, text: string, url?: string, fileName?: string) => void;
-  joinChannel: (channelId: string) => void;
-  leaveChannel: (channelId: string) => void;
+  sendMessage: (conversationId: string, text: string, url?: string, fileName?: string) => void;
+  joinConversation: (conversationId: string) => void;
+  leaveConversation: (conversationId: string) => void;
   isConnected: () => boolean;
 
   // Internal methods
@@ -280,7 +280,7 @@ export const useSocketStore = create<SocketState>()(
       },
 
       // Send a message
-      sendMessage: (channelId: string, text: string, url?: string, fileName?: string) => {
+      sendMessage: (conversationId: string, text: string, url?: string, fileName?: string) => {
         const { ws, connectionState } = get();
         if (!ws || connectionState !== ConnectionState.CONNECTED || ws.readyState !== WebSocket.OPEN) {
           throw new Error("WebSocket not connected");
@@ -289,13 +289,13 @@ export const useSocketStore = create<SocketState>()(
         try {
           const message: WebSocketMessage = {
             id: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
-            type: MessageType.CHANNEL_MESSAGE,
+            type: MessageType.CONVERSATION_MESSAGE,
             data: {
-              channel_id: channelId,
+              conversation_id: conversationId,
               text,
               url: url || null,
               fileName: fileName || null,
-            } as ChannelMessageData,
+            } as ConversationMessageData,
             timestamp: Date.now(),
             user_id: get().userId,
           };
@@ -308,8 +308,8 @@ export const useSocketStore = create<SocketState>()(
         }
       },
 
-      // Join a channel
-      joinChannel: (channelId: string) => {
+      // Join a conversation
+      joinConversation: (conversationId: string) => {
         const { ws, connectionState } = get();
         if (!ws || connectionState !== ConnectionState.CONNECTED || ws.readyState !== WebSocket.OPEN) {
           throw new Error("WebSocket not connected");
@@ -318,28 +318,28 @@ export const useSocketStore = create<SocketState>()(
         try {
           const message: WebSocketMessage = {
             id: `join-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
-            type: MessageType.CHANNEL_JOIN,
-            data: { channel_id: channelId },
+            type: MessageType.CONVERSATION_JOIN,
+            data: { conversation_id: conversationId },
             timestamp: Date.now(),
             user_id: get().userId,
           };
 
           ws.send(JSON.stringify(message));
 
-          // Track joined channel for automatic re-join on reconnect
+          // Track joined conversation for automatic re-join on reconnect
           try {
-            const channelStore = useChannelStore.getState();
-            channelStore.addJoinedChannel(channelId);
+            const conversationStore = useConversationStore.getState();
+            conversationStore.addJoinedConversation(conversationId);
           } catch {}
         } catch (error) {
-          console.error("Failed to join channel:", error);
-          set({ error: error instanceof Error ? error.message : "Failed to join channel" });
+          console.error("Failed to join conversation:", error);
+          set({ error: error instanceof Error ? error.message : "Failed to join conversation" });
           throw error;
         }
       },
 
-      // Leave a channel
-      leaveChannel: (channelId: string) => {
+      // Leave a conversation
+      leaveConversation: (conversationId: string) => {
         const { ws, connectionState } = get();
         if (!ws || connectionState !== ConnectionState.CONNECTED) {
           return; // Don't throw error on disconnect
@@ -348,21 +348,21 @@ export const useSocketStore = create<SocketState>()(
         try {
           const message: WebSocketMessage = {
             id: `leave-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
-            type: MessageType.CHANNEL_LEAVE,
-            data: { channel_id: channelId },
+            type: MessageType.CONVERSATION_LEAVE,
+            data: { conversation_id: conversationId },
             timestamp: Date.now(),
             user_id: get().userId,
           };
 
           ws.send(JSON.stringify(message));
 
-          // Untrack joined channel so it isn't auto re-joined later
+          // Untrack joined conversation so it isn't auto re-joined later
           try {
-            const channelStore = useChannelStore.getState();
-            channelStore.removeJoinedChannel(channelId);
+            const conversationStore = useConversationStore.getState();
+            conversationStore.removeJoinedConversation(conversationId);
           } catch {}
         } catch (error) {
-          console.error("Failed to leave channel:", error);
+          console.error("Failed to leave conversation:", error);
           // Don't set error for leave operations as they're not critical
         }
       },
@@ -389,31 +389,31 @@ export const useSocketStore = create<SocketState>()(
             set({ connectionPromise: null });
           }
 
-          // After reconnect, automatically re-join previously joined channels
+          // After reconnect, automatically re-join previously joined conversations
           try {
-            const channelStore = useChannelStore.getState();
-            const channelsToRejoin = channelStore.getJoinedChannels();
-            if (channelsToRejoin.length > 0) {
+            const conversationStore = useConversationStore.getState();
+            const conversationsToRejoin = conversationStore.getJoinedConversations();
+            if (conversationsToRejoin.length > 0) {
               const { ws } = get();
               if (ws && ws.readyState === WebSocket.OPEN) {
-                channelsToRejoin.forEach((channelId) => {
+                conversationsToRejoin.forEach((conversationId) => {
                   const joinMsg: WebSocketMessage = {
-                    id: `rejoin-${channelId}-${Date.now()}`,
-                    type: MessageType.CHANNEL_JOIN,
-                    data: { channel_id: channelId },
+                    id: `rejoin-${conversationId}-${Date.now()}`,
+                    type: MessageType.CONVERSATION_JOIN,
+                    data: { conversation_id: conversationId },
                     timestamp: Date.now(),
                     user_id: get().userId,
                   };
                   try {
                     ws.send(JSON.stringify(joinMsg));
                   } catch (err) {
-                    console.error("Failed to auto re-join channel", channelId, err);
+                    console.error("Failed to auto re-join conversation", conversationId, err);
                   }
                 });
               }
             }
           } catch (err) {
-            console.error("Auto re-join channels failed:", err);
+            console.error("Auto re-join conversations failed:", err);
           }
           return;
         }
@@ -425,18 +425,18 @@ export const useSocketStore = create<SocketState>()(
           return;
         }
 
-        // Handle channel messages
-        if (message.type === MessageType.CHANNEL_MESSAGE) {
+        // Handle conversation messages
+        if (message.type === MessageType.CONVERSATION_MESSAGE) {
           const messageData = message.data;
 
           if (!messageData) {
-            console.error("Invalid channel message data:", messageData);
+            console.error("Invalid conversation message data:", messageData);
             return;
           }
 
           const chatMessage: ChatMessage = {
             id: messageData.id,
-            channelId: messageData.ChannelID || messageData.channelId,
+            conversationId: messageData.ConversationID || messageData.conversationId,
             senderId: messageData.SenderID || messageData.senderId,
             senderName: messageData.Sender?.Username || messageData.Sender?.username || "Unknown",
             senderAvatar: messageData.Sender?.Avatar || messageData.Sender?.avatar || "",
@@ -449,35 +449,35 @@ export const useSocketStore = create<SocketState>()(
 
           // Add message to chat store
           const chatStore = useChatStore.getState();
-          chatStore.upsertMessageToChannel(String(chatMessage.channelId), chatMessage);
+          chatStore.upsertMessageToConversation(String(chatMessage.conversationId), chatMessage);
 
           // Dispatch custom event for components to listen to
           window.dispatchEvent(
             new CustomEvent("chat-message", {
-              detail: { message: chatMessage, channelId: chatMessage.channelId },
+              detail: { message: chatMessage, conversationId: chatMessage.conversationId },
             })
           );
         }
 
         // Dispatch ack events for join/leave to coordinate UI flows
-        if (message.type === MessageType.CHANNEL_LEAVE) {
-          const chanId = Number(message.data?.channel_id ?? message.data?.ChannelID ?? message.data?.channelId);
-          if (!Number.isNaN(chanId)) {
+        if (message.type === MessageType.CONVERSATION_LEAVE) {
+          const convId = Number(message.data?.conversation_id ?? message.data?.ConversationID ?? message.data?.conversationId);
+          if (!Number.isNaN(convId)) {
             window.dispatchEvent(
-              new CustomEvent("ws-channel-leave-ack", {
-                detail: { channelId: chanId, userId: message.user_id },
+              new CustomEvent("ws-conversation-leave-ack", {
+                detail: { conversationId: convId, userId: message.user_id },
               })
             );
           }
           return;
         }
 
-        if (message.type === MessageType.CHANNEL_JOIN) {
-          const chanId = Number(message.data?.channel_id ?? message.data?.ChannelID ?? message.data?.channelId);
-          if (!Number.isNaN(chanId)) {
+        if (message.type === MessageType.CONVERSATION_JOIN) {
+          const convId = Number(message.data?.conversation_id ?? message.data?.ConversationID ?? message.data?.conversationId);
+          if (!Number.isNaN(convId)) {
             window.dispatchEvent(
-              new CustomEvent("ws-channel-join-ack", {
-                detail: { channelId: chanId, userId: message.user_id },
+              new CustomEvent("ws-conversation-join-ack", {
+                detail: { conversationId: convId, userId: message.user_id },
               })
             );
           }

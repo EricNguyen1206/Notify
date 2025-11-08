@@ -11,7 +11,7 @@ import {
   isOperationalError,
 } from "@notify/shared";
 
-export const errorHandler = (error: Error, req: Request, res: Response, next: NextFunction): void => {
+export const errorHandler = (error: Error, req: Request, res: Response, _next: NextFunction): void => {
   logger.error("Error occurred:", {
     error: error.message,
     stack: error.stack,
@@ -70,7 +70,7 @@ export const errorHandler = (error: Error, req: Request, res: Response, next: Ne
   }
 
   // Add stack trace in development
-  if (process.env.NODE_ENV === "development") {
+  if (process.env['NODE_ENV'] === "development") {
     errorResponse.stack = error.stack;
   }
 

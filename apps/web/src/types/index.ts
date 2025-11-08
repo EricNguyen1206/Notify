@@ -3,7 +3,7 @@ export interface ServerType {
   name: string;
   icon?: string;
   ownerId: string;
-  channels: ChannelType[];
+  conversations: ConversationType[];
 }
 
 export interface UserType {
@@ -29,16 +29,16 @@ export interface DirectMessageChatType {
   fileName?: string;
   sended?: string;
 }
-export interface ChannelType {
+export interface ConversationType {
   id: string;
   name: string;
   type: 'text' | 'voice';
 }
 
-export interface ChannelMessageChatType {
+export interface ConversationMessageChatType {
   id?: string;
   user: UserType | any;
-  channelId?: string;
+  conversationId?: string;
   text: string;
   type?: string;
   provider?: string;

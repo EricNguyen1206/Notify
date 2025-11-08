@@ -4,7 +4,7 @@ import { useSidebarActions } from "@/app/messages/action";
 import { Separator } from "@radix-ui/react-context-menu";
 import { Search } from "lucide-react";
 import NavUser from "../molecules/NavUser";
-import { SidebarChannels } from "../molecules/SidebarChannels";
+import { SidebarConversations } from "../molecules/SidebarConversations";
 import SidebarDirectMessages from "../molecules/SidebarDirectMessages";
 import { Input } from "../ui/input";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader } from "../ui/sidebar";
@@ -14,9 +14,9 @@ const AppSidebar = () => {
   const {
     searchQuery,
     setSearchQuery,
-    filteredChannels,
+    filteredConversations,
     filteredDirectMessages,
-    isChannelsLoading,
+    isConversationsLoading,
   } = useSidebarActions();
 
   return (
@@ -35,13 +35,13 @@ const AppSidebar = () => {
       </SidebarHeader>
 
       <SidebarContent className="px-chat-gutter">
-        {/* Channels Section */}
-        <SidebarChannels items={filteredChannels} loading={isChannelsLoading} />
+        {/* Conversations Section */}
+        <SidebarConversations items={filteredConversations} loading={isConversationsLoading} />
 
         <Separator className="mx-4 bg-chat-border" />
 
         {/* Direct Messages Section */}
-        <SidebarDirectMessages items={filteredDirectMessages} loading={isChannelsLoading} />
+        <SidebarDirectMessages items={filteredDirectMessages} loading={isConversationsLoading} />
       </SidebarContent>
 
       {/* User Profile Section */}

@@ -1,19 +1,17 @@
 import { AppDataSource } from "@/config/database";
-import { Channel } from "@/entities/Channel";
 import { Message } from "@/entities/Message";
 import { MessageResponse } from "@notify/types";
 import { logger } from "@/utils/logger";
 
 export class MessageRepository {
   private messageRepository = AppDataSource.getRepository(Message);
-  private channelRepository = AppDataSource.getRepository(Channel);
 
-  async getChannelMessages(channelId: number, limit: number = 50, before?: number): Promise<MessageResponse[]> {
+  async getConversationMessages(conversationId: number, limit: number = 50, before?: number): Promise<MessageResponse[]> {
     try {
       const queryBuilder = this.messageRepository
         .createQueryBuilder("message")
         .leftJoinAndSelect("message.sender", "sender")
-        .where("message.channelId = :channelId", { channelId })
+        .where("message.conversationId = :conversationId", { conversationId })
         .andWhere("message.deletedAt IS NULL")
         .orderBy("message.createdAt", "DESC")
         .limit(limit);
@@ -24,20 +22,33 @@ export class MessageRepository {
 
       const messages = await queryBuilder.getMany();
 
-      return messages.map((message) => ({
-        id: message.id,
-        type: message.getType(),
-        senderId: message.senderId,
-        senderName: message.sender.username,
-        senderAvatar: message.sender.avatar,
-        text: message.text,
-        url: message.url,
-        fileName: message.fileName,
-        createdAt: message.createdAt,
-        channelId: message.channelId,
-      }));
+      return messages.map((message) => {
+        const response: MessageResponse = {
+          id: message.id,
+          type: message.getType(),
+          senderId: message.senderId,
+          senderName: message.sender.username,
+          createdAt: message.createdAt,
+        };
+        if (message.sender.avatar !== undefined) {
+          response.senderAvatar = message.sender.avatar;
+        }
+        if (message.text !== undefined) {
+          response.text = message.text;
+        }
+        if (message.url !== undefined) {
+          response.url = message.url;
+        }
+        if (message.fileName !== undefined) {
+          response.fileName = message.fileName;
+        }
+        if (message.conversationId !== undefined) {
+          response.conversationId = message.conversationId;
+        }
+        return response;
+      });
     } catch (error) {
-      logger.error("Error getting channel messages:", error);
+      logger.error("Error getting conversation messages:", error);
       throw error;
     }
   }
@@ -61,18 +72,31 @@ export class MessageRepository {
 
       const messages = await queryBuilder.getMany();
 
-      return messages.map((message) => ({
-        id: message.id,
-        type: message.getType(),
-        senderId: message.senderId,
-        senderName: message.sender.username,
-        senderAvatar: message.sender.avatar,
-        text: message.text,
-        url: message.url,
-        fileName: message.fileName,
-        createdAt: message.createdAt,
-        receiverId: message.receiverId,
-      }));
+      return messages.map((message) => {
+        const response: MessageResponse = {
+          id: message.id,
+          type: message.getType(),
+          senderId: message.senderId,
+          senderName: message.sender.username,
+          createdAt: message.createdAt,
+        };
+        if (message.sender.avatar !== undefined) {
+          response.senderAvatar = message.sender.avatar;
+        }
+        if (message.text !== undefined) {
+          response.text = message.text;
+        }
+        if (message.url !== undefined) {
+          response.url = message.url;
+        }
+        if (message.fileName !== undefined) {
+          response.fileName = message.fileName;
+        }
+        if (message.receiverId !== undefined) {
+          response.receiverId = message.receiverId;
+        }
+        return response;
+      });
     } catch (error) {
       logger.error("Error getting direct messages:", error);
       throw error;
@@ -82,7 +106,7 @@ export class MessageRepository {
   async createMessage(data: {
     senderId: number;
     receiverId?: number;
-    channelId?: number;
+    conversationId?: number;
     text?: string;
     url?: string;
     fileName?: string;
@@ -101,19 +125,32 @@ export class MessageRepository {
         throw new Error("Message not found after creation");
       }
 
-      return {
+      const response: MessageResponse = {
         id: messageWithRelations.id,
         type: messageWithRelations.getType(),
         senderId: messageWithRelations.senderId,
         senderName: messageWithRelations.sender.username,
-        senderAvatar: messageWithRelations.sender.avatar,
-        text: messageWithRelations.text,
-        url: messageWithRelations.url,
-        fileName: messageWithRelations.fileName,
         createdAt: messageWithRelations.createdAt,
-        receiverId: messageWithRelations.receiverId,
-        channelId: messageWithRelations.channelId,
       };
+      if (messageWithRelations.sender.avatar !== undefined) {
+        response.senderAvatar = messageWithRelations.sender.avatar;
+      }
+      if (messageWithRelations.text !== undefined) {
+        response.text = messageWithRelations.text;
+      }
+      if (messageWithRelations.url !== undefined) {
+        response.url = messageWithRelations.url;
+      }
+      if (messageWithRelations.fileName !== undefined) {
+        response.fileName = messageWithRelations.fileName;
+      }
+      if (messageWithRelations.receiverId !== undefined) {
+        response.receiverId = messageWithRelations.receiverId;
+      }
+      if (messageWithRelations.conversationId !== undefined) {
+        response.conversationId = messageWithRelations.conversationId;
+      }
+      return response;
     } catch (error) {
       logger.error("Error creating message:", error);
       throw error;
@@ -140,19 +177,32 @@ export class MessageRepository {
         return null;
       }
 
-      return {
+      const response: MessageResponse = {
         id: message.id,
         type: message.getType(),
         senderId: message.senderId,
         senderName: message.sender.username,
-        senderAvatar: message.sender.avatar,
-        text: message.text,
-        url: message.url,
-        fileName: message.fileName,
         createdAt: message.createdAt,
-        receiverId: message.receiverId,
-        channelId: message.channelId,
       };
+      if (message.sender.avatar !== undefined) {
+        response.senderAvatar = message.sender.avatar;
+      }
+      if (message.text !== undefined) {
+        response.text = message.text;
+      }
+      if (message.url !== undefined) {
+        response.url = message.url;
+      }
+      if (message.fileName !== undefined) {
+        response.fileName = message.fileName;
+      }
+      if (message.receiverId !== undefined) {
+        response.receiverId = message.receiverId;
+      }
+      if (message.conversationId !== undefined) {
+        response.conversationId = message.conversationId;
+      }
+      return response;
     } catch (error) {
       logger.error("Error getting message by id:", error);
       throw error;

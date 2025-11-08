@@ -1,6 +1,6 @@
 import { Server as SocketIOServer, Socket } from "socket.io";
 import { Hub } from "./hub";
-import { ChannelService } from "@/services/channel/channel.service";
+import { ConversationService } from "@/services/conversation/conversation.service";
 import { MessageService } from "@/services/message/message.service";
 import { RedisService } from "@/services/redis/redis.service";
 import { WebSocketMessage } from "./message-types";
@@ -10,30 +10,21 @@ import { config } from "@/config/config";
 
 export class WebSocketHandler {
   private hub: Hub;
-  private channelService: ChannelService;
-  private messageService: MessageService;
-  private redisService: RedisService;
 
   constructor(
     io: SocketIOServer,
-    channelService: ChannelService,
+    conversationService: ConversationService,
     messageService: MessageService,
     redisService: RedisService
   ) {
-    this.channelService = channelService;
-    this.messageService = messageService;
-    this.redisService = redisService;
-    this.hub = new Hub(io, channelService, messageService, redisService);
+    // Services are passed to Hub but not directly used here
+    this.hub = new Hub(io, conversationService, messageService, redisService);
   }
 
   // Initialize WebSocket handling
   public initialize(): void {
-    this.hub = new Hub(
-      this.hub["io"], // Access private io property
-      this.channelService,
-      this.messageService,
-      this.redisService
-    );
+    // Hub is already initialized in constructor, no need to reinitialize
+    // This method is kept for backward compatibility
   }
 
   // Handle new WebSocket connection
@@ -85,8 +76,8 @@ export class WebSocketHandler {
       }
     });
 
-    // Handle join channel
-    socket.on("join_channel", async (data: { channel_id: number }) => {
+    // Handle join conversation
+    socket.on("join_conversation", async (data: { conversation_id: number }) => {
       try {
         const userId = (socket as any).userId;
         if (!userId) {
@@ -94,16 +85,16 @@ export class WebSocketHandler {
           return;
         }
 
-        await this.hub.joinChannel(userId, data.channel_id);
-        socket.emit("joined_channel", { channel_id: data.channel_id });
+        await this.hub.joinConversation(userId, data.conversation_id);
+        socket.emit("joined_conversation", { conversation_id: data.conversation_id });
       } catch (error) {
-        logger.error("Join channel error:", error);
-        socket.emit("error", { message: "Failed to join channel" });
+        logger.error("Join conversation error:", error);
+        socket.emit("error", { message: "Failed to join conversation" });
       }
     });
 
-    // Handle leave channel
-    socket.on("leave_channel", async (data: { channel_id: number }) => {
+    // Handle leave conversation
+    socket.on("leave_conversation", async (data: { conversation_id: number }) => {
       try {
         const userId = (socket as any).userId;
         if (!userId) {
@@ -111,11 +102,11 @@ export class WebSocketHandler {
           return;
         }
 
-        await this.hub.leaveChannel(userId, data.channel_id);
-        socket.emit("left_channel", { channel_id: data.channel_id });
+        await this.hub.leaveConversation(userId, data.conversation_id);
+        socket.emit("left_conversation", { conversation_id: data.conversation_id });
       } catch (error) {
-        logger.error("Leave channel error:", error);
-        socket.emit("error", { message: "Failed to leave channel" });
+        logger.error("Leave conversation error:", error);
+        socket.emit("error", { message: "Failed to leave conversation" });
       }
     });
 
