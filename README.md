@@ -14,9 +14,11 @@ A high-performance, real-time chat application built with modern technologies, f
 - [Performance Metrics](#-performance-metrics)
 - [High-Level Design](#-high-level-design)
 - [Detailed Design](#-detailed-design)
+- [Monorepo Architecture](#️-monorepo-architecture)
 - [Quick Start](#-quick-start)
 - [Development](#-development)
 - [Production Deployment](#-production-deployment)
+- [Deployment Guide](./DEPLOYMENT.md)
 - [API Documentation](#-api-documentation)
 - [Contributing](#-contributing)
 - [License & Copyright](#-license--copyright)
@@ -26,18 +28,21 @@ A high-performance, real-time chat application built with modern technologies, f
 Notify Chat Application is a modern, scalable real-time messaging platform designed for high-performance communication. Built with a microservices architecture, it provides instant messaging capabilities with support for both direct and group conversations.
 
 ### Key Technologies
-- **Backend**: Go 1.23 with Gin framework
+- **Monorepo**: PNPM workspace with Turborepo for parallel builds
+- **Backend**: Express.js + TypeScript with TypeORM
 - **Frontend**: Next.js 15 with React 19 and TypeScript
 - **Database**: PostgreSQL 15 with Redis caching
-- **Real-time**: WebSocket with horizontal scaling support
-- **Deployment**: Docker with production-ready configuration
+- **Real-time**: Socket.IO WebSocket with horizontal scaling support
+- **Deployment**: Vercel (frontend) + Render.com (backend) + Docker support
 
 ### Architecture Philosophy
+- **Monorepo**: Single repository with shared packages for code reuse
 - **Microservices**: Separated frontend and backend services
 - **Real-time First**: WebSocket-based instant messaging
 - **Scalable**: Redis pub/sub for horizontal scaling
 - **Production Ready**: Comprehensive monitoring and health checks
 - **Security First**: JWT authentication, rate limiting, and security headers
+- **Type Safety**: Shared TypeScript types across frontend and backend
 
 ## ✨ Highlight Features
 
@@ -200,14 +205,103 @@ graph TB
 - Health monitoring and alerting
 - Automated backup system
 
+## 🏛️ Monorepo Architecture
+
+This project uses a **PNPM workspace monorepo** structure for better code organization, shared types, and simplified development workflow.
+
+### Project Structure
+
+```
+Notify/
+├── apps/
+│   ├── web/                    # Next.js Frontend Application
+│   │   ├── src/
+│   │   │   ├── app/            # Next.js App Router
+│   │   │   ├── components/     # React components
+│   │   │   ├── hooks/          # Custom React hooks
+│   │   │   ├── lib/            # Utilities & configs
+│   │   │   ├── services/       # API clients
+│   │   │   └── store/         # Zustand state management
+│   │   └── package.json
+│   │
+│   └── api/                     # Express.js Backend API
+│       ├── src/
+│       │   ├── config/         # Configuration
+│       │   ├── controllers/    # Request handlers
+│       │   ├── services/        # Business logic
+│       │   ├── repositories/   # Data access layer
+│       │   ├── entities/       # TypeORM entities
+│       │   ├── middleware/     # Express middleware
+│       │   ├── routes/         # Route definitions
+│       │   ├── websocket/      # Socket.IO handlers
+│       │   └── utils/          # Utilities
+│       └── package.json
+│
+├── packages/
+│   ├── types/                   # Shared TypeScript Types
+│   │   ├── src/
+│   │   │   ├── user.ts         # User interfaces
+│   │   │   ├── channel.ts      # Channel interfaces
+│   │   │   ├── chat.ts         # Chat/Message interfaces
+│   │   │   ├── auth.ts         # Auth interfaces
+│   │   │   └── index.ts        # Public exports
+│   │   └── package.json
+│   │
+│   ├── validators/              # Shared Validation DTOs
+│   │   ├── src/
+│   │   │   ├── auth.dto.ts     # Auth DTOs (RegisterDto, LoginDto)
+│   │   │   ├── channel.dto.ts  # Channel DTOs
+│   │   │   ├── message.dto.ts  # Message DTOs
+│   │   │   └── index.ts
+│   │   └── package.json
+│   │
+│   └── shared/                  # Shared Utilities & Constants
+│       ├── src/
+│       │   ├── errors.ts       # Custom error classes
+│       │   ├── helpers.ts      # Helper functions
+│       │   ├── constants.ts    # Shared constants
+│       │   └── index.ts
+│       └── package.json
+│
+├── deployments/                 # Deployment configurations
+├── package.json                 # Root workspace config
+├── pnpm-workspace.yaml          # Workspace definition
+├── turbo.json                   # Turborepo configuration
+└── vercel.json                  # Vercel deployment config
+```
+
+### Monorepo Benefits
+
+1. **Shared Types**: TypeScript interfaces shared between frontend and backend via `@notify/types`
+2. **Code Reuse**: Common utilities and validation logic in `@notify/shared` and `@notify/validators`
+3. **Type Safety**: End-to-end type safety from API to UI
+4. **Single Source of Truth**: One repository for all related code
+5. **Parallel Builds**: Turborepo enables fast, parallel builds across packages
+6. **Simplified Development**: Single `pnpm install` installs all dependencies
+
+### Workspace Packages
+
+- **`@notify/types`**: Shared TypeScript interfaces and types
+  - Used by both frontend and backend
+  - Ensures type consistency across the stack
+  
+- **`@notify/validators`**: Validation DTOs using class-validator
+  - Used by backend for request validation
+  - Can be shared with frontend for form validation
+  
+- **`@notify/shared`**: Shared utilities and constants
+  - Error classes
+  - Helper functions (date formatting, string utilities)
+  - Constants
+
 ## 🔧 Detailed Design
 
 ### Backend Architecture
-The backend service is built with Go and follows clean architecture principles:
+The backend service is built with Express.js + TypeScript and follows clean architecture principles:
 
-- **📁 [Backend Documentation](./chat-service/README.md)**
-  - API endpoints and WebSocket handlers
-  - Database models and repositories
+- **📁 [Backend Documentation](./apps/api/README.md)**
+  - API endpoints and Socket.IO handlers
+  - Database models and repositories (TypeORM)
   - Business logic and services
   - Authentication and middleware
   - Real-time messaging implementation
@@ -215,11 +309,11 @@ The backend service is built with Go and follows clean architecture principles:
 ### Frontend Architecture
 The frontend is built with Next.js 15 and modern React patterns:
 
-- **📁 [Frontend Documentation](./frontend/README.md)**
+- **📁 [Frontend Documentation](./apps/web/README.md)**
   - Component architecture and design system
   - State management with Zustand
   - Real-time WebSocket integration
-  - API client generation
+  - API client generation (Orval)
   - UI/UX implementation
 
 ### Deployment Architecture
@@ -249,9 +343,10 @@ Production-ready deployment with Docker and orchestration:
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Docker and Docker Compose
-- 4GB+ RAM available
-- Ports 80, 3000, 8080, 5432, 6379 available
+- **Node.js**: >= 18.0.0
+- **PNPM**: >= 8.0.0
+- **PostgreSQL**: 13+ (for backend)
+- **Redis**: 6+ (for backend)
 
 ### 1. Clone Repository
 ```bash
@@ -259,68 +354,163 @@ git clone <repository-url>
 cd Notify
 ```
 
-### 2. Setup Environment
+### 2. Install Dependencies
+```bash
+# Install all workspace dependencies
+pnpm install
+```
+
+### 3. Setup Environment
+
+**Backend (apps/api):**
+```bash
+cd apps/api
+cp env.example .env
+# Edit .env with your database and Redis configuration
+```
+
+**Frontend (apps/web):**
+```bash
+cd apps/web
+# Create .env.local if needed for environment variables
+```
+
+### 4. Start Development
+
+**Option A: Start both apps (recommended)**
+```bash
+# From root directory
+pnpm dev
+```
+
+**Option B: Start individually**
+```bash
+# Frontend only
+pnpm --filter @notify/web dev
+
+# Backend only
+pnpm --filter @notify/api dev
+```
+
+### 5. Access Application
+- **Frontend**: http://localhost:3000
+- **Backend API**: http://localhost:8080
+- **API Documentation**: http://localhost:8080/swagger/ (if configured)
+
+### 6. Docker Development (Alternative)
 ```bash
 cd deployments/docker
 cp env.example .env
-# Edit .env with your configuration
-```
-
-### 3. Deploy Application
-```bash
-# Automated setup
-./setup.sh
-
-# Or manually
 docker compose up -d
 ```
 
-### 4. Access Application
-- **Frontend**: http://localhost
-- **API**: http://localhost/api
-- **Documentation**: http://localhost/swagger/
-
-### 5. Test Credentials
-- **Email**: admin@notify.com
-- **Password**: 123456
-
 ## 💻 Development
+
+### Monorepo Commands
+
+**Install dependencies:**
+```bash
+pnpm install                    # Install all workspace dependencies
+pnpm --filter @notify/web install  # Install only frontend deps
+pnpm --filter @notify/api install  # Install only backend deps
+```
+
+**Development:**
+```bash
+pnpm dev                        # Start all apps in dev mode
+pnpm --filter @notify/web dev   # Start only frontend
+pnpm --filter @notify/api dev   # Start only backend
+```
+
+**Build:**
+```bash
+pnpm build                      # Build all packages
+pnpm --filter @notify/web build # Build only frontend
+pnpm --filter @notify/api build # Build only backend
+```
+
+**Testing:**
+```bash
+pnpm test                       # Run all tests
+pnpm --filter @notify/web test  # Test frontend
+pnpm --filter @notify/api test  # Test backend
+```
+
+**Linting:**
+```bash
+pnpm lint                       # Lint all packages
+pnpm --filter @notify/web lint  # Lint frontend
+pnpm --filter @notify/api lint  # Lint backend
+```
+
+### Using Makefile (Alternative)
+
+```bash
+make install    # Install all dependencies
+make dev        # Start both frontend and backend
+make build      # Build all packages
+make test       # Run all tests
+make clean      # Clean build artifacts
+```
 
 ### Backend Development
 ```bash
-cd chat-service
-make dev          # Start with live reload
-make test         # Run tests
-make swagger      # Generate API docs
+cd apps/api
+pnpm dev        # Start with live reload (ts-node-dev)
+pnpm test       # Run tests
+pnpm lint       # Run linting
+pnpm migration:run  # Run database migrations
 ```
 
 ### Frontend Development
 ```bash
-cd frontend
-npm run dev       # Start development server
-npm run build     # Build for production
-npm run lint      # Run linting
+cd apps/web
+pnpm dev        # Start Next.js dev server
+pnpm build      # Build for production
+pnpm lint       # Run linting
+pnpm gen:api    # Generate API client from OpenAPI
 ```
 
-### Full Development Environment
+### Shared Packages Development
 ```bash
-make dev          # Start both frontend and backend
-make test         # Run all tests
-make build        # Build everything
+# Build shared packages
+pnpm --filter @notify/types build
+pnpm --filter @notify/validators build
+pnpm --filter @notify/shared build
 ```
 
 ## 🚀 Production Deployment
 
-### Docker Deployment
+### Cloud Deployment
+
+This project supports deployment to modern cloud platforms:
+
+- **Frontend**: Deploy to [Vercel](https://vercel.com) (recommended)
+- **Backend**: Deploy to [Render.com](https://render.com) (recommended)
+- **Database**: PostgreSQL on Render.com or managed service
+- **Cache**: Redis on Render.com or managed service
+
+**📖 [Complete Deployment Guide](./DEPLOYMENT.md)**
+
+### Quick Deployment
+
+**Frontend (Vercel):**
+1. Connect your GitHub repository to Vercel
+2. Set root directory to `apps/web`
+3. Vercel will auto-detect Next.js and deploy
+
+**Backend (Render.com):**
+1. Create a new Web Service on Render.com
+2. Connect your GitHub repository
+3. Set root directory to `apps/api`
+4. Configure environment variables
+5. Set build command: `cd ../.. && pnpm install && pnpm --filter @notify/api build`
+6. Set start command: `cd ../.. && pnpm --filter @notify/api start`
+
+### Docker Deployment (Alternative)
 ```bash
 cd deployments/docker
 ./setup.sh        # Automated production setup
-```
-
-### Manual Production Setup
-```bash
-# Use production configuration
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ```
 
 ### SSL/HTTPS Setup
