@@ -1,0 +1,14 @@
+version: 0.1
+
+build:
+  commands:
+    - cd ../.. && pnpm install
+    - cd ../.. && pnpm --filter @notify/api build
+
+start:
+  command: cd ../.. && pnpm --filter @notify/api start
+
+env:
+  - key: NODE_ENV
+    value: production
+
