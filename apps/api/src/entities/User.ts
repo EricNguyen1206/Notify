@@ -6,12 +6,11 @@ import {
   UpdateDateColumn,
   DeleteDateColumn,
   OneToMany,
-  ManyToMany,
-  JoinTable,
 } from "typeorm";
-import { Chat } from "./Chat";
+import { Message } from "./Message";
 import { Channel } from "./Channel";
 import { ChannelMember } from "./ChannelMember";
+import { Session } from "./Session";
 
 @Entity("users")
 export class User {
@@ -40,15 +39,18 @@ export class User {
   deletedAt?: Date;
 
   // Relations
-  @OneToMany(() => Chat, (chat) => chat.sender)
-  sentMessages: Chat[];
+  @OneToMany(() => Message, (message) => message.sender)
+  sentMessages: Message[];
 
-  @OneToMany(() => Chat, (chat) => chat.receiver)
-  receivedMessages: Chat[];
+  @OneToMany(() => Message, (message) => message.receiver)
+  receivedMessages: Message[];
 
   @OneToMany(() => Channel, (channel) => channel.owner)
   ownedChannels: Channel[];
 
   @OneToMany(() => ChannelMember, (member) => member.user)
   channelMemberships: ChannelMember[];
+
+  @OneToMany(() => Session, (session) => session.user)
+  sessions: Session[];
 }

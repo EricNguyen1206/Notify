@@ -1,14 +1,17 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import { AppDataSource } from "@/config/database";
 import { User } from "@/entities/User";
+import { Session } from "@/entities/Session";
 import { config } from "@/config/config";
 import { RegisterDto, LoginDto } from "@notify/validators";
-import { LoginResponse, UserResponse } from "@notify/types";
+import { LoginResponse, UserResponse, RefreshTokenResponse } from "@notify/types";
 import { logger } from "@/utils/logger";
 
 export class AuthService {
   private userRepository = AppDataSource.getRepository(User);
+  private sessionRepository = AppDataSource.getRepository(Session);
 
   public async register(data: RegisterDto): Promise<UserResponse> {
     try {
@@ -65,15 +68,36 @@ export class AuthService {
         throw new Error("Invalid credentials");
       }
 
-      // Generate JWT token
-      const token = jwt.sign({ userId: user.id, email: user.email, username: user.username }, config.jwt.secret, {
-        expiresIn: config.jwt.expire,
+      // Generate access token (short-lived)
+      const accessToken = jwt.sign(
+        { userId: user.id, email: user.email, username: user.username },
+        config.jwt.secret,
+        {
+          expiresIn: config.jwt.accessExpire,
+        }
+      );
+
+      // Generate refresh token (long-lived, 30 days)
+      const refreshToken = crypto.randomBytes(64).toString("hex");
+
+      // Calculate expiration date (30 days from now)
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 30);
+
+      // Create session record
+      const session = this.sessionRepository.create({
+        userId: user.id,
+        refreshToken,
+        expiresAt,
       });
+
+      await this.sessionRepository.save(session);
 
       logger.info("User logged in successfully", { userId: user.id, email: user.email });
 
       return {
-        token,
+        accessToken,
+        refreshToken,
         user: {
           id: user.id,
           username: user.username,
@@ -84,6 +108,82 @@ export class AuthService {
       };
     } catch (error) {
       logger.error("Login error:", error);
+      throw error;
+    }
+  }
+
+  public async refreshToken(refreshToken: string): Promise<RefreshTokenResponse> {
+    try {
+      // Find session by refresh token
+      const session = await this.sessionRepository.findOne({
+        where: { refreshToken },
+        relations: ["user"],
+      });
+
+      if (!session) {
+        throw new Error("Invalid refresh token");
+      }
+
+      // Check if session is expired
+      if (session.isExpired() || session.deletedAt) {
+        throw new Error("Refresh token expired");
+      }
+
+      // Get user
+      const user = session.user;
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      // Generate new access token
+      const accessToken = jwt.sign(
+        { userId: user.id, email: user.email, username: user.username },
+        config.jwt.secret,
+        {
+          expiresIn: config.jwt.accessExpire,
+        }
+      );
+
+      logger.info("Access token refreshed", { userId: user.id, sessionId: session.id });
+
+      return {
+        accessToken,
+      };
+    } catch (error) {
+      logger.error("Refresh token error:", error);
+      throw error;
+    }
+  }
+
+  public async logout(refreshToken: string, userId: number): Promise<void> {
+    try {
+      // Find and delete session
+      const session = await this.sessionRepository.findOne({
+        where: { refreshToken, userId },
+      });
+
+      if (session) {
+        await this.sessionRepository.softDelete(session.id);
+        logger.info("User logged out successfully", { userId, sessionId: session.id });
+      }
+    } catch (error) {
+      logger.error("Logout error:", error);
+      throw error;
+    }
+  }
+
+  public async logoutAll(userId: number): Promise<void> {
+    try {
+      // Delete all sessions for user
+      await this.sessionRepository
+        .createQueryBuilder()
+        .softDelete()
+        .where("userId = :userId", { userId })
+        .execute();
+
+      logger.info("All sessions logged out", { userId });
+    } catch (error) {
+      logger.error("Logout all error:", error);
       throw error;
     }
   }

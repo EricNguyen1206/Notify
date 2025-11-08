@@ -27,7 +27,8 @@ export const config = {
   },
   jwt: {
     secret: process.env.JWT_SECRET || "your-super-secure-jwt-secret-key",
-    expire: process.env.JWT_EXPIRE || "7d",
+    accessExpire: process.env.JWT_ACCESS_EXPIRE || "15m",
+    refreshExpire: process.env.JWT_REFRESH_EXPIRE || "30d",
   },
   cors: {
     origin: process.env.CORS_ORIGIN?.split(",") || ["http://localhost:3000"],

@@ -1,12 +1,12 @@
 import { AppDataSource } from "@/config/database";
 import { Channel } from "@/entities/Channel";
-import { Chat } from "@/entities/Chat";
-import { ChatResponse } from "@notify/types";
+import { Message } from "@/entities/Message";
+import { MessageResponse } from "@notify/types";
 import { logger } from "@/utils/logger";
 
 export class ChannelRepository {
   private channelRepository = AppDataSource.getRepository(Channel);
-  private chatRepository = AppDataSource.getRepository(Chat);
+  private messageRepository = AppDataSource.getRepository(Message);
 
   async create(channel: Channel): Promise<Channel> {
     try {
@@ -107,22 +107,22 @@ export class ChannelRepository {
     }
   }
 
-  async getChatMessagesWithPagination(channelId: number, limit: number = 20, before?: number): Promise<ChatResponse[]> {
+  async getChatMessagesWithPagination(channelId: number, limit: number = 20, before?: number): Promise<MessageResponse[]> {
     try {
-      let query = this.chatRepository
-        .createQueryBuilder("chat")
-        .leftJoinAndSelect("chat.sender", "sender")
-        .where("chat.channelId = :channelId", { channelId })
-        .andWhere("chat.deletedAt IS NULL")
-        .orderBy("chat.createdAt", "ASC");
+      let query = this.messageRepository
+        .createQueryBuilder("message")
+        .leftJoinAndSelect("message.sender", "sender")
+        .where("message.channelId = :channelId", { channelId })
+        .andWhere("message.deletedAt IS NULL")
+        .orderBy("message.createdAt", "ASC");
 
       if (before) {
-        query = query.andWhere("chat.createdAt < :before", { before });
+        query = query.andWhere("message.createdAt < :before", { before });
       }
 
       const messages = await query.limit(limit).getMany();
 
-      // Convert to ChatResponse format
+      // Convert to MessageResponse format
       return messages.map((message) => ({
         id: message.id,
         type: message.getType(),

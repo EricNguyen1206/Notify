@@ -10,7 +10,7 @@ import {
   JoinColumn,
 } from "typeorm";
 import { User } from "./User";
-import { Chat } from "./Chat";
+import { Message } from "./Message";
 import { ChannelMember } from "./ChannelMember";
 
 export enum ChannelType {
@@ -50,8 +50,8 @@ export class Channel {
   @JoinColumn({ name: "ownerId" })
   owner: User;
 
-  @OneToMany(() => Chat, (chat) => chat.channel)
-  messages: Chat[];
+  @OneToMany(() => Message, (message) => message.channel)
+  messages: Message[];
 
   @OneToMany(() => ChannelMember, (member) => member.channel)
   members: ChannelMember[];

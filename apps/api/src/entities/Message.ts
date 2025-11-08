@@ -11,13 +11,13 @@ import {
 import { User } from "./User";
 import { Channel } from "./Channel";
 
-export enum ChatType {
+export enum MessageType {
   DIRECT = "direct",
   CHANNEL = "group",
 }
 
-@Entity("chats")
-export class Chat {
+@Entity("messages")
+export class Message {
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -61,14 +61,15 @@ export class Chat {
   @JoinColumn({ name: "channelId" })
   channel?: Channel;
 
-  // Helper method to get chat type
-  getType(): ChatType {
+  // Helper method to get message type
+  getType(): MessageType {
     if (this.receiverId) {
-      return ChatType.DIRECT;
+      return MessageType.DIRECT;
     }
     if (this.channelId) {
-      return ChatType.CHANNEL;
+      return MessageType.CHANNEL;
     }
-    throw new Error("Invalid chat: must have either receiverId or channelId");
+    throw new Error("Invalid message: must have either receiverId or channelId");
   }
 }
+

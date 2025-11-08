@@ -1,14 +1,14 @@
 import { UserType } from './user';
 
 // Chat/Message Types
-export enum ChatType {
+export enum MessageType {
   DIRECT = "direct",
   CHANNEL = "group",
 }
 
-export interface ChatResponse {
+export interface MessageResponse {
   id: number;
-  type: ChatType;
+  type: MessageType;
   senderId: number;
   senderName: string;
   senderAvatar?: string;
@@ -20,8 +20,8 @@ export interface ChatResponse {
   channelId?: number;
 }
 
-export interface PaginatedChatResponse {
-  items: ChatResponse[];
+export interface PaginatedMessageResponse {
+  items: MessageResponse[];
   total: number;
   nextCursor?: number;
 }

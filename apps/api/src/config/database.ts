@@ -2,8 +2,9 @@ import { DataSource } from "typeorm";
 import { config } from "./config";
 import { User } from "@/entities/User";
 import { Channel } from "@/entities/Channel";
-import { Chat } from "@/entities/Chat";
+import { Message } from "@/entities/Message";
 import { ChannelMember } from "@/entities/ChannelMember";
+import { Session } from "@/entities/Session";
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -14,7 +15,7 @@ export const AppDataSource = new DataSource({
   database: config.database.name,
   synchronize: false, // Use migrations instead
   logging: config.database.logging,
-  entities: [User, Channel, Chat, ChannelMember],
+  entities: [User, Channel, Message, ChannelMember, Session],
   migrations: ["src/migrations/*.ts"],
   migrationsRun: false, // Don't auto-run migrations
   subscribers: ["src/subscribers/*.ts"],

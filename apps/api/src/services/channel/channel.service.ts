@@ -2,28 +2,28 @@ import { AppDataSource } from "@/config/database";
 import { Channel, ChannelType } from "@/entities/Channel";
 import { User } from "@/entities/User";
 import { ChannelMember } from "@/entities/ChannelMember";
-import { Chat } from "@/entities/Chat";
+import { Message } from "@/entities/Message";
 import { ChannelRepository } from "@/repositories/postgres/channel.repository";
 import { UserRepository } from "@/repositories/postgres/user.repository";
-import { ChatRepository } from "@/repositories/postgres/chat.repository";
+import { MessageRepository } from "@/repositories/postgres/message.repository";
 import {
   ChannelResponse,
   DirectChannelResponse,
   ChannelDetailResponse,
   UserChannelsResponse,
 } from "@notify/types";
-import { ChatResponse } from "@notify/types";
+import { MessageResponse } from "@notify/types";
 import { logger } from "@/utils/logger";
 
 export class ChannelService {
   private channelRepository: ChannelRepository;
   private userRepository: UserRepository;
-  private chatRepository: ChatRepository;
+  private messageRepository: MessageRepository;
 
   constructor() {
     this.channelRepository = new ChannelRepository();
     this.userRepository = new UserRepository();
-    this.chatRepository = new ChatRepository();
+    this.messageRepository = new MessageRepository();
   }
 
   // Get all channels for a user, separated by type (direct/group)
@@ -327,7 +327,7 @@ export class ChannelService {
     channelId: number,
     limit: number = 20,
     before?: number
-  ): Promise<ChatResponse[]> {
+  ): Promise<MessageResponse[]> {
     try {
       return await this.channelRepository.getChatMessagesWithPagination(channelId, limit, before);
     } catch (error) {

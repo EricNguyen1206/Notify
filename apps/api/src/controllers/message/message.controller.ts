@@ -107,17 +107,7 @@ export class MessageController {
 
       res.status(201).json({
         success: true,
-        data: {
-          id: message.id,
-          type: message.getType(),
-          senderId: message.senderId,
-          text: message.text,
-          url: message.url,
-          fileName: message.fileName,
-          createdAt: message.createdAt,
-          channelId: message.channelId,
-          receiverId: message.receiverId,
-        },
+        data: message,
       });
     } catch (error) {
       logger.error("Create message error:", error);
@@ -188,17 +178,7 @@ export class MessageController {
 
       res.status(200).json({
         success: true,
-        data: {
-          id: message.id,
-          type: message.getType(),
-          senderId: message.senderId,
-          text: message.text,
-          url: message.url,
-          fileName: message.fileName,
-          createdAt: message.createdAt,
-          channelId: message.channelId,
-          receiverId: message.receiverId,
-        },
+        data: message,
       });
     } catch (error) {
       logger.error("Get message by ID error:", error);

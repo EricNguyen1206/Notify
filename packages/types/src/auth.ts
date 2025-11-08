@@ -2,8 +2,13 @@ import { UserResponse } from './user';
 
 // Auth Types
 export interface LoginResponse {
-  token: string;
+  accessToken: string;
+  refreshToken: string;
   user: UserResponse;
+}
+
+export interface RefreshTokenResponse {
+  accessToken: string;
 }
 
 export interface ErrorResponse {

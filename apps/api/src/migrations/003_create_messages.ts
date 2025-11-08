@@ -1,12 +1,12 @@
 import { MigrationInterface, QueryRunner, Table, Index, ForeignKey, Check } from "typeorm";
 
-export class CreateChats1700000003 implements MigrationInterface {
-  name = "CreateChats1700000003";
+export class CreateMessages1700000003 implements MigrationInterface {
+  name = "CreateMessages1700000003";
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.createTable(
       new Table({
-        name: "chats",
+        name: "messages",
         columns: [
           {
             name: "id",
@@ -70,7 +70,7 @@ export class CreateChats1700000003 implements MigrationInterface {
 
     // Create foreign key constraints
     await queryRunner.createForeignKey(
-      "chats",
+      "messages",
       new ForeignKey({
         columnNames: ["senderId"],
         referencedColumnNames: ["id"],
@@ -80,7 +80,7 @@ export class CreateChats1700000003 implements MigrationInterface {
     );
 
     await queryRunner.createForeignKey(
-      "chats",
+      "messages",
       new ForeignKey({
         columnNames: ["receiverId"],
         referencedColumnNames: ["id"],
@@ -90,7 +90,7 @@ export class CreateChats1700000003 implements MigrationInterface {
     );
 
     await queryRunner.createForeignKey(
-      "chats",
+      "messages",
       new ForeignKey({
         columnNames: ["channelId"],
         referencedColumnNames: ["id"],
@@ -101,7 +101,7 @@ export class CreateChats1700000003 implements MigrationInterface {
 
     // Create check constraint to ensure exactly one of receiverId or channelId is set
     await queryRunner.query(`
-      ALTER TABLE chats ADD CONSTRAINT CHK_chats_receiver_or_channel 
+      ALTER TABLE messages ADD CONSTRAINT CHK_messages_receiver_or_channel 
       CHECK (
         (receiverId IS NOT NULL AND channelId IS NULL) OR 
         (receiverId IS NULL AND channelId IS NOT NULL)
@@ -109,18 +109,19 @@ export class CreateChats1700000003 implements MigrationInterface {
     `);
 
     // Create indexes
-    await queryRunner.createIndex("chats", new Index("IDX_chats_sender_id", ["senderId"]));
+    await queryRunner.createIndex("messages", new Index("IDX_messages_sender_id", ["senderId"]));
 
-    await queryRunner.createIndex("chats", new Index("IDX_chats_receiver_id", ["receiverId"]));
+    await queryRunner.createIndex("messages", new Index("IDX_messages_receiver_id", ["receiverId"]));
 
-    await queryRunner.createIndex("chats", new Index("IDX_chats_channel_id", ["channelId"]));
+    await queryRunner.createIndex("messages", new Index("IDX_messages_channel_id", ["channelId"]));
 
-    await queryRunner.createIndex("chats", new Index("IDX_chats_created_at", ["createdAt"]));
+    await queryRunner.createIndex("messages", new Index("IDX_messages_created_at", ["createdAt"]));
 
-    await queryRunner.createIndex("chats", new Index("IDX_chats_deleted_at", ["deletedAt"]));
+    await queryRunner.createIndex("messages", new Index("IDX_messages_deleted_at", ["deletedAt"]));
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.dropTable("chats");
+    await queryRunner.dropTable("messages");
   }
 }
+
