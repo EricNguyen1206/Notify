@@ -1,10 +1,12 @@
 import { DataSource } from "typeorm";
 import { config } from "./config";
-import { User } from "@/entities/User";
-import { Conversation } from "@/entities/Conversation";
-import { Message } from "@/entities/Message";
-import { ConversationMember } from "@/entities/ConversationMember";
-import { Session } from "@/entities/Session";
+import { User } from "@/models/User";
+import { Conversation } from "@/models/Conversation";
+import { Message } from "@/models/Message";
+import { Participant } from "@/models/Participant";
+import { Session } from "@/models/Session";
+import { FriendRequest } from "@/models/FriendRequest";
+import { Friends } from "@/models/Friends";
 
 // Parse database URL if provided, otherwise use individual config
 const getDatabaseConfig = () => {
@@ -15,7 +17,7 @@ const getDatabaseConfig = () => {
       const url = new URL(config.database.url);
       const sslMode = url.searchParams.get("sslmode");
       const requiresSSL = sslMode === "require" || sslMode === "prefer" || config.database.ssl;
-      
+
       return {
         type: "postgres" as const,
         host: url.hostname,
@@ -47,7 +49,7 @@ export const AppDataSource = new DataSource({
   ...getDatabaseConfig(),
   synchronize: false, // Use migrations instead
   logging: config.database.logging,
-  entities: [User, Conversation, Message, ConversationMember, Session],
+  entities: [User, Conversation, Message, Participant, Session, FriendRequest, Friends],
   migrations: ["src/migrations/*.ts"],
   migrationsRun: false, // Don't auto-run migrations
   subscribers: ["src/subscribers/*.ts"],

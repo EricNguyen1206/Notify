@@ -32,8 +32,8 @@ const DirectMessagesPage = () => {
         isGroup={currentChannel?.type === "group"}
         avatar={currentChannel?.avatar ?? ""}
         participantCount={memberCount}
-        members={channelData?.data?.members}
-        ownerId={channelData?.data?.ownerId}
+        members={channelData?.data?.members as any}
+        ownerId={channelData?.data?.ownerId as any}
         currentUserId={user?.id}
       />
 

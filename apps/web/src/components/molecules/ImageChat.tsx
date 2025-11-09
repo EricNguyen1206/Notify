@@ -19,7 +19,7 @@ interface PropType {
   chat: DirectMessageChatType;
   friend?: UserType;
   mainRef: React.RefObject<HTMLDivElement>;
-  handleDeleteChatById: (chatId: number) => void;
+  handleDeleteChatById: (chatId: string) => void;
   handleDownloadFile: (
     bucket: string,
     folderName: string,
@@ -65,7 +65,7 @@ const ImageChat = (props: PropType) => {
         <div className="flex flex-col gap-3">
           <div className="flex flex-col text-[13px]">
             <div className="flex items-center gap-3">
-              <p className="font-bold">{`${user?.username} ${userIdSession === chat?.userId ? "(You)" : ""
+              <p className="font-bold">{`${user?.username} ${String(userIdSession) === chat?.userId ? "(You)" : ""
                 }`}</p>
               <p className="text-[12px] text-zinc-400">
                 {chat?.sended ? formatDateStr(chat?.sended) : "undefined"}

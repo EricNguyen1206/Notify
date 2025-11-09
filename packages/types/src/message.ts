@@ -1,4 +1,4 @@
-import { UserType } from './user';
+import { UserType } from "./user";
 
 // Chat/Message Types
 export enum MessageType {
@@ -7,29 +7,29 @@ export enum MessageType {
 }
 
 export interface MessageResponse {
-  id: number;
+  id: string;
   type: MessageType;
-  senderId: number;
+  senderId: string;
   senderName: string;
   senderAvatar?: string;
   text?: string;
   url?: string;
   fileName?: string;
   createdAt: Date;
-  receiverId?: number;
-  conversationId?: number;
+  receiverId?: string;
+  conversationId?: string;
 }
 
 export interface PaginatedMessageResponse {
   items: MessageResponse[];
   total: number;
-  nextCursor?: number;
+  nextCursor?: string;
 }
 
 export interface DirectMessageChatType {
-  id?: number;
+  id?: string;
   user: UserType | any;
-  userId?: number;
+  userId?: string;
   friendId?: string;
   text: string;
   type?: string;
@@ -50,4 +50,3 @@ export interface ConversationMessageChatType {
   fileName?: string;
   sended?: string;
 }
-

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { ConversationController } from "@/controllers/conversation/conversation.controller";
+import { ConversationController } from "@/controllers/conversation.controller";
 import { validateDto } from "@/middleware/validation/validation.middleware";
 import {
   CreateConversationDto,
@@ -33,7 +33,10 @@ router.post("/:id/user", validateDto(AddUserToConversationDto), conversationCont
 router.put("/:id/user", conversationController.leaveConversation);
 
 // DELETE /api/v1/conversations/:id/user
-router.delete("/:id/user", validateDto(RemoveUserFromConversationDto), conversationController.removeUserFromConversation);
+router.delete(
+  "/:id/user",
+  validateDto(RemoveUserFromConversationDto),
+  conversationController.removeUserFromConversation
+);
 
 export { router as conversationRoutes };
-

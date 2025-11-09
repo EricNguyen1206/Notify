@@ -1,0 +1,60 @@
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  DeleteDateColumn,
+  ManyToOne,
+  OneToMany,
+  JoinColumn,
+  Index,
+} from "typeorm";
+import { User } from "./User";
+import { Message } from "./Message";
+import { Participant } from "./Participant";
+
+export enum ConversationType {
+  DIRECT = "direct",
+  GROUP = "group",
+}
+
+@Entity("conversations")
+export class Conversation {
+  @PrimaryGeneratedColumn("uuid")
+  id!: string;
+
+  @Column({ nullable: false })
+  name!: string;
+
+  @Column({ nullable: false })
+  ownerId!: string;
+
+  @Column({
+    type: "enum",
+    enum: ConversationType,
+    default: ConversationType.GROUP,
+  })
+  type!: ConversationType;
+
+  @CreateDateColumn()
+  createdAt!: Date;
+
+  @UpdateDateColumn()
+  updatedAt!: Date;
+
+  @DeleteDateColumn()
+  deletedAt?: Date;
+
+  // Relations
+  @ManyToOne(() => User, (user) => user.ownedConversations)
+  @JoinColumn({ name: "ownerId" })
+  owner!: User;
+
+  @OneToMany(() => Message, (message) => message.conversation)
+  messages!: Message[];
+
+  @OneToMany(() => Participant, (participant) => participant.conversation)
+  @Index("IDX_participants_userId")
+  participants!: Participant[];
+}

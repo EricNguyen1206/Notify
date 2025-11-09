@@ -8,8 +8,6 @@
 
 export type ChatServiceInternalModelsCreateChannelRequestType = typeof ChatServiceInternalModelsCreateChannelRequestType[keyof typeof ChatServiceInternalModelsCreateChannelRequestType];
 
-
-// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const ChatServiceInternalModelsCreateChannelRequestType = {
   direct: 'direct',
   group: 'group',

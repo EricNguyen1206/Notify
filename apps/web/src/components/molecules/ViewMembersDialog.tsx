@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 
 interface Member {
-  id?: number;
+  id?: string;
   username?: string;
   email?: string;
   avatar?: string;

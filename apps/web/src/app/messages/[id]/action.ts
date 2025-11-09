@@ -125,11 +125,23 @@ export const useChatData = (conversationId: number | undefined) => {
   // Transform API data to Message format
   const chats: Message[] = [
     ...(Array.isArray(chatsData?.data.items)
-      ? chatsData.data.items.map((chat: ChatServiceInternalModelsChatResponse) => chat as Message)
+      ? chatsData.data.items.map((chat: ChatServiceInternalModelsChatResponse): Message => ({
+          id: String(chat.id || ""),
+          conversationId: String(chat.channelId || conversationId || ""),
+          createdAt: chat.createdAt || new Date().toISOString(),
+          fileName: chat.fileName,
+          receiverId: chat.receiverId ? String(chat.receiverId) : undefined,
+          senderAvatar: chat.senderAvatar,
+          senderId: String(chat.senderId || ""),
+          senderName: chat.senderName,
+          text: chat.text,
+          type: chat.type,
+          url: chat.url,
+        }))
       : []),
     // ...optimisticChats,
     ...storeMessages, // Include messages from WebSocket
-  ] as Message[];
+  ];
 
   return {
     chats,
@@ -282,12 +294,12 @@ export const useWebSocketMessageHandler = (conversationId: number | undefined) =
       const chatMessage = event.detail;
 
       // Only process messages for the current conversation
-      if (conversationId && chatMessage.conversationId === conversationId) {
+      if (conversationId && String(chatMessage.conversationId) === String(conversationId)) {
         // Transform ChatMessage to Message format
         const message: Message = {
-          id: chatMessage.id,
-          conversationId: chatMessage.conversationId,
-          senderId: chatMessage.senderId,
+          id: String(chatMessage.id),
+          conversationId: String(chatMessage.conversationId),
+          senderId: String(chatMessage.senderId),
           senderName: chatMessage.senderName,
           senderAvatar: chatMessage.senderAvatar,
           text: chatMessage.text,

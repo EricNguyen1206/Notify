@@ -61,13 +61,6 @@ export class CreateUsers1700000001 implements MigrationInterface {
       }),
       true
     );
-
-    // Create indexes
-    await queryRunner.createIndex("users", new Index("IDX_users_email", ["email"]));
-
-    await queryRunner.createIndex("users", new Index("IDX_users_username", ["username"]));
-
-    await queryRunner.createIndex("users", new Index("IDX_users_deleted_at", ["deletedAt"]));
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {

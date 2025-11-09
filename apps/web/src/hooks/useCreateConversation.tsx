@@ -111,7 +111,7 @@ export const useCreateConversation = (options: UseCreateConversationOptions = {}
 
     // Ensure current user is included for group conversations
     if (data.type === "group") {
-      const currentUserIncluded = data.selectedUsers.some((u) => u.id === user.id);
+      const currentUserIncluded = data.selectedUsers.some((u) => String(u.id) === user.id);
       if (!currentUserIncluded) {
         return "You must include yourself when creating a conversation";
       }

@@ -10,14 +10,14 @@ export class CreateSessions1700000005 implements MigrationInterface {
         columns: [
           {
             name: "id",
-            type: "int",
+            type: "varchar",
             isPrimary: true,
             isGenerated: true,
             generationStrategy: "increment",
           },
           {
             name: "userId",
-            type: "int",
+            type: "varchar",
             isNullable: false,
           },
           {
@@ -51,27 +51,9 @@ export class CreateSessions1700000005 implements MigrationInterface {
       }),
       true
     );
-
-    // Create foreign key constraint
-    await queryRunner.createForeignKey(
-      "sessions",
-      new ForeignKey({
-        columnNames: ["userId"],
-        referencedColumnNames: ["id"],
-        referencedTableName: "users",
-        onDelete: "CASCADE",
-      })
-    );
-
-    // Create indexes
-    await queryRunner.createIndex("sessions", new Index("IDX_sessions_user_id", ["userId"]));
-    await queryRunner.createIndex("sessions", new Index("IDX_sessions_refresh_token", ["refreshToken"]));
-    await queryRunner.createIndex("sessions", new Index("IDX_sessions_expires_at", ["expiresAt"]));
-    await queryRunner.createIndex("sessions", new Index("IDX_sessions_deleted_at", ["deletedAt"]));
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.dropTable("sessions");
   }
 }
-

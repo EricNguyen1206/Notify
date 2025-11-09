@@ -1,7 +1,7 @@
 import { Server as SocketIOServer, Socket } from "socket.io";
-import { ConversationService } from "@/services/conversation/conversation.service";
-import { MessageService } from "@/services/message/message.service";
-import { RedisService } from "@/services/redis/redis.service";
+import { ConversationService } from "@/services/conversation.service";
+import { MessageService } from "@/services/message.service";
+import { RedisService } from "@/services/redis.service";
 import {
   WebSocketMessage,
   newConnectMessage,
@@ -108,7 +108,7 @@ export class Hub {
       await this.redisService.joinConversation(userIdStr, conversationIdStr);
 
       // Notify channel members
-      await this.notifyConversationMembers(conversationId, userId, "join");
+      await this.notifyParticipants(conversationId, userId, "join");
 
       logger.info("User joined channel", { userId, conversationId });
     } catch (error) {
@@ -138,7 +138,7 @@ export class Hub {
       await this.redisService.leaveConversation(userIdStr, conversationIdStr);
 
       // Notify channel members
-      await this.notifyConversationMembers(conversationId, userId, "leave");
+      await this.notifyParticipants(conversationId, userId, "leave");
 
       logger.info("User left channel", { userId, conversationId });
     } catch (error) {
@@ -257,12 +257,20 @@ export class Hub {
 
       // Get sender info for the message
       // Note: In a real implementation, you'd get sender info from database
-      await this.conversationService.getConversationById(conversation_id);
+      await this.conversationService.getConversationByIdPublic(conversation_id);
       const senderName = `User-${sender_id}`;
       const senderAvatar = undefined;
 
       // Create channel message for broadcasting
-      const channelMessage = newChannelMessage(conversation_id, sender_id, senderName, senderAvatar, text, url, file_name);
+      const channelMessage = newChannelMessage(
+        conversation_id,
+        sender_id,
+        senderName,
+        senderAvatar,
+        text,
+        url,
+        file_name
+      );
 
       // Broadcast to all channel members
       await this.broadcastToConversation(conversation_id, channelMessage);
@@ -279,7 +287,7 @@ export class Hub {
   }
 
   // Notify channel members about join/leave events
-  private async notifyConversationMembers(conversationId: number, userId: number, action: "join" | "leave"): Promise<void> {
+  private async notifyParticipants(conversationId: number, userId: number, action: "join" | "leave"): Promise<void> {
     try {
       // Get user info (in real implementation, get from database)
       const username = `User-${userId}`;
@@ -294,7 +302,7 @@ export class Hub {
       // Broadcast to all channel members
       await this.broadcastToConversation(conversationId, message);
     } catch (error) {
-      logger.error("Notify channel members error:", error);
+      logger.error("Notify participants error:", error);
       throw error;
     }
   }
@@ -308,7 +316,7 @@ export class Hub {
   }
 
   // Get channel member count
-  getConversationMemberCount(conversationId: number): number {
+  getParticipantCount(conversationId: number): number {
     const conversationIdStr = conversationId.toString();
     const conversationClients = this.conversations.get(conversationIdStr);
     return conversationClients ? conversationClients.size : 0;
@@ -320,7 +328,7 @@ export class Hub {
   }
 
   // Get channel members
-  getConversationMembers(conversationId: number): number[] {
+  getParticipants(conversationId: number): number[] {
     const conversationIdStr = conversationId.toString();
     const conversationClients = this.conversations.get(conversationIdStr);
     return conversationClients ? Array.from(conversationClients.keys()).map((id) => parseInt(id)) : [];

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { MessageController } from "@/controllers/message/message.controller";
+import { MessageController } from "@/controllers/message.controller";
 import { validateDto } from "@/middleware/validation/validation.middleware";
 import { SendMessageDto } from "@notify/validators";
 

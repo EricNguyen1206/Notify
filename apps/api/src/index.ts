@@ -13,9 +13,9 @@ import { setupRoutes } from "@/routes";
 import { errorHandler } from "@/middleware/errorHandler";
 import { notFoundHandler } from "@/middleware/notFoundHandler";
 import { WebSocketHandler } from "@/websocket/websocket.handler";
-import { ConversationService } from "@/services/conversation/conversation.service";
-import { MessageService } from "@/services/message/message.service";
-import { RedisService } from "@/services/redis/redis.service";
+import { ConversationService } from "@/services/conversation.service";
+import { MessageService } from "@/services/message.service";
+import { RedisService } from "@/services/redis.service";
 import { logger } from "@/utils/logger";
 
 class App {
@@ -65,8 +65,7 @@ class App {
     this.app.use(express.json({ limit: "10mb" }));
     this.app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
-    // Health check endpoint
-    this.app.get("/health", (_req, res) => {
+    this.app.get("/", (_req, res) => {
       res.status(200).json({
         status: "ok",
         timestamp: new Date().toISOString(),

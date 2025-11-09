@@ -1,8 +1,8 @@
 import { Server as SocketIOServer, Socket } from "socket.io";
 import { Hub } from "./hub";
-import { ConversationService } from "@/services/conversation/conversation.service";
-import { MessageService } from "@/services/message/message.service";
-import { RedisService } from "@/services/redis/redis.service";
+import { ConversationService } from "@/services/conversation.service";
+import { MessageService } from "@/services/message.service";
+import { RedisService } from "@/services/redis.service";
 import { WebSocketMessage } from "./message-types";
 import { logger } from "@/utils/logger";
 import jwt from "jsonwebtoken";

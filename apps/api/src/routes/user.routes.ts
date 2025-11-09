@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { UserController } from "@/controllers/user/user.controller";
+import { UserController } from "@/controllers/user.controller";
 import { validateDto } from "@/middleware/validation/validation.middleware";
 import { UpdateProfileDto } from "@notify/validators";
 

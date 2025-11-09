@@ -48,7 +48,7 @@ Notify Chat Application is a modern, scalable real-time messaging platform desig
 
 ### Core Functionality
 - ✅ **Real-time Messaging** - Instant message delivery via WebSocket
-- ✅ **Channel Management** - Direct messages and group chats
+- ✅ **Conversation Management** - Direct messages and group chats
 - ✅ **User Authentication** - Secure JWT-based authentication
 - ✅ **Profile Management** - User profiles with avatar support
 - ✅ **Message History** - Persistent message storage and retrieval
@@ -193,7 +193,7 @@ graph TB
 #### 4. **Real-time Layer**
 - WebSocket hub for connection management
 - Redis pub/sub for message broadcasting
-- Channel-based messaging
+- Conversation-based messaging
 
 #### 5. **Data Layer**
 - **PostgreSQL**: Primary data storage
@@ -227,10 +227,9 @@ Notify/
 │   └── api/                     # Express.js Backend API
 │       ├── src/
 │       │   ├── config/         # Configuration
-│       │   ├── controllers/    # Request handlers
-│       │   ├── services/        # Business logic
-│       │   ├── repositories/   # Data access layer
-│       │   ├── entities/       # TypeORM entities
+│       │   ├── controllers/    # Request handlers (HTTP layer)
+│       │   ├── services/        # Business logic + data access
+│       │   ├── models/          # TypeORM entities (database models)
 │       │   ├── middleware/     # Express middleware
 │       │   ├── routes/         # Route definitions
 │       │   ├── websocket/      # Socket.IO handlers
@@ -241,8 +240,8 @@ Notify/
 │   ├── types/                   # Shared TypeScript Types
 │   │   ├── src/
 │   │   │   ├── user.ts         # User interfaces
-│   │   │   ├── channel.ts      # Channel interfaces
-│   │   │   ├── chat.ts         # Chat/Message interfaces
+│   │   │   ├── conversation.ts # Conversation interfaces
+│   │   │   ├── message.ts      # Message interfaces
 │   │   │   ├── auth.ts         # Auth interfaces
 │   │   │   └── index.ts        # Public exports
 │   │   └── package.json
@@ -250,7 +249,7 @@ Notify/
 │   ├── validators/              # Shared Validation DTOs
 │   │   ├── src/
 │   │   │   ├── auth.dto.ts     # Auth DTOs (RegisterDto, LoginDto)
-│   │   │   ├── channel.dto.ts  # Channel DTOs
+│   │   │   ├── conversation.dto.ts  # Conversation DTOs
 │   │   │   ├── message.dto.ts  # Message DTOs
 │   │   │   └── index.ts
 │   │   └── package.json
@@ -296,12 +295,36 @@ Notify/
 ## 🔧 Detailed Design
 
 ### Backend Architecture
-The backend service is built with Express.js + TypeScript and follows clean architecture principles:
+The backend service is built with Express.js + TypeScript and follows a **3-layer architecture**:
+
+#### Architecture Layers
+
+1. **Models Layer** (`src/models/`)
+   - TypeORM entities representing database schema
+   - Defines data structure and relationships
+   - Examples: `User`, `Conversation`, `Message`, `Participant`, `Session`
+
+2. **Services Layer** (`src/services/`)
+   - Business logic and data access combined
+   - Directly uses TypeORM repositories via `AppDataSource.getRepository()`
+   - Handles all database operations and business rules
+   - Examples: `UserService`, `ConversationService`, `MessageService`, `AuthService`
+
+3. **Controllers Layer** (`src/controllers/`)
+   - HTTP request/response handling
+   - Validates input and delegates to services
+   - Returns formatted responses
+   - Examples: `UserController`, `ConversationController`, `MessageController`, `AuthController`
+
+#### Benefits of 3-Layer Architecture
+
+- **Simplicity**: Removed unnecessary repository abstraction layer
+- **Direct Data Access**: Services directly interact with TypeORM repositories
+- **Clear Separation**: Each layer has a distinct responsibility
+- **Maintainability**: Easier to understand and modify code
 
 - **📁 [Backend Documentation](./apps/api/README.md)**
   - API endpoints and Socket.IO handlers
-  - Database models and repositories (TypeORM)
-  - Business logic and services
   - Authentication and middleware
   - Real-time messaging implementation
 
@@ -327,9 +350,10 @@ Production-ready deployment to cloud platforms:
 
 ### Database Schema
 - **Users**: Authentication and profile management
-- **Channels**: Direct messages and group chats
+- **Conversations**: Direct messages and group chats
 - **Messages**: Chat history with metadata
-- **Relationships**: Many-to-many channel memberships
+- **Participants**: Many-to-many conversation memberships
+- **Sessions**: User authentication sessions with refresh tokens
 
 ### Security Implementation
 - **JWT Authentication**: Stateless token-based auth
@@ -519,14 +543,14 @@ This project supports deployment to modern cloud platforms:
 ### API Endpoints
 - **Authentication**: `/api/auth/login`, `/api/auth/register`
 - **Users**: `/api/users/profile`, `/api/users/search`
-- **Channels**: `/api/channels/`, `/api/channels/:id`
-- **Messages**: `/api/messages/channel/:id`
+- **Conversations**: `/api/conversations/`, `/api/conversations/:id`
+- **Messages**: `/api/messages/conversation/:id`
 - **WebSocket**: `/ws` for real-time communication
 
 ### WebSocket Events
-- **Join Channel**: `channel.join`
-- **Leave Channel**: `channel.leave`
-- **Send Message**: `channel.message`
+- **Join Conversation**: `conversation.join`
+- **Leave Conversation**: `conversation.leave`
+- **Send Message**: `conversation.message`
 - **Connection**: `connection.connect`
 
 ## 🤝 Contributing

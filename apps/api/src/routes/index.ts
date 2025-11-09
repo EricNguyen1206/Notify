@@ -3,6 +3,7 @@ import { Server as SocketIOServer } from "socket.io";
 import { authRoutes } from "./auth.routes";
 import { userRoutes } from "./user.routes";
 import { conversationRoutes } from "./conversation.routes";
+import { friendRoutes } from "./friend.routes";
 import messageRoutes from "./message.routes";
 import websocketRoutes, { initializeWebSocketRoutes } from "./websocket.routes";
 import { generalRateLimit, authRateLimit } from "@/middleware/rateLimit/rateLimit.middleware";
@@ -21,6 +22,7 @@ export const setupRoutes = (app: Application, io: SocketIOServer): void => {
   // Protected routes (authentication required)
   app.use(`${apiPrefix}/users`, generalRateLimit, authenticateToken, userRoutes);
   app.use(`${apiPrefix}/conversations`, generalRateLimit, authenticateToken, conversationRoutes);
+  app.use(`${apiPrefix}/friends`, generalRateLimit, authenticateToken, friendRoutes);
   app.use(`${apiPrefix}/messages`, generalRateLimit, authenticateToken, messageRoutes);
 
   // WebSocket routes

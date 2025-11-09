@@ -52,9 +52,9 @@ const UserSettingDialog: React.FC<ParentComponentProps> = ({ children, open, onO
         toast.success("Profile updated successfully");
         // Update local state
         updateUser({
-          id: data.data.id ?? profile?.id!,
-          email: data.data.email ?? profile?.email!,
-          username: data.data.username ?? profile?.username!,
+          id: String(data.data.id ?? profile?.id ?? ""),
+          email: data.data.email ?? profile?.email ?? "",
+          username: data.data.username ?? profile?.username ?? "",
           avatar: data.data.avatar ?? profile?.avatar,
         });
         // Reset form

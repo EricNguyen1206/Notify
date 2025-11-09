@@ -41,7 +41,7 @@ const LoginEmailForm = () => {
           // Update Zustand state
           setToken(token);
           setUser({
-            id: user.id!,
+            id: String(user.id!),
             email: user.email!,
             username: user.username || "",
           });

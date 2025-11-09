@@ -2,12 +2,12 @@ import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { config } from "@/config/config";
 import { AppDataSource } from "@/config/database";
-import { User } from "@/entities/User";
+import { User } from "@/models/User";
 import { logger } from "@/utils/logger";
 
 export interface AuthenticatedRequest extends Request {
   user?: User;
-  userId?: number;
+  userId?: string;
 }
 
 export const authenticateToken = async (

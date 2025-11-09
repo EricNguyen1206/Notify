@@ -1,6 +1,6 @@
 // Shared User Types
 export interface User {
-  id: number;
+  id: string;
   username: string;
   email: string;
   avatar?: string;
@@ -8,7 +8,7 @@ export interface User {
 }
 
 export interface UserType {
-  id?: string | number;
+  id?: string;
   name?: string;
   username?: string;
   email?: string;
@@ -21,10 +21,9 @@ export interface UserType {
 }
 
 export interface UserResponse {
-  id: number;
+  id: string;
   username: string;
   email: string;
   avatar?: string;
   createdAt: Date;
 }
-

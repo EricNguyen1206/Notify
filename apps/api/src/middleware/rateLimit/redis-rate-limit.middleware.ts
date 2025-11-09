@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { RedisService } from "@/services/redis/redis.service";
+import { RedisService } from "@/services/redis.service";
 import { logger } from "@/utils/logger";
 
 export interface RateLimitOptions {

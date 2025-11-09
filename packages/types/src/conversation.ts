@@ -1,4 +1,4 @@
-import { UserResponse } from './user';
+import { UserResponse } from "./user";
 
 // Conversation Types
 export enum ConversationType {
@@ -7,33 +7,33 @@ export enum ConversationType {
 }
 
 export interface Conversation {
-  id: number | string;
+  id: string;
   name: string;
-  type: ConversationType | 'text' | 'voice';
-  ownerId: number;
+  type: ConversationType;
+  ownerId: string;
   createdAt?: Date;
 }
 
 export interface ConversationResponse {
-  id: number;
+  id: string;
   name: string;
   type: ConversationType;
-  ownerId: number;
+  ownerId: string;
 }
 
 export interface DirectConversationResponse {
-  id: number;
+  id: string;
   name: string;
   avatar?: string;
   type: ConversationType;
-  ownerId: number;
+  ownerId: string;
 }
 
 export interface ConversationDetailResponse {
-  id: number;
+  id: string;
   name: string;
   type: ConversationType;
-  ownerId: number;
+  ownerId: string;
   createdAt: Date;
   members: UserResponse[];
 }
@@ -42,4 +42,3 @@ export interface UserConversationsResponse {
   direct: DirectConversationResponse[];
   group: ConversationResponse[];
 }
-

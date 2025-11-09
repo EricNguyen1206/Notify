@@ -1,19 +1,19 @@
 import { create } from "zustand";
 
 export interface Message {
-  id: number;
+  id: string;
   /** conversation */
-  conversationId: number;
+  conversationId: string;
   /** timestamp of when the message was created */
   createdAt: string;
   /** optional file name for media */
   fileName?: string;
   /** Relate to type message */
-  receiverId?: number;
+  receiverId?: string;
   /** url string for avatar */
   senderAvatar?: string;
   /** ID of the user who sent the message */
-  senderId: number;
+  senderId: string;
   /** Username of the sender */
   senderName?: string;
   /** free text message */
