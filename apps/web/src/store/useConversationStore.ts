@@ -9,7 +9,7 @@ export interface EnhancedConversation {
   avatar: string;
   lastActivity: Date;
   unreadCount: number;
-  members?: UserType[]; // load lazy khi cần
+  members?: UserType[];
 }
 
 // stores/conversationStore.ts

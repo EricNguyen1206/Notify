@@ -9,7 +9,7 @@ export interface EnhancedChannel {
   avatar: string;
   lastActivity: Date;
   unreadCount: number;
-  members?: UserType[]; // load lazy khi cần
+  members?: UserType[];
 }
 
 // stores/channelStore.ts
