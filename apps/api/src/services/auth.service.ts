@@ -6,14 +6,14 @@ import { User } from "@/models/User";
 import { Session } from "@/models/Session";
 import { config } from "@/config/config";
 import { RegisterDto, LoginDto } from "@notify/validators";
-import { LoginResponse, UserResponse, RefreshTokenResponse } from "@notify/types";
+import { UserResponse } from "@notify/types";
 import { logger } from "@/utils/logger";
 
 export class AuthService {
   private userRepository = AppDataSource.getRepository(User);
   private sessionRepository = AppDataSource.getRepository(Session);
 
-  public async register(data: RegisterDto): Promise<UserResponse> {
+  public async signup(data: RegisterDto): Promise<UserResponse> {
     try {
       // Check if user already exists
       const existingUser = await this.userRepository.findOne({
@@ -36,7 +36,7 @@ export class AuthService {
 
       const savedUser = await this.userRepository.save(user);
 
-      logger.info("User registered successfully", { userId: savedUser.id, email: savedUser.email });
+      logger.info("User signed up successfully", { userId: savedUser.id, email: savedUser.email });
 
       const response: UserResponse = {
         id: savedUser.id,
@@ -49,12 +49,12 @@ export class AuthService {
       }
       return response;
     } catch (error) {
-      logger.error("Registration error:", error);
+      logger.error("Signup error:", error);
       throw error;
     }
   }
 
-  public async login(data: LoginDto): Promise<LoginResponse> {
+  public async signin(data: LoginDto): Promise<{ user: UserResponse; accessToken: string; refreshToken: string }> {
     try {
       // Find user by email
       const user = await this.userRepository.findOne({
@@ -92,7 +92,7 @@ export class AuthService {
 
       await this.sessionRepository.save(session);
 
-      logger.info("User logged in successfully", { userId: user.id, email: user.email });
+      logger.info("User signed in successfully", { userId: user.id, email: user.email });
 
       const userResponse: UserResponse = {
         id: user.id,
@@ -105,17 +105,17 @@ export class AuthService {
       }
 
       return {
+        user: userResponse,
         accessToken,
         refreshToken,
-        user: userResponse,
       };
     } catch (error) {
-      logger.error("Login error:", error);
+      logger.error("Signin error:", error);
       throw error;
     }
   }
 
-  public async refreshToken(refreshToken: string): Promise<RefreshTokenResponse> {
+  public async refreshToken(refreshToken: string): Promise<{ accessToken: string }> {
     try {
       // Find session by refresh token
       const session = await this.sessionRepository.findOne({
@@ -145,16 +145,14 @@ export class AuthService {
 
       logger.info("Access token refreshed", { userId: user.id, sessionId: session.id });
 
-      return {
-        accessToken,
-      };
+      return { accessToken };
     } catch (error) {
       logger.error("Refresh token error:", error);
       throw error;
     }
   }
 
-  public async logout(refreshToken: string, userId: string): Promise<void> {
+  public async signout(refreshToken: string, userId: string): Promise<void> {
     try {
       // Find and delete session
       const session = await this.sessionRepository.findOne({
@@ -163,10 +161,10 @@ export class AuthService {
 
       if (session) {
         await this.sessionRepository.softDelete(session.id);
-        logger.info("User logged out successfully", { userId, sessionId: session.id });
+        logger.info("User signed out successfully", { userId, sessionId: session.id });
       }
     } catch (error) {
-      logger.error("Logout error:", error);
+      logger.error("Signout error:", error);
       throw error;
     }
   }

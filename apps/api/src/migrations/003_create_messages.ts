@@ -1,33 +1,35 @@
-import { MigrationInterface, QueryRunner, Table } from "typeorm";
+import { MigrationInterface, QueryRunner, Table, TableIndex, TableForeignKey } from "typeorm";
 
-export class CreateMessages1700000003 implements MigrationInterface {
-  name = "CreateMessages1700000003";
+export class CreateMessages1735689602000 implements MigrationInterface {
+  name = "CreateMessages1735689602000";
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    // Enable UUID extension if not already enabled
+    await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
+
     await queryRunner.createTable(
       new Table({
         name: "messages",
         columns: [
           {
             name: "id",
-            type: "int",
+            type: "uuid",
             isPrimary: true,
-            isGenerated: true,
-            generationStrategy: "increment",
+            default: "uuid_generate_v4()",
           },
           {
             name: "senderId",
-            type: "int",
+            type: "uuid",
             isNullable: false,
           },
           {
             name: "receiverId",
-            type: "int",
+            type: "uuid",
             isNullable: true,
           },
           {
-            name: "channelId",
-            type: "int",
+            name: "conversationId",
+            type: "uuid",
             isNullable: true,
           },
           {
@@ -51,12 +53,13 @@ export class CreateMessages1700000003 implements MigrationInterface {
             name: "createdAt",
             type: "timestamp",
             default: "CURRENT_TIMESTAMP",
+            isNullable: false,
           },
           {
             name: "updatedAt",
             type: "timestamp",
             default: "CURRENT_TIMESTAMP",
-            onUpdate: "CURRENT_TIMESTAMP",
+            isNullable: false,
           },
           {
             name: "deletedAt",
@@ -67,9 +70,82 @@ export class CreateMessages1700000003 implements MigrationInterface {
       }),
       true
     );
+
+    // Create indexes for better query performance
+    await queryRunner.createIndex(
+      "messages",
+      new TableIndex({
+        name: "IDX_messages_senderId",
+        columnNames: ["senderId"],
+      })
+    );
+
+    await queryRunner.createIndex(
+      "messages",
+      new TableIndex({
+        name: "IDX_messages_receiverId",
+        columnNames: ["receiverId"],
+      })
+    );
+
+    await queryRunner.createIndex(
+      "messages",
+      new TableIndex({
+        name: "IDX_messages_conversationId",
+        columnNames: ["conversationId"],
+      })
+    );
+
+    await queryRunner.createIndex(
+      "messages",
+      new TableIndex({
+        name: "IDX_messages_createdAt",
+        columnNames: ["createdAt"],
+      })
+    );
+
+    // Create foreign keys
+    await queryRunner.createForeignKey(
+      "messages",
+      new TableForeignKey({
+        columnNames: ["senderId"],
+        referencedColumnNames: ["id"],
+        referencedTableName: "users",
+        onDelete: "CASCADE",
+      })
+    );
+
+    await queryRunner.createForeignKey(
+      "messages",
+      new TableForeignKey({
+        columnNames: ["conversationId"],
+        referencedColumnNames: ["id"],
+        referencedTableName: "conversations",
+        onDelete: "CASCADE",
+      })
+    );
+
+    await queryRunner.createForeignKey(
+      "messages",
+      new TableForeignKey({
+        columnNames: ["receiverId"],
+        referencedColumnNames: ["id"],
+        referencedTableName: "users",
+        onDelete: "CASCADE",
+      })
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
+    // Drop foreign keys
+    const table = await queryRunner.getTable("messages");
+    if (table) {
+      const foreignKeys = table.foreignKeys;
+      for (const fk of foreignKeys) {
+        await queryRunner.dropForeignKey("messages", fk);
+      }
+    }
+
     await queryRunner.dropTable("messages");
   }
 }

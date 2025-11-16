@@ -1,4 +1,4 @@
-import { useGetChannels } from "@/services/endpoints/channels/channels";
+import { useConversationsQuery } from "@/services/api/conversations";
 import { EnhancedConversation, useConversationStore } from "@/store/useConversationStore";
 import { useSocketStore } from "@/store/useSocketStore";
 import { useEffect, useMemo, useState, useRef } from "react";
@@ -22,21 +22,21 @@ export const useConversationSearch = () => {
  * Transforms API conversation data to EnhancedConversation format
  */
 const transformConversationData = (conversations: any[], type: "group" | "direct"): EnhancedConversation[] => {
-  return (
-    conversations?.map(
-      (ch) =>
-        ({
-          id: ch.id ?? 0,
-          name: ch.name,
-          ownerId: ch.ownerId,
-          createdAt: new Date(),
-          type: type,
-          avatar: ch.avatar || "",
-          lastActivity: new Date(),
-          unreadCount: 0,
-          members: [],
-        }) as EnhancedConversation
-    ) ?? []
+  if (!Array.isArray(conversations)) return [];
+
+  return conversations.map(
+    (ch) =>
+      ({
+        id: String(ch.id ?? ""),
+        name: ch.name,
+        ownerId: String(ch.ownerId ?? ""),
+        createdAt: new Date(),
+        type,
+        avatar: ch.avatar || "",
+        lastActivity: new Date(),
+        unreadCount: 0,
+        members: [],
+      }) as EnhancedConversation
   );
 };
 
@@ -52,13 +52,13 @@ export const useConversationData = () => {
     isLoading: isConversationsLoading,
     error: conversationsError,
     refetch: refetchConversations,
-  } = useGetChannels();
+  } = useConversationsQuery();
 
   // Transform and set conversation data when it changes
   useEffect(() => {
-    if (conversationsData?.data) {
-      const groupConversations = transformConversationData(conversationsData.data.group || [], "group");
-      const directConversations = transformConversationData(conversationsData.data.direct || [], "direct");
+    if (conversationsData) {
+      const groupConversations = transformConversationData(conversationsData.group || [], "group");
+      const directConversations = transformConversationData(conversationsData.direct || [], "direct");
 
       setGroupConversations(groupConversations);
       setDirectConversations(directConversations);
@@ -101,7 +101,7 @@ export const useConversationFiltering = (searchQuery: string) => {
  * Hook for managing WebSocket connection
  * This ensures the connection is established only once
  */
-export const useWebSocketConnection = (userId: number | null) => {
+export const useWebSocketConnection = (userId: string | null) => {
   const { isConnected, connectionState, error } = useSocketStore();
 
   // Use ref to track if component is mounted to prevent state updates after unmount
@@ -127,7 +127,7 @@ export const useWebSocketConnection = (userId: number | null) => {
  * Main hook that combines all sidebar functionality
  * This is the primary hook that components should use
  */
-export const useSidebarActions = (userId?: number) => {
+export const useSidebarActions = (userId?: string) => {
   // Search functionality
   const { searchQuery, setSearchQuery, clearSearch } = useConversationSearch();
 
@@ -165,7 +165,7 @@ export const conversationUtils = {
   /**
    * Get conversation by ID from store
    */
-  getConversationById: (conversationId: number): EnhancedConversation | null => {
+  getConversationById: (conversationId: string): EnhancedConversation | null => {
     const { groupConversations, directConversations } = useConversationStore.getState();
     return [...groupConversations, ...directConversations].find((conv) => conv.id === conversationId) || null;
   },
@@ -180,7 +180,7 @@ export const conversationUtils = {
   /**
    * Get unread count for a conversation
    */
-  getUnreadCount: (conversationId: number): number => {
+  getUnreadCount: (conversationId: string): number => {
     const { unreadCounts } = useConversationStore.getState();
     return unreadCounts[conversationId] || 0;
   },

@@ -16,8 +16,14 @@ export const authenticateToken = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const authHeader = req.headers.authorization;
-    const token = authHeader && authHeader.split(" ")[1]; // Bearer TOKEN
+    // Try to get token from cookie first (preferred method)
+    let token = req.cookies?.["accessToken"];
+
+    // Fallback to Authorization header for backward compatibility
+    if (!token) {
+      const authHeader = req.headers.authorization;
+      token = authHeader && authHeader.split(" ")[1]; // Bearer TOKEN
+    }
 
     if (!token) {
       res.status(401).json({

@@ -4,6 +4,7 @@ import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import compression from "compression";
+import cookieParser from "cookie-parser";
 import { createServer } from "http";
 import { Server as SocketIOServer } from "socket.io";
 import { config } from "@/config/config";
@@ -12,6 +13,7 @@ import { initializeRedis, closeRedis } from "@/config/redis";
 import { setupRoutes } from "@/routes";
 import { errorHandler } from "@/middleware/errorHandler";
 import { notFoundHandler } from "@/middleware/notFoundHandler";
+import { setupSwagger } from "@/config/swagger";
 import { WebSocketHandler } from "@/websocket/websocket.handler";
 import { ConversationService } from "@/services/conversation.service";
 import { MessageService } from "@/services/message.service";
@@ -34,6 +36,7 @@ class App {
     });
 
     this.initializeMiddlewares();
+    this.initializeSwagger();
     this.initializeRoutes();
     this.initializeWebSocket();
     this.initializeErrorHandling();
@@ -61,6 +64,9 @@ class App {
       })
     );
 
+    // Cookie parser middleware
+    this.app.use(cookieParser());
+
     // Body parsing middleware
     this.app.use(express.json({ limit: "10mb" }));
     this.app.use(express.urlencoded({ extended: true, limit: "10mb" }));
@@ -72,6 +78,11 @@ class App {
         uptime: process.uptime(),
       });
     });
+  }
+
+  private initializeSwagger(): void {
+    setupSwagger(this.app);
+    logger.info("📚 Swagger UI available at /api-docs");
   }
 
   private initializeRoutes(): void {

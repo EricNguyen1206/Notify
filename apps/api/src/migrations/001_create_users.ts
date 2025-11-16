@@ -1,19 +1,21 @@
-import { MigrationInterface, QueryRunner, Table, Index } from "typeorm";
+import { MigrationInterface, QueryRunner, Table, TableIndex } from "typeorm";
 
-export class CreateUsers1700000001 implements MigrationInterface {
-  name = "CreateUsers1700000001";
+export class CreateUsers1735689600000 implements MigrationInterface {
+  name = "CreateUsers1735689600000";
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    // Enable UUID extension if not already enabled
+    await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
+
     await queryRunner.createTable(
       new Table({
         name: "users",
         columns: [
           {
             name: "id",
-            type: "int",
+            type: "uuid",
             isPrimary: true,
-            isGenerated: true,
-            generationStrategy: "increment",
+            default: "uuid_generate_v4()",
           },
           {
             name: "username",
@@ -45,12 +47,13 @@ export class CreateUsers1700000001 implements MigrationInterface {
             name: "createdAt",
             type: "timestamp",
             default: "CURRENT_TIMESTAMP",
+            isNullable: false,
           },
           {
             name: "updatedAt",
             type: "timestamp",
             default: "CURRENT_TIMESTAMP",
-            onUpdate: "CURRENT_TIMESTAMP",
+            isNullable: false,
           },
           {
             name: "deletedAt",
@@ -60,6 +63,23 @@ export class CreateUsers1700000001 implements MigrationInterface {
         ],
       }),
       true
+    );
+
+    // Create indexes for better query performance
+    await queryRunner.createIndex(
+      "users",
+      new TableIndex({
+        name: "IDX_users_username",
+        columnNames: ["username"],
+      })
+    );
+
+    await queryRunner.createIndex(
+      "users",
+      new TableIndex({
+        name: "IDX_users_email",
+        columnNames: ["email"],
+      })
     );
   }
 

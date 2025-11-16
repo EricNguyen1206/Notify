@@ -2,9 +2,9 @@ import { UserType } from "@notify/types";
 import { create } from "zustand";
 
 export interface EnhancedChannel {
-  id: number;
+  id: string;
   name: string;
-  ownerId: number;
+  ownerId: string;
   type: "group" | "direct";
   avatar: string;
   lastActivity: Date;
@@ -15,8 +15,8 @@ export interface EnhancedChannel {
 // stores/channelStore.ts
 export interface ChannelState {
   // Existing state
-  unreadCounts: Record<number, number>;
-  activeChannelId: number | null;
+  unreadCounts: Record<string, number>;
+  activeChannelId: string | null;
   currentChannel: EnhancedChannel | null;
   groupChannels: EnhancedChannel[];
   directChannels: EnhancedChannel[];
@@ -26,15 +26,15 @@ export interface ChannelState {
   joinedChannels: Set<string>; // Track all joined WebSocket channels
 
   // Existing methods
-  setUnreadCount: (channelId: number, count: number) => void;
-  setActiveChannel: (channelId: number) => void;
+  setUnreadCount: (channelId: string, count: number) => void;
+  setActiveChannel: (channelId: string) => void;
   setCurrentChannel: (channel: EnhancedChannel) => void;
-  markAsRead: (channelId: number) => void;
+  markAsRead: (channelId: string) => void;
   setGroupChannels: (channels: EnhancedChannel[]) => void;
   setDirectChannels: (channels: EnhancedChannel[]) => void;
   addGroupChannel: (channel: EnhancedChannel) => void;
   addDirectChannel: (channel: EnhancedChannel) => void;
-  removeChannel: (channelId: number, type: "group" | "direct") => void;
+  removeChannel: (channelId: string, type: "group" | "direct") => void;
 
   // New WebSocket channel management methods
   setCurrentChannelId: (channelId: string | null) => void;
@@ -82,7 +82,7 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
     set((state) => ({
       directChannels: [...state.directChannels, channel],
     })),
-  removeChannel: (channelId: number, type: "group" | "direct") =>
+  removeChannel: (channelId: string, type: "group" | "direct") =>
     set((state) => ({
       groupChannels: type === "group" ? state.groupChannels.filter((ch) => ch.id !== channelId) : state.groupChannels,
       directChannels:

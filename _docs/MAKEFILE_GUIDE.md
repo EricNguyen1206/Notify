@@ -71,14 +71,6 @@ Run `make check-env` to verify you have:
 | `backend-test` | Run tests | `make backend-test` |
 | `integration-test` | Run integration tests | `make integration-test` |
 
-### 📡 API Development
-
-| Command | Description | Usage |
-|---------|-------------|-------|
-| `api-sync` | Sync OpenAPI docs from backend | `make api-sync` |
-| `api-generate` | Generate TypeScript client | `make api-generate` |
-| `api-full` | Complete API workflow | `make api-full` |
-
 ### 🗄️ Database Operations
 
 | Command | Description | Usage |
@@ -138,19 +130,6 @@ make migrate-seed
 
 # 5. Start development servers
 make dev
-```
-
-### API Development Workflow
-
-```bash
-# 1. Make changes to Go backend API
-# 2. Sync OpenAPI documentation
-make api-sync
-
-# 3. Generate TypeScript client
-make api-generate
-
-# 4. Use new API in frontend with type safety
 ```
 
 ### Testing Workflow
@@ -262,9 +241,8 @@ make health
 1. **Always run `make check-env` first** on new machines
 2. **Use `make quick-start`** for complete setup
 3. **Run `make health`** to verify services are working
-4. **Use `make api-full`** after backend API changes
-5. **Run `make test`** before committing changes
-6. **Use `make docker-clean`** to free up disk space
+4. **Run `make test`** before committing changes
+5. **Use `make docker-clean`** to free up disk space
 
 ## 📝 Notes
 

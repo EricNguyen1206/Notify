@@ -1,19 +1,30 @@
-import { MigrationInterface, QueryRunner, Table } from "typeorm";
+import { MigrationInterface, QueryRunner, Table, TableIndex, TableForeignKey } from "typeorm";
 
-export class CreateChannels1700000002 implements MigrationInterface {
-  name = "CreateChannels1700000002";
+export class CreateConversations1735689601000 implements MigrationInterface {
+  name = "CreateConversations1735689601000";
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    // Enable UUID extension if not already enabled
+    await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
+
+    // Create enum type for conversation type
+    await queryRunner.query(`
+      DO $$ BEGIN
+        CREATE TYPE conversation_type AS ENUM ('direct', 'group');
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$;
+    `);
+
     await queryRunner.createTable(
       new Table({
-        name: "channels",
+        name: "conversations",
         columns: [
           {
             name: "id",
-            type: "int",
+            type: "uuid",
             isPrimary: true,
-            isGenerated: true,
-            generationStrategy: "increment",
+            default: "uuid_generate_v4()",
           },
           {
             name: "name",
@@ -23,13 +34,12 @@ export class CreateChannels1700000002 implements MigrationInterface {
           },
           {
             name: "ownerId",
-            type: "int",
+            type: "uuid",
             isNullable: false,
           },
           {
             name: "type",
-            type: "enum",
-            enum: ["direct", "group"],
+            type: "conversation_type",
             default: "'group'",
             isNullable: false,
           },
@@ -37,12 +47,13 @@ export class CreateChannels1700000002 implements MigrationInterface {
             name: "createdAt",
             type: "timestamp",
             default: "CURRENT_TIMESTAMP",
+            isNullable: false,
           },
           {
             name: "updatedAt",
             type: "timestamp",
             default: "CURRENT_TIMESTAMP",
-            onUpdate: "CURRENT_TIMESTAMP",
+            isNullable: false,
           },
           {
             name: "deletedAt",
@@ -53,9 +64,47 @@ export class CreateChannels1700000002 implements MigrationInterface {
       }),
       true
     );
+
+    // Create indexes
+    await queryRunner.createIndex(
+      "conversations",
+      new TableIndex({
+        name: "IDX_conversations_ownerId",
+        columnNames: ["ownerId"],
+      })
+    );
+
+    await queryRunner.createIndex(
+      "conversations",
+      new TableIndex({
+        name: "IDX_conversations_type",
+        columnNames: ["type"],
+      })
+    );
+
+    // Create foreign key
+    await queryRunner.createForeignKey(
+      "conversations",
+      new TableForeignKey({
+        columnNames: ["ownerId"],
+        referencedColumnNames: ["id"],
+        referencedTableName: "users",
+        onDelete: "CASCADE",
+      })
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.dropTable("channels");
+    // Drop foreign keys
+    const table = await queryRunner.getTable("conversations");
+    if (table) {
+      const foreignKeys = table.foreignKeys;
+      for (const fk of foreignKeys) {
+        await queryRunner.dropForeignKey("conversations", fk);
+      }
+    }
+
+    await queryRunner.dropTable("conversations");
+    await queryRunner.query(`DROP TYPE IF EXISTS conversation_type`);
   }
 }

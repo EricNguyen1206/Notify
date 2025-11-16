@@ -2,9 +2,9 @@ import { UserType } from "@notify/types";
 import { create } from "zustand";
 
 export interface EnhancedConversation {
-  id: number;
+  id: string;
   name: string;
-  ownerId: number;
+  ownerId: string;
   type: "group" | "direct";
   avatar: string;
   lastActivity: Date;
@@ -15,8 +15,8 @@ export interface EnhancedConversation {
 // stores/conversationStore.ts
 export interface ConversationState {
   // Existing state
-  unreadCounts: Record<number, number>;
-  activeConversationId: number | null;
+  unreadCounts: Record<string, number>;
+  activeConversationId: string | null;
   currentConversation: EnhancedConversation | null;
   groupConversations: EnhancedConversation[];
   directConversations: EnhancedConversation[];
@@ -26,15 +26,15 @@ export interface ConversationState {
   joinedConversations: Set<string>; // Track all joined WebSocket conversations
 
   // Existing methods
-  setUnreadCount: (conversationId: number, count: number) => void;
-  setActiveConversation: (conversationId: number) => void;
+  setUnreadCount: (conversationId: string, count: number) => void;
+  setActiveConversation: (conversationId: string) => void;
   setCurrentConversation: (conversation: EnhancedConversation) => void;
-  markAsRead: (conversationId: number) => void;
+  markAsRead: (conversationId: string) => void;
   setGroupConversations: (conversations: EnhancedConversation[]) => void;
   setDirectConversations: (conversations: EnhancedConversation[]) => void;
   addGroupConversation: (conversation: EnhancedConversation) => void;
   addDirectConversation: (conversation: EnhancedConversation) => void;
-  removeConversation: (conversationId: number, type: "group" | "direct") => void;
+  removeConversation: (conversationId: string, type: "group" | "direct") => void;
 
   // New WebSocket conversation management methods
   setCurrentConversationId: (conversationId: string | null) => void;
@@ -82,7 +82,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
     set((state) => ({
       directConversations: [...state.directConversations, conversation],
     })),
-  removeConversation: (conversationId: number, type: "group" | "direct") =>
+  removeConversation: (conversationId: string, type: "group" | "direct") =>
     set((state) => ({
       groupConversations: type === "group" ? state.groupConversations.filter((ch) => ch.id !== conversationId) : state.groupConversations,
       directConversations:

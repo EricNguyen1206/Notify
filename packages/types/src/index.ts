@@ -4,4 +4,5 @@ export * from './message';
 export * from './auth';
 export * from './server';
 export * from './friend';
+export * from './common';
 

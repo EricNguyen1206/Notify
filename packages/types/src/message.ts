@@ -1,3 +1,4 @@
+import { PaginatedApiResponse } from "./common";
 import { UserType } from "./user";
 
 // Chat/Message Types
@@ -50,3 +51,12 @@ export interface ConversationMessageChatType {
   fileName?: string;
   sended?: string;
 }
+
+export interface SendMessageRequest {
+  conversationId: string;
+  text?: string;
+  url?: string;
+  fileName?: string;
+}
+
+export type ConversationMessagesApiResponse = PaginatedApiResponse<MessageResponse[]>;

@@ -7,6 +7,8 @@ import { toast } from "react-toastify";
 import { ThemeToggle } from "../atoms/ThemeToggle";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Button } from "../ui/button";
+import { useSignoutMutation } from "@/services/api/auth";
+import { useAuthStore } from "@/store/useAuthStore";
 
 interface MainHeaderClientProps {
   user: any;
@@ -14,11 +16,22 @@ interface MainHeaderClientProps {
 
 const MainHeaderClient = ({ user }: MainHeaderClientProps) => {
   const router = useRouter();
+  const { clearAuth } = useAuthStore();
+
+  const signoutMutation = useSignoutMutation({
+    onSuccess: () => {
+      clearAuth();
+      toast.success("Sign out successfully");
+      router.replace("/login");
+    },
+    onError: (error) => {
+      toast.error("An error occurred during sign out");
+      console.error("Signout error:", error);
+    },
+  });
 
   const handleSignOut = () => {
-    // You may want to clear the cookie here via an API call or client logic
-    toast.success("Sign out successfully");
-    router.replace("/login");
+    signoutMutation.mutate();
   };
 
   return (

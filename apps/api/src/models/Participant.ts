@@ -1,4 +1,13 @@
-import { Entity, Column, CreateDateColumn, ManyToOne, JoinColumn, Unique, Index } from "typeorm";
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  ManyToOne,
+  JoinColumn,
+  Unique,
+  Index,
+} from "typeorm";
 import { User } from "./User";
 import { Conversation } from "./Conversation";
 
@@ -6,14 +15,17 @@ import { Conversation } from "./Conversation";
 @Unique(["userId", "conversationId"])
 @Index("IDX_participants_user_conversation", ["userId", "conversationId"])
 export class Participant {
-  @Column({ nullable: false })
-  userId: string;
+  @PrimaryGeneratedColumn("uuid")
+  id!: string;
 
   @Column({ nullable: false })
-  conversationId: string;
+  userId!: string;
+
+  @Column({ nullable: false })
+  conversationId!: string;
 
   @CreateDateColumn()
-  joinedAt: Date;
+  joinedAt: Date = new Date();
 
   // Relations
   @ManyToOne(() => User, (user) => user.participants)
@@ -24,9 +36,8 @@ export class Participant {
   @JoinColumn({ name: "conversationId" })
   conversation!: Conversation;
 
-  constructor(userId: string, conversationId: string) {
-    this.userId = userId;
-    this.conversationId = conversationId;
-    this.joinedAt = new Date();
+  constructor(userId?: string, conversationId?: string) {
+    if (userId) this.userId = userId;
+    if (conversationId) this.conversationId = conversationId;
   }
 }

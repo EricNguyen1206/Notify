@@ -1,3 +1,4 @@
+import { ApiMessageResponse, ApiResponse } from "./common";
 import { UserResponse } from "./user";
 
 // Conversation Types
@@ -42,3 +43,22 @@ export interface UserConversationsResponse {
   direct: DirectConversationResponse[];
   group: ConversationResponse[];
 }
+
+export interface CreateConversationRequest {
+  name?: string;
+  type: ConversationType;
+  userIds: string[];
+}
+
+export interface UpdateConversationRequest {
+  name: string;
+}
+
+export interface ConversationMembershipRequest {
+  userId: string;
+}
+
+export type ConversationListApiResponse = ApiResponse<UserConversationsResponse>;
+export type ConversationDetailApiResponse = ApiResponse<ConversationDetailResponse>;
+export type ConversationMutationResponse = ApiResponse<ConversationResponse>;
+export type ConversationMessageResponse = ApiMessageResponse;

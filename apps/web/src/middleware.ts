@@ -9,8 +9,8 @@ export default function middleware(req: NextRequest) {
   // Define auth paths that authenticated users shouldn't access
   const AUTH_PATHS = ["/login", "/register", "/forgot-password"];
 
-  // Get token from cookies
-  const token = req.cookies.get("token")?.value;
+  // Get access token from cookies (httpOnly cookie set by backend)
+  const token = req.cookies.get("accessToken")?.value;
 
   // If user is on an auth path (login, register, etc.)
   if (AUTH_PATHS.includes(pathname)) {

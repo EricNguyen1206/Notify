@@ -10,12 +10,15 @@ export class AuthController {
     this.authService = new AuthService();
   }
 
-  public register = async (req: Request, res: Response): Promise<void> => {
+  public signup = async (req: Request, res: Response): Promise<void> => {
     try {
-      const result = await this.authService.register(req.body);
-      res.status(201).json(result);
+      const result = await this.authService.signup(req.body);
+      res.status(201).json({
+        success: true,
+        data: result,
+      });
     } catch (error: any) {
-      logger.error("Registration failed:", error);
+      logger.error("Signup failed:", error);
 
       if (error.message === "Email already exists") {
         res.status(409).json({
@@ -28,18 +31,41 @@ export class AuthController {
 
       res.status(500).json({
         code: 500,
-        message: "Registration failed",
+        message: "Signup failed",
         details: "An unexpected error occurred",
       });
     }
   };
 
-  public login = async (req: Request, res: Response): Promise<void> => {
+  public signin = async (req: Request, res: Response): Promise<void> => {
     try {
-      const result = await this.authService.login(req.body);
-      res.status(200).json(result);
+      const result = await this.authService.signin(req.body);
+      
+      // Set access token as httpOnly cookie
+      const isProduction = process.env["NODE_ENV"] === "production";
+      const cookieOptions = {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: "lax" as const,
+        maxAge: 15 * 60 * 1000, // 15 minutes (matches JWT access token expiry)
+        path: "/",
+      };
+      
+      res.cookie("accessToken", result.accessToken, cookieOptions);
+      
+      // Set refresh token as httpOnly cookie
+      res.cookie("refreshToken", result.refreshToken, {
+        ...cookieOptions,
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      });
+      
+      // Return only user data (tokens are in cookies)
+      res.status(200).json({
+        success: true,
+        data: result.user,
+      });
     } catch (error: any) {
-      logger.error("Login failed:", error);
+      logger.error("Signin failed:", error);
 
       res.status(401).json({
         code: 401,
@@ -51,19 +77,34 @@ export class AuthController {
 
   public refresh = async (req: Request, res: Response): Promise<void> => {
     try {
-      const { refreshToken } = req.body;
+      // Read refresh token from httpOnly cookie
+      const refreshToken = req.cookies?.["refreshToken"];
 
       if (!refreshToken) {
         res.status(400).json({
           code: 400,
           message: "Bad Request",
-          details: "Refresh token is required",
+          details: "Refresh token is required in cookie",
         });
         return;
       }
 
       const result = await this.authService.refreshToken(refreshToken);
-      res.status(200).json(result);
+      
+      // Set new access token as httpOnly cookie
+      const isProduction = process.env["NODE_ENV"] === "production";
+      res.cookie("accessToken", result.accessToken, {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: "lax" as const,
+        maxAge: 15 * 60 * 1000, // 15 minutes
+        path: "/",
+      });
+      
+      res.status(200).json({
+        success: true,
+        message: "Token refreshed successfully",
+      });
     } catch (error: any) {
       logger.error("Refresh token failed:", error);
 
@@ -75,16 +116,17 @@ export class AuthController {
     }
   };
 
-  public logout = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  public signout = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const { refreshToken } = req.body;
+      // Read refresh token from httpOnly cookie
+      const refreshToken = req.cookies?.["refreshToken"];
       const userId = req.userId;
 
       if (!refreshToken) {
         res.status(400).json({
           code: 400,
           message: "Bad Request",
-          details: "Refresh token is required",
+          details: "Refresh token is required in cookie",
         });
         return;
       }
@@ -98,17 +140,34 @@ export class AuthController {
         return;
       }
 
-      await this.authService.logout(refreshToken, userId);
+      await this.authService.signout(refreshToken, userId);
+      
+      // Clear access token cookie
+      res.clearCookie("accessToken", {
+        httpOnly: true,
+        secure: process.env["NODE_ENV"] === "production",
+        sameSite: "lax",
+        path: "/",
+      });
+      
+      // Clear refresh token cookie
+      res.clearCookie("refreshToken", {
+        httpOnly: true,
+        secure: process.env["NODE_ENV"] === "production",
+        sameSite: "lax",
+        path: "/",
+      });
+      
       res.status(200).json({
-        code: 200,
-        message: "Logged out successfully",
+        success: true,
+        message: "Signed out successfully",
       });
     } catch (error: any) {
-      logger.error("Logout failed:", error);
+      logger.error("Signout failed:", error);
 
       res.status(500).json({
         code: 500,
-        message: "Logout failed",
+        message: "Signout failed",
         details: "An unexpected error occurred",
       });
     }

@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner, Table, TableForeignKey, TableIndex } from "typeorm";
 
-export class CreateFriendRequests1700000006 implements MigrationInterface {
-  name = "CreateFriendRequests1700000006";
+export class CreateFriendRequests1735689605000 implements MigrationInterface {
+  name = "CreateFriendRequests1735689605000";
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Enable UUID extension if not already enabled

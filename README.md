@@ -63,7 +63,7 @@ Notify Chat Application is a modern, scalable real-time messaging platform desig
 - ✅ **Docker Deployment** - Containerized with orchestration
 
 ### Developer Experience
-- ✅ **Auto-generated APIs** - OpenAPI/Swagger documentation
+- ✅ **API Design First** - OpenAPI 3.0 specification with Swagger UI
 - ✅ **Type Safety** - Full TypeScript support
 - ✅ **Hot Reload** - Development with live reload
 - ✅ **Testing Suite** - Comprehensive testing scripts
@@ -335,7 +335,7 @@ The frontend is built with Next.js 15 and modern React patterns:
   - Component architecture and design system
   - State management with Zustand
   - Real-time WebSocket integration
-  - API client generation (Orval)
+  - Typed API layer powered by shared packages
   - UI/UX implementation
 
 ### Deployment Architecture
@@ -417,8 +417,8 @@ pnpm --filter @notify/api dev
 
 ### 5. Access Application
 - **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:8080
-- **API Documentation**: http://localhost:8080/swagger/ (if configured)
+- **Backend API**: http://localhost:3000
+- **API Documentation (Swagger UI)**: http://localhost:3000/api-docs
 
 ## 💻 Development
 
@@ -484,7 +484,6 @@ cd apps/web
 pnpm dev        # Start Next.js dev server
 pnpm build      # Build for production
 pnpm lint       # Run linting
-pnpm gen:api    # Generate API client from OpenAPI
 ```
 
 ### Shared Packages Development
@@ -536,16 +535,29 @@ This project supports deployment to modern cloud platforms:
 
 ## 📚 API Documentation
 
-### Interactive Documentation
-- **Swagger UI**: http://localhost/swagger/
-- **OpenAPI Spec**: Available in `/docs` directory
+### Interactive Documentation (Swagger UI)
 
-### API Endpoints
-- **Authentication**: `/api/auth/login`, `/api/auth/register`
-- **Users**: `/api/users/profile`, `/api/users/search`
-- **Conversations**: `/api/conversations/`, `/api/conversations/:id`
-- **Messages**: `/api/messages/conversation/:id`
-- **WebSocket**: `/ws` for real-time communication
+The API follows an **API Design First** approach. The OpenAPI 3.0 specification is maintained in `apps/api/docs/swagger.json` and serves as the source of truth for API design.
+
+**Access Swagger UI:**
+- **Development**: http://localhost:3000/api-docs
+- **Raw OpenAPI JSON**: http://localhost:3000/api-docs.json
+
+**API Design First Workflow:**
+1. Design API endpoints in `apps/api/docs/swagger.json`
+2. Implement controllers and services to match the specification
+3. Use Swagger UI to test and validate API behavior
+4. Keep the specification updated as APIs evolve
+
+**Note:** Swagger UI is only available in development and staging environments.
+
+### API Endpoints Overview
+- **Authentication**: `/api/v1/auth/login`, `/api/v1/auth/register`, `/api/v1/auth/refresh`, `/api/v1/auth/logout`
+- **Users**: `/api/v1/users/profile`, `/api/v1/users/search`
+- **Conversations**: `/api/v1/conversations/`, `/api/v1/conversations/:id`
+- **Messages**: `/api/v1/messages/conversation/:id`, `/api/v1/messages`
+- **Friends**: `/api/v1/friends`, `/api/v1/friends/requests`
+- **WebSocket**: Real-time communication via Socket.IO (not documented in OpenAPI spec)
 
 ### WebSocket Events
 - **Join Conversation**: `conversation.join`

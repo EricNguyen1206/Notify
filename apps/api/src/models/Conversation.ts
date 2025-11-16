@@ -8,7 +8,6 @@ import {
   ManyToOne,
   OneToMany,
   JoinColumn,
-  Index,
 } from "typeorm";
 import { User } from "./User";
 import { Message } from "./Message";
@@ -55,6 +54,5 @@ export class Conversation {
   messages!: Message[];
 
   @OneToMany(() => Participant, (participant) => participant.conversation)
-  @Index("IDX_participants_userId")
   participants!: Participant[];
 }

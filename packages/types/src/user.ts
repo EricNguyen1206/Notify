@@ -27,3 +27,10 @@ export interface UserResponse {
   avatar?: string;
   createdAt: Date;
 }
+
+export interface UpdateProfileRequest {
+  username?: string;
+  avatar?: string | null;
+  password?: string;
+  currentPassword: string;
+}
