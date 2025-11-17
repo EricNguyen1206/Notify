@@ -1,7 +1,7 @@
 "use client";
 
 import { useSigninMutation } from "@/services/api/auth";
-import { useAuthStore } from "@/store/useAuthStore";
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -11,32 +11,18 @@ const LoginEmailForm = () => {
   const [email, setEmail] = useState("admin@notify.com");
   const [password, setPassword] = useState("123456");
   const router = useRouter();
-  const { setUser, setIsAuthenticated } = useAuthStore();
+  const queryClient = useQueryClient();
 
   const signinMutation = useSigninMutation({
-    onSuccess: (res) => {
-      const data = res.data;
-      // Response contains user data, tokens are in httpOnly cookies
-      if (!data || !data.id) {
-        toast.error("Invalid signin response");
-        return;
-      }
-
-      // Update Zustand state
-      setUser({
-        id: String(data.id),
-        email: data.email,
-        username: data.username || "",
-        avatar: data.avatar,
-      });
-      setIsAuthenticated(true);
-
+    onSuccess: () => {
+      // Invalidate and refetch user query to get fresh user data
+      queryClient.invalidateQueries({ queryKey: ["user", "current"] });
+      
       toast.success("Sign in successfully");
       router.push("/messages");
     },
     onError: (error) => {
       toast.error("An error occurred during sign in");
-      console.error("Signin error:", error);
     },
   });
 

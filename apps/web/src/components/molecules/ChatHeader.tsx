@@ -10,9 +10,9 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import ViewMembersDialog from "./ViewMembersDialog";
-import { usePutChannelsIdUser, useDeleteChannelsId } from "@/services/endpoints/channels/channels";
+import { useLeaveConversationMutation, useDeleteConversationMutation } from "@/services/api/conversations";
 import { useRouter } from "next/navigation";
-import { useChannelStore } from "@/store/useChannelStore";
+import { useConversationStore } from "@/store/useConversationStore";
 import { useSocketStore } from "@/store/useSocketStore";
 import { toast } from "react-toastify";
 
@@ -36,64 +36,56 @@ interface ChatHeaderProps {
 export default function ChatHeader(chat: ChatHeaderProps) {
   const [isViewMembersOpen, setIsViewMembersOpen] = useState(false);
   const router = useRouter();
-  const { removeChannel } = useChannelStore();
-  const { leaveConversation: leaveChannelFromSocket } = useSocketStore();
+  const { removeConversation } = useConversationStore();
+  const { leaveConversation: leaveConversationFromSocket } = useSocketStore();
 
   const isOwner = chat.currentUserId === chat.ownerId;
 
-  const leaveChannelMutation = usePutChannelsIdUser({
-    mutation: {
-      onSuccess: () => {
-        // Remove channel from store
-        const channelType = chat.isGroup ? "group" : "direct";
-        // TODO: Update removeChannel to accept string IDs (UUIDs)
-        // removeChannel(chat.id, channelType);
+  const leaveConversationMutation = useLeaveConversationMutation({
+    onSuccess: () => {
+      // Remove conversation from store
+      const conversationType = chat.isGroup ? "group" : "direct";
+      removeConversation(chat.id, conversationType);
 
-        // Leave channel from WebSocket
-        try {
-          leaveChannelFromSocket(chat.id);
-        } catch (error) {
-          console.error("Failed to leave channel from WebSocket:", error);
-        }
+      // Leave conversation from WebSocket
+      try {
+        leaveConversationFromSocket(chat.id);
+      } catch (error) {
+        // Error handled silently
+      }
 
-        // Show success message
-        toast.success("Successfully left the channel");
+      // Show success message
+      toast.success("Successfully left the conversation");
 
-        // Redirect to messages page
-        router.push("/messages");
-      },
-      onError: (error) => {
-        console.error("Failed to leave channel:", error);
-        toast.error("Failed to leave channel. Please try again.");
-      },
+      // Redirect to messages page
+      router.push("/messages");
+    },
+    onError: () => {
+      toast.error("Failed to leave conversation. Please try again.");
     },
   });
 
-  const deleteChannelMutation = useDeleteChannelsId({
-    mutation: {
-      onSuccess: () => {
-        // Remove channel from store
-        const channelType = chat.isGroup ? "group" : "direct";
-        // TODO: Update removeChannel to accept string IDs (UUIDs)
-        // removeChannel(chat.id, channelType);
+  const deleteConversationMutation = useDeleteConversationMutation({
+    onSuccess: () => {
+      // Remove conversation from store
+      const conversationType = chat.isGroup ? "group" : "direct";
+      removeConversation(chat.id, conversationType);
 
-        // Leave channel from WebSocket (cleanup)
-        try {
-          leaveChannelFromSocket(chat.id);
-        } catch (error) {
-          console.error("Failed to leave channel from WebSocket:", error);
-        }
+      // Leave conversation from WebSocket (cleanup)
+      try {
+        leaveConversationFromSocket(chat.id);
+      } catch (error) {
+        // Error handled silently
+      }
 
-        // Show success message
-        toast.success("Channel deleted successfully");
+      // Show success message
+      toast.success("Conversation deleted successfully");
 
-        // Redirect to messages page
-        router.push("/messages");
-      },
-      onError: (error) => {
-        console.error("Failed to delete channel:", error);
-        toast.error("Failed to delete channel. Please try again.");
-      },
+      // Redirect to messages page
+      router.push("/messages");
+    },
+    onError: () => {
+      toast.error("Failed to delete conversation. Please try again.");
     },
   });
 
@@ -101,26 +93,22 @@ export default function ChatHeader(chat: ChatHeaderProps) {
     setIsViewMembersOpen(true);
   };
 
-  const handleDeleteChannel = () => {
-    const channelName = chat.name;
+  const handleDeleteConversation = () => {
+    const conversationName = chat.name;
     const isGroup = chat.isGroup;
 
     const confirmMessage = isGroup
-      ? `Are you sure you want to delete the group channel "#${channelName}"? This action cannot be undone and all members will lose access to this channel.`
-      : `Are you sure you want to delete the direct message with "${channelName}"? This action cannot be undone.`;
+      ? `Are you sure you want to delete the group conversation "#${conversationName}"? This action cannot be undone and all members will lose access to this conversation.`
+      : `Are you sure you want to delete the direct message with "${conversationName}"? This action cannot be undone.`;
 
     if (confirm(confirmMessage)) {
-      // TODO: API client needs to be regenerated to accept string IDs (UUIDs)
-      // For now, this will fail at runtime if API expects numbers
-      deleteChannelMutation.mutate({ id: chat.id as any });
+      deleteConversationMutation.mutate(chat.id);
     }
   };
 
-  const handleLeaveChannel = () => {
-    if (confirm("Are you sure you want to leave this channel?")) {
-      // TODO: API client needs to be regenerated to accept string IDs (UUIDs)
-      // For now, this will fail at runtime if API expects numbers
-      leaveChannelMutation.mutate({ id: chat.id as any });
+  const handleLeaveConversation = () => {
+    if (confirm("Are you sure you want to leave this conversation?")) {
+      leaveConversationMutation.mutate(chat.id);
     }
   };
 
@@ -156,21 +144,21 @@ export default function ChatHeader(chat: ChatHeaderProps) {
 
             {isOwner ? (
               <DropdownMenuItem
-                onClick={handleDeleteChannel}
+                onClick={handleDeleteConversation}
                 className="text-red-600 focus:text-red-600"
-                disabled={deleteChannelMutation.isPending}
+                disabled={deleteConversationMutation.isPending}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
-                <span>{deleteChannelMutation.isPending ? "Deleting..." : "Delete channel"}</span>
+                <span>{deleteConversationMutation.isPending ? "Deleting..." : "Delete conversation"}</span>
               </DropdownMenuItem>
             ) : (
               <DropdownMenuItem
-                onClick={handleLeaveChannel}
+                onClick={handleLeaveConversation}
                 className="text-orange-600 focus:text-orange-600"
-                disabled={leaveChannelMutation.isPending}
+                disabled={leaveConversationMutation.isPending}
               >
                 <LogOut className="mr-2 h-4 w-4" />
-                <span>{leaveChannelMutation.isPending ? "Leaving..." : "Leave channel"}</span>
+                <span>{leaveConversationMutation.isPending ? "Leaving..." : "Leave conversation"}</span>
               </DropdownMenuItem>
             )}
           </DropdownMenuContent>

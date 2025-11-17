@@ -1,0 +1,19 @@
+{
+  "name": "@notify/jest",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Shared Jest configuration for Notify monorepo",
+  "main": "index.cjs",
+  "files": [
+    "index.cjs"
+  ],
+  "dependencies": {
+    "@types/jest": "^29.5.8",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.1"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
+

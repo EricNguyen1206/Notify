@@ -24,9 +24,17 @@ const getDatabaseConfig = () => {
         console.log("🔄 Using Supabase Session Pooler (port 6543) for better connection management");
       }
 
+      // Parse URL to extract components for better SSL control
+      // Replace postgresql:// with http:// temporarily for URL parsing
+      const parseUrl = finalUrl.replace(/^postgresql:\/\//, "http://");
+      const urlObj = new URL(parseUrl);
       const baseConfig: any = {
         type: "postgres" as const,
-        url: finalUrl,
+        host: urlObj.hostname,
+        port: parseInt(urlObj.port || "5432", 10),
+        username: decodeURIComponent(urlObj.username),
+        password: decodeURIComponent(urlObj.password),
+        database: urlObj.pathname.slice(1), // Remove leading '/'
         extra: {
           max: 15, // Connection pool size for application
           idleTimeoutMillis: 30000,
@@ -36,17 +44,13 @@ const getDatabaseConfig = () => {
 
       // Supabase requires SSL - enforce it
       if (isSupabase) {
-        // Ensure sslmode=require in URL
-        if (!finalUrl.includes("sslmode=")) {
-          baseConfig.url = finalUrl + (finalUrl.includes("?") ? "&" : "?") + "sslmode=require";
-        } else {
-          // Ensure sslmode is set to require
-          baseConfig.url = finalUrl.replace(/sslmode=[^&]*/, "sslmode=require");
-        }
-        // Also set SSL config for TypeORM
+        // Set SSL config for TypeORM (top level)
         baseConfig.ssl = { rejectUnauthorized: false };
+        // Also set SSL config in extra for pg library
+        baseConfig.extra.ssl = { rejectUnauthorized: false };
       } else if (config.database.ssl) {
         baseConfig.ssl = { rejectUnauthorized: false };
+        baseConfig.extra.ssl = { rejectUnauthorized: false };
       }
 
       return baseConfig;
@@ -134,12 +138,14 @@ export const initializeDatabase = async (): Promise<void> => {
           "   - etc.\n" +
           "3. Example: postgresql://user:p%40ssw%23rd@host:5432/db"
       );
-    } else if (error.message?.includes("SSL") || error.code === "08006") {
+    } else if (error.code === "SELF_SIGNED_CERT_IN_CHAIN" || error.message?.includes("SSL") || error.code === "08006") {
       console.error(
-        "\n💡 SSL Connection Error:\n" +
-          "1. Supabase requires SSL connections\n" +
-          "2. Ensure your connection string includes sslmode=require\n" +
-          "3. For Session Pooler, use port 6543 with SSL enabled"
+        "\n💡 SSL Certificate Error:\n" +
+          "1. Supabase uses self-signed certificates which require special handling\n" +
+          "2. The SSL configuration should allow self-signed certificates (rejectUnauthorized: false)\n" +
+          "3. Ensure your connection string includes sslmode=require\n" +
+          "4. For Session Pooler, use port 6543 with SSL enabled\n" +
+          "5. If this error persists, check that the SSL config is properly set in both TypeORM and pg library settings"
       );
     }
 

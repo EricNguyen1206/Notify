@@ -8,7 +8,7 @@ import { ThemeToggle } from "../atoms/ThemeToggle";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Button } from "../ui/button";
 import { useSignoutMutation } from "@/services/api/auth";
-import { useAuthStore } from "@/store/useAuthStore";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface MainHeaderClientProps {
   user: any;
@@ -16,17 +16,17 @@ interface MainHeaderClientProps {
 
 const MainHeaderClient = ({ user }: MainHeaderClientProps) => {
   const router = useRouter();
-  const { clearAuth } = useAuthStore();
+  const queryClient = useQueryClient();
 
   const signoutMutation = useSignoutMutation({
     onSuccess: () => {
-      clearAuth();
+      // Clear all query cache, especially user data
+      queryClient.clear();
       toast.success("Sign out successfully");
       router.replace("/login");
     },
-    onError: (error) => {
+    onError: () => {
       toast.error("An error occurred during sign out");
-      console.error("Signout error:", error);
     },
   });
 

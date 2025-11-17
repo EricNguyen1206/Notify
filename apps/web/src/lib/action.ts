@@ -83,7 +83,6 @@ export async function handleRegister(prevState: any, formData: FormData) {
     }
 
   } catch (error) {
-    console.error('Registration error:', error)
     return {
       error: 'An unexpected error occurred during registration'
     }
@@ -127,7 +126,6 @@ export async function handleLogin(prevState: any, formData: FormData) {
     }
 
   } catch (error) {
-    console.error('Login error:', error)
     return {
       error: 'An unexpected error occurred during login'
     }

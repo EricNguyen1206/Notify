@@ -1,11 +1,9 @@
 import { useState } from "react";
 import { toast } from "react-toastify";
 
-import { usePostChannels } from "@/services/endpoints/channels/channels";
-import type {
-  ChatServiceInternalModelsCreateChannelRequest,
-  ChatServiceInternalModelsUserResponse,
-} from "@/services/schemas";
+import { useCreateConversationMutation } from "@/services/api/conversations";
+import { CreateConversationRequest, ConversationType } from "@notify/types";
+import type { ChatServiceInternalModelsUserResponse } from "@/services/schemas";
 import { useAuthStore } from "@/store/useAuthStore";
 import { EnhancedConversation, useConversationStore } from "@/store/useConversationStore";
 
@@ -35,46 +33,44 @@ export const useCreateConversation = (options: UseCreateConversationOptions = {}
     selectedUsers: [],
   });
 
-  const postConversationMutation = usePostChannels({
-    mutation: {
-      onSuccess: (data) => {
-        if (showToast) {
-          toast.success("Conversation created successfully");
-        }
+  const postConversationMutation = useCreateConversationMutation({
+    onSuccess: (data) => {
+      if (showToast) {
+        toast.success("Conversation created successfully");
+      }
 
-        // Transform API response to EnhancedConversation format
-        const newConversation: EnhancedConversation = {
-          id: data.data.id!,
-          name: data.data.name!,
-          ownerId: data.data.ownerId!,
-          type: formData.type,
-          avatar: "",
-          lastActivity: new Date(),
-          unreadCount: 0,
-          members: [],
-        };
+      // Transform API response to EnhancedConversation format
+      const newConversation: EnhancedConversation = {
+        id: data.id,
+        name: data.name,
+        ownerId: data.ownerId,
+        type: formData.type,
+        avatar: "",
+        lastActivity: new Date(),
+        unreadCount: 0,
+        members: [],
+      };
 
-        // Add to appropriate conversation list in store
-        if (newConversation.type === "group") {
-          addGroupConversation(newConversation);
-        } else {
-          addDirectConversation(newConversation);
-        }
+      // Add to appropriate conversation list in store
+      if (newConversation.type === "group") {
+        addGroupConversation(newConversation);
+      } else {
+        addDirectConversation(newConversation);
+      }
 
-        // Reset form
-        resetForm();
-        setLoading(false);
+      // Reset form
+      resetForm();
+      setLoading(false);
 
-        // Call custom success callback
-        onSuccess?.(newConversation);
-      },
-      onError: (error) => {
-        if (showToast) {
-          toast.error("Failed to create conversation");
-        }
-        setLoading(false);
-        onError?.(error);
-      },
+      // Call custom success callback
+      onSuccess?.(newConversation);
+    },
+    onError: (error) => {
+      if (showToast) {
+        toast.error("Failed to create conversation");
+      }
+      setLoading(false);
+      onError?.(error);
     },
   });
 
@@ -135,24 +131,22 @@ export const useCreateConversation = (options: UseCreateConversationOptions = {}
     setLoading(true);
 
     try {
-      // Prepare API request body using generated schema
-      const selectedUserIds = dataToSubmit.selectedUsers.map((u) => u.id!);
+      // Prepare API request body
+      const selectedUserIds = dataToSubmit.selectedUsers.map((u) => String(u.id!));
       const userIds =
         dataToSubmit.type === "direct"
           ? [...selectedUserIds, user!.id] // Add current user for direct messages
           : selectedUserIds; // Group conversations already include current user
 
-      const requestBody: ChatServiceInternalModelsCreateChannelRequest = {
-        name: dataToSubmit.name.trim() || "", // Backend will auto-generate name for direct messages
-        type: dataToSubmit.type,
+      const requestBody: CreateConversationRequest = {
+        name: dataToSubmit.name.trim() || undefined, // Backend will auto-generate name for direct messages
+        type: dataToSubmit.type as ConversationType,
         userIds: [...new Set(userIds)], // Remove duplicates
       };
 
-      const response = await postConversationMutation.mutateAsync({
-        data: requestBody,
-      });
+      const response = await postConversationMutation.mutateAsync(requestBody);
 
-      return { success: true, data: response.data };
+      return { success: true, data: response };
     } catch (error) {
       // Error is handled by the mutation's onError callback
       return { success: false, error };

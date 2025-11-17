@@ -1,4 +1,4 @@
-import { EnhancedChannel } from "@/store/useChannelStore";
+import { EnhancedConversation } from "@/store/useConversationStore";
 import { Plus } from "lucide-react";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
@@ -8,20 +8,20 @@ import CreateNewDirectMessageDialog from "../organisms/CreateNewDirectMessageDia
 import { useState } from "react";
 
 type SidebarDirectMessagesProps = {
-  items: EnhancedChannel[];
+  items: EnhancedConversation[];
   loading: boolean;
 };
 
 const SidebarDirectMessages = ({ items, loading }: SidebarDirectMessagesProps) => {
   const [openDirectMessage, setOpenDirectMessage] = useState(false);
 
-  // Helper function to extract username from email-based channel name
-  const getDisplayName = (channelName: string) => {
-    // If channel name looks like an email, extract username part
-    if (channelName.includes("@")) {
-      return channelName.split("@")[0];
+  // Helper function to extract username from email-based conversation name
+  const getDisplayName = (conversationName: string) => {
+    // If conversation name looks like an email, extract username part
+    if (conversationName.includes("@")) {
+      return conversationName.split("@")[0];
     }
-    return channelName;
+    return conversationName;
   };
 
   return (

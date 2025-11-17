@@ -256,7 +256,6 @@ export const useMessageSending = (
           setFormData({ message: "" });
           scrollToBottom();
         } catch (error) {
-          console.error("Failed to send message:", error);
           toast.error("Failed to send message");
         }
       } else if (!isConnected()) {
@@ -354,14 +353,10 @@ export const useChatPage = () => {
     sessionUser,
     user,
 
-    // Conversation data (keeping channelId/currentChannel for backward compatibility with page component)
-    channelId: conversationId,
-    currentChannel: currentConversation,
+    // Conversation data
     conversationId,
     currentConversation,
-    channelData: conversationData,
     conversationData,
-    channelLoading: conversationLoading,
     conversationLoading,
     memberCount,
 
@@ -388,7 +383,7 @@ export const useChatPage = () => {
     containerRef,
     mainRef,
 
-    // Handlers (for backward compatibility)
+    // Handlers
     handleSendMessage: messageSending.handleSendMessage,
   };
 };

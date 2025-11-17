@@ -21,9 +21,8 @@ const RegisterForm = () => {
       toast.success("Registration successful! Please sign in with your credentials.");
       router.push("/login");
     },
-    onError: (error) => {
+    onError: () => {
       toast.error("An error occurred during registration");
-      console.error("Registration error:", error);
     },
   });
 

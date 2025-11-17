@@ -3,7 +3,6 @@
 import { BadgeCheck, Bell, ChevronsUpDown, CreditCard, LogOut, Moon, Sparkles, Sun } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useAuthStore } from "@/store/useAuthStore";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
@@ -19,17 +18,30 @@ import {
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "../ui/sidebar";
 import UserSettingDialog from "../organisms/UserSettingDialog";
 import { useState } from "react";
+import { useCurrentUserQuery } from "@/services/api/users";
+import { useSignoutMutation } from "@/services/api/auth";
+import { useQueryClient } from "@tanstack/react-query";
 
 const NavUser = () => {
-  const { user, clearAuth } = useAuthStore((state) => state);
+  const { data: user, isLoading } = useCurrentUserQuery();
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
+  const queryClient = useQueryClient();
+
+  const signoutMutation = useSignoutMutation({
+    onSuccess: () => {
+      queryClient.clear();
+      toast.success("Sign out successfully");
+      router.replace("/login");
+    },
+    onError: () => {
+      toast.error("An error occurred during sign out");
+    },
+  });
 
   const handleSignOut = () => {
-    clearAuth();
-    toast.success("Sign out successfully");
-    router.replace("/login");
+    signoutMutation.mutate();
   };
 
   const { isMobile } = useSidebar();
@@ -44,12 +56,14 @@ const NavUser = () => {
               className="h-[40px] data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <Avatar className="h-8 w-8 rounded-lg">
-                {user && <AvatarImage src={user!.avatar} alt={user!.username} />}
-                <AvatarFallback className="rounded-lg">CN</AvatarFallback>
+                {user && <AvatarImage src={user.avatar || undefined} alt={user.username} />}
+                <AvatarFallback className="rounded-lg">
+                  {user?.username?.[0]?.toUpperCase() || "U"}
+                </AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{user?.username ?? "EMPTY"}</span>
-                <span className="truncate text-xs">{user?.email ?? "EMPTY"}</span>
+                <span className="truncate font-medium">{user?.username ?? (isLoading ? "Loading..." : "User")}</span>
+                <span className="truncate text-xs">{user?.email ?? ""}</span>
               </div>
               <ChevronsUpDown className="ml-auto size-4" />
             </SidebarMenuButton>
@@ -63,12 +77,14 @@ const NavUser = () => {
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
-                  {user && <AvatarImage src={user!.avatar} alt={user?.username} />}
-                  <AvatarFallback className="rounded-lg">{(user?.username[0] ?? "A").toUpperCase()}</AvatarFallback>
+                  {user && <AvatarImage src={user.avatar || undefined} alt={user.username} />}
+                  <AvatarFallback className="rounded-lg">
+                    {user?.username?.[0]?.toUpperCase() || "U"}
+                  </AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">{user?.username ?? "EMPTY"}</span>
-                  <span className="truncate text-xs">{user?.email}</span>
+                  <span className="truncate font-medium">{user?.username ?? (isLoading ? "Loading..." : "User")}</span>
+                  <span className="truncate text-xs">{user?.email ?? ""}</span>
                 </div>
               </div>
             </DropdownMenuLabel>

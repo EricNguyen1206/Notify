@@ -19,12 +19,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "../ui/button";
 import { Label } from "../ui/label";
 
-// Store/state
-import { useAuthStore } from "@/store/useAuthStore";
-
 // API
-import { usePutUsersProfile } from "@/services/endpoints/users/users";
-import type { ChatServiceInternalModelsUpdateProfileRequest } from "@/services/schemas";
+import { useCurrentUserQuery, useUpdateProfileMutation } from "@/services/api/users";
+import type { UpdateProfileRequest } from "@notify/types";
+import { useQueryClient } from "@tanstack/react-query";
 
 type ParentComponentProps = {
   children: React.ReactNode;
@@ -34,8 +32,8 @@ type ParentComponentProps = {
 
 const UserSettingDialog: React.FC<ParentComponentProps> = ({ children, open, onOpenChange }) => {
   // Store/state/hooks
-  const profile = useAuthStore((state) => state.user);
-  const updateUser = useAuthStore((state) => state.updateUser);
+  const { data: profile } = useCurrentUserQuery();
+  const queryClient = useQueryClient();
   const [formData, setFormData] = useState<any>({
     username: "",
     password: "",
@@ -46,40 +44,8 @@ const UserSettingDialog: React.FC<ParentComponentProps> = ({ children, open, onO
   const avatarRef = useRef<any>(null);
 
   // API hooks
-  const updateProfileMutation = usePutUsersProfile({
-    mutation: {
-      onSuccess: (data) => {
-        toast.success("Profile updated successfully");
-        // Update local state
-        updateUser({
-          id: String(data.data.id ?? profile?.id ?? ""),
-          email: data.data.email ?? profile?.email ?? "",
-          username: data.data.username ?? profile?.username ?? "",
-          avatar: data.data.avatar ?? profile?.avatar,
-        });
-        // Reset form
-        setFormData({
-          username: "",
-          password: "",
-          currentPassword: "",
-        });
-        setImage(null);
-        if (avatarRef.current) {
-          avatarRef.current.value = null;
-        }
-        setLoading(false);
-        // Auto close dialog
-        if (onOpenChange) {
-          onOpenChange(false);
-        }
-      },
-      onError: (error: any) => {
-        const errorMessage = error?.response?.data?.message || "Failed to update profile";
-        toast.error(errorMessage);
-        setLoading(false);
-      },
-    },
-  });
+  const updateProfileMutation = useUpdateProfileMutation();
+  // Reset form
 
   const handleImageSelection = (event: any) => {
     setImage(event.target.files[0]);
@@ -97,8 +63,8 @@ const UserSettingDialog: React.FC<ParentComponentProps> = ({ children, open, onO
     let avatar = null;
     let checkEdit = false;
 
-    const updateData: ChatServiceInternalModelsUpdateProfileRequest = {
-      current_password: formData.currentPassword,
+    const updateData: UpdateProfileRequest = {
+      currentPassword: formData.currentPassword,
     };
 
     // Check edit avatar
@@ -140,10 +106,15 @@ const UserSettingDialog: React.FC<ParentComponentProps> = ({ children, open, onO
     setLoading(true);
 
     try {
-      await updateProfileMutation.mutateAsync({ data: updateData });
+      await updateProfileMutation.mutateAsync(updateData);
+      toast.success("Profile updated successfully");
+      // Invalidate and refetch user query to get updated data
+      queryClient.invalidateQueries({ queryKey: ["user", "current"] });
+      setLoading(false);
+      onOpenChange?.(false);
     } catch (error) {
-      // Error handling is done in onError callback
-      console.error("Update profile error:", error);
+      setLoading(false);
+      // Error handling is done in mutation onError callback
     }
   };
 

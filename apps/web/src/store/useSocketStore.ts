@@ -190,7 +190,7 @@ export const useSocketStore = create<SocketState>()(
                   const message: WebSocketMessage = JSON.parse(event.data);
                   get().handleMessage(message);
                 } catch (error) {
-                  console.error("Failed to parse WebSocket message:", error);
+                  // Failed to parse WebSocket message
                 }
               };
 
@@ -237,7 +237,6 @@ export const useSocketStore = create<SocketState>()(
             }
           });
         } catch (error) {
-          console.error("Failed to connect to WebSocket:", error);
           set({
             connectionState: ConnectionState.ERROR,
             error: error instanceof Error ? error.message : "Connection failed",
@@ -302,7 +301,6 @@ export const useSocketStore = create<SocketState>()(
 
           ws.send(JSON.stringify(message));
         } catch (error) {
-          console.error("Failed to send message:", error);
           set({ error: error instanceof Error ? error.message : "Failed to send message" });
           throw error;
         }
@@ -332,7 +330,6 @@ export const useSocketStore = create<SocketState>()(
             conversationStore.addJoinedConversation(conversationId);
           } catch {}
         } catch (error) {
-          console.error("Failed to join conversation:", error);
           set({ error: error instanceof Error ? error.message : "Failed to join conversation" });
           throw error;
         }
@@ -362,7 +359,6 @@ export const useSocketStore = create<SocketState>()(
             conversationStore.removeJoinedConversation(conversationId);
           } catch {}
         } catch (error) {
-          console.error("Failed to leave conversation:", error);
           // Don't set error for leave operations as they're not critical
         }
       },
@@ -407,20 +403,19 @@ export const useSocketStore = create<SocketState>()(
                   try {
                     ws.send(JSON.stringify(joinMsg));
                   } catch (err) {
-                    console.error("Failed to auto re-join conversation", conversationId, err);
+                    // Failed to auto re-join conversation
                   }
                 });
               }
             }
           } catch (err) {
-            console.error("Auto re-join conversations failed:", err);
+            // Auto re-join conversations failed
           }
           return;
         }
 
         // Handle error messages
         if (message.type === MessageType.ERROR) {
-          console.error("Received error message:", message.data);
           set({ error: (message.data as ErrorData).message });
           return;
         }
@@ -430,7 +425,6 @@ export const useSocketStore = create<SocketState>()(
           const messageData = message.data;
 
           if (!messageData) {
-            console.error("Invalid conversation message data:", messageData);
             return;
           }
 
@@ -503,11 +497,9 @@ export const useSocketStore = create<SocketState>()(
         const reconnectTimer = setTimeout(() => {
           // Only attempt reconnection if we're still disconnected
           if (get().connectionState === ConnectionState.DISCONNECTED) {
-            console.log("TEST Reconnect attempt", userId);
             get()
               .connect(userId)
-              .catch((error) => {
-                console.error("Reconnection failed:", error);
+              .catch(() => {
                 // Don't immediately retry, let the timer handle it
               });
           }

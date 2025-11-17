@@ -16,13 +16,10 @@ function MessagesWebSocketProvider({ userId, children }: MessagesWebSocketProvid
   useEffect(() => {
     const userIdString = userId.toString();
 
-    console.log("TEST Establishing WebSocket connection for user:", userIdString);
-
     // Only connect if we haven't connected yet and we're not already connected
     if (!hasConnected.current && !isConnected()) {
       hasConnected.current = true;
-      connect(userIdString).catch((error: any) => {
-        console.error("Failed to establish WebSocket connection:", error);
+      connect(userIdString).catch(() => {
         // Reset the flag on error so we can try again if needed
         hasConnected.current = false;
       });
@@ -30,7 +27,6 @@ function MessagesWebSocketProvider({ userId, children }: MessagesWebSocketProvid
 
     // Cleanup on unmount
     return () => {
-      console.log("TEST Cleaning up WebSocket connection");
       hasConnected.current = false;
       disconnect();
     };

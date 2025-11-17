@@ -3,12 +3,12 @@ import { Search, X, User } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { useGetUsersSearch } from "@/services/endpoints/users/users";
-import type { ChatServiceInternalModelsUserResponse } from "@/services/schemas";
+import { useSearchUsersQuery } from "@/services/api/users";
+import type { UserResponse } from "@notify/types";
 
 interface UserSearchInputProps {
-  selectedUsers: ChatServiceInternalModelsUserResponse[];
-  onUsersChange: (users: ChatServiceInternalModelsUserResponse[]) => void;
+  selectedUsers: UserResponse[];
+  onUsersChange: (users: UserResponse[]) => void;
   maxUsers?: number;
   minUsers?: number;
   disabled?: boolean;
@@ -26,23 +26,15 @@ export const UserSearchInput = ({
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Use generated API hook for user search
-  const { data: searchResponse, isLoading: isSearching } = useGetUsersSearch(
-    { username: searchTerm },
-    {
-      query: {
-        enabled: searchTerm.length >= 2,
-        staleTime: 30000, // Cache for 30 seconds
-      },
-    }
-  );
+  const { data: searchResponse, isLoading: isSearching } = useSearchUsersQuery(searchTerm);
 
   // Extract data from response and filter out already selected users
-  const searchResults = searchResponse?.data || [];
+  const searchResults = searchResponse || [];
   const filteredResults = searchResults.filter(
-    (user: ChatServiceInternalModelsUserResponse) => !selectedUsers.some((selected) => selected.id === user.id)
+    (user: UserResponse) => !selectedUsers.some((selected) => selected.id === user.id)
   );
 
-  const handleUserSelect = (user: ChatServiceInternalModelsUserResponse) => {
+  const handleUserSelect = (user: UserResponse) => {
     if (selectedUsers.length >= maxUsers) return;
 
     onUsersChange([...selectedUsers, user]);
@@ -51,7 +43,7 @@ export const UserSearchInput = ({
     inputRef.current?.focus();
   };
 
-  const handleUserRemove = (userId: number) => {
+  const handleUserRemove = (userId: string) => {
     onUsersChange(selectedUsers.filter((user) => user.id !== userId));
   };
 

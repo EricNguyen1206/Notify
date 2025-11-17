@@ -13,9 +13,9 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { UserSearchInput } from "@/components/molecules/UserSearchInput";
-import { useCreateChannel } from "@/hooks/useCreateChannel";
+import { useCreateConversation } from "@/hooks/useCreateConversation";
 import type { ChatServiceInternalModelsUserResponse } from "@/services/schemas";
-import { useChannelStore } from "@/store/useChannelStore";
+import { useConversationStore } from "@/store/useConversationStore";
 import { useAuthStore } from "@/store/useAuthStore";
 
 interface CreateNewDirectMessageDialogProps {
@@ -29,49 +29,49 @@ const CreateNewDirectMessageDialog = (props: CreateNewDirectMessageDialogProps) 
   const router = useRouter();
 
   const { user } = useAuthStore((state) => state);
-  const { directChannels } = useChannelStore((state) => state);
+  const { directConversations } = useConversationStore((state) => state);
 
-  const { formData, loading, createChannel, updateSelectedUsers, resetForm } = useCreateChannel({
+  const { formData, loading, createConversation, updateSelectedUsers, resetForm } = useCreateConversation({
     defaultType: "direct",
-    onSuccess: (channel) => {
-      // Navigate to the newly created channel
-      router.push(`/messages/${channel.id}`);
+    onSuccess: (conversation) => {
+      // Navigate to the newly created conversation
+      router.push(`/messages/${conversation.id}`);
       setOpenDirectMessage(false);
     },
   });
 
-  // Check if selected users already have a direct channel
-  const existingDirectChannel = useMemo(() => {
+  // Check if selected users already have a direct conversation
+  const existingDirectConversation = useMemo(() => {
     if (formData.selectedUsers.length !== 1) return null;
 
     const selectedUser = formData.selectedUsers[0];
     if (!selectedUser || !user) return null;
 
-    // Find existing direct channel between current user and selected user
-    // Now using email for uniqueness since backend returns email as channel name for direct channels
-    return directChannels.find((channel) => {
-      if (channel.type !== "direct") return false;
+    // Find existing direct conversation between current user and selected user
+    // Now using email for uniqueness since backend returns email as conversation name for direct conversations
+    return directConversations.find((conversation) => {
+      if (conversation.type !== "direct") return false;
 
-      // Check if channel name matches the selected user's email
+      // Check if conversation name matches the selected user's email
       const selectedUserEmail = selectedUser.email?.toLowerCase() || "";
-      const channelName = channel.name.toLowerCase();
+      const conversationName = conversation.name.toLowerCase();
 
-      return channelName === selectedUserEmail;
+      return conversationName === selectedUserEmail;
     });
-  }, [formData.selectedUsers, directChannels, user]);
+  }, [formData.selectedUsers, directConversations, user]);
 
   const handleCreateDirectMessage = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    // If there's an existing direct channel, navigate to it
-    if (existingDirectChannel) {
-      router.push(`/messages/${existingDirectChannel.id}`);
+    // If there's an existing direct conversation, navigate to it
+    if (existingDirectConversation) {
+      router.push(`/messages/${existingDirectConversation.id}`);
       setOpenDirectMessage(false);
       return;
     }
 
-    // Otherwise create a new direct channel
-    await createChannel();
+    // Otherwise create a new direct conversation
+    await createConversation();
   };
 
   const handleDialogChange = (open: boolean) => {
@@ -107,10 +107,10 @@ const CreateNewDirectMessageDialog = (props: CreateNewDirectMessageDialogProps) 
             />
           </div>
 
-          {existingDirectChannel && formData.selectedUsers.length === 1 && (
+          {existingDirectConversation && formData.selectedUsers.length === 1 && (
             <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
               <p className="text-sm text-blue-800">
-                Direct message channel already exists with {formData.selectedUsers[0]?.email}. Click "Open Channel" to
+                Direct message conversation already exists with {formData.selectedUsers[0]?.email}. Click "Open Conversation" to
                 join.
               </p>
             </div>
@@ -123,7 +123,7 @@ const CreateNewDirectMessageDialog = (props: CreateNewDirectMessageDialogProps) 
               </Button>
             </DialogClose>
             <Button type="submit" variant="default" disabled={loading || formData.selectedUsers.length !== 1}>
-              {loading ? "Creating..." : existingDirectChannel ? "Open Channel" : "Create Direct Message"}
+              {loading ? "Creating..." : existingDirectConversation ? "Open Conversation" : "Create Direct Message"}
             </Button>
           </DialogFooter>
         </form>

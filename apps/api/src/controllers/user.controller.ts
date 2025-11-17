@@ -13,7 +13,10 @@ export class UserController {
   public getProfile = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const user = await this.userService.getProfile(req.userId!);
-      res.status(200).json(user);
+      res.status(200).json({
+        success: true,
+        data: user,
+      });
     } catch (error: any) {
       logger.error("Get profile failed:", error);
 
@@ -28,7 +31,10 @@ export class UserController {
   public updateProfile = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const user = await this.userService.updateProfile(req.userId!, req.body);
-      res.status(200).json(user);
+      res.status(200).json({
+        success: true,
+        data: user,
+      });
     } catch (error: any) {
       logger.error("Update profile failed:", error);
 
