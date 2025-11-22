@@ -22,7 +22,7 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
 
-      <body className="h-screen overflow-hidden">
+      <body className={inter.className + " h-screen overflow-hidden"}>
         <div className="flex flex-col h-screen">
           <QueryProvider>
             <ThemeProvider

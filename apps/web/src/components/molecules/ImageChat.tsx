@@ -1,38 +1,29 @@
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Download, Smile, Trash2 } from "lucide-react";
-import Image from "next/image";
-import { toast } from "react-toastify";
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Download, Smile, Trash2 } from 'lucide-react';
+import Image from 'next/image';
+import { toast } from 'react-toastify';
 
-import { DirectMessageChatType, UserType } from "@notify/types";
+import { DirectMessageChatType, UserDto } from '@notify/types';
 
-import { formatDateStr, getSummaryName } from "@notify/shared";
-import { useAuthStore } from "@/store/useAuthStore";
+import { formatDateStr, getSummaryName } from '@notify/shared';
+import { useCurrentUserQuery } from '@/services/api/users';
 
 interface PropType {
   userIdSession: number;
   chat: DirectMessageChatType;
-  friend?: UserType;
+  friend?: UserDto;
   mainRef: React.RefObject<HTMLDivElement>;
   handleDeleteChatById: (chatId: string) => void;
-  handleDownloadFile: (
-    bucket: string,
-    folderName: string,
-    chat: DirectMessageChatType
-  ) => void;
+  handleDownloadFile: (bucket: string, folderName: string, chat: DirectMessageChatType) => void;
 }
 
 const ImageChat = (props: PropType) => {
-  const { user } = useAuthStore((state) => state);
+  const { data: user } = useCurrentUserQuery();
   const {
     userIdSession,
     chat,
-    friend,
+    friend: _friend,
     mainRef,
     handleDeleteChatById,
     handleDownloadFile,
@@ -57,25 +48,22 @@ const ImageChat = (props: PropType) => {
         )}
         {user?.avatar === null && (
           <Avatar className="w-[40px] h-[40px]">
-            <AvatarFallback>
-              {user?.username && getSummaryName(user?.username)}
-            </AvatarFallback>
+            <AvatarFallback>{user?.username && getSummaryName(user?.username)}</AvatarFallback>
           </Avatar>
         )}
         <div className="flex flex-col gap-3">
           <div className="flex flex-col text-[13px]">
             <div className="flex items-center gap-3">
-              <p className="font-bold">{`${user?.username} ${String(userIdSession) === chat?.userId ? "(You)" : ""
-                }`}</p>
+              <p className="font-bold">{`${user?.username} ${
+                String(userIdSession) === chat?.userId ? '(You)' : ''
+              }`}</p>
               <p className="text-[12px] text-zinc-400">
-                {chat?.sended ? formatDateStr(chat?.sended) : "undefined"}
+                {chat?.sended ? formatDateStr(chat?.sended) : 'undefined'}
               </p>
             </div>
             {user?.avatar === null && (
               <Avatar className="w-[40px] h-[40px]">
-                <AvatarFallback>
-                  {user?.username && getSummaryName(user?.username)}
-                </AvatarFallback>
+                <AvatarFallback>{user?.username && getSummaryName(user?.username)}</AvatarFallback>
               </Avatar>
             )}
           </div>
@@ -96,7 +84,7 @@ const ImageChat = (props: PropType) => {
                       <button
                         className="flex items-center justify-center p-2 rounded-md text-white bg-primary-purple hover:bg-secondary-purple"
                         onClick={() => {
-                          handleDownloadFile("uploads", "images", chat);
+                          handleDownloadFile('uploads', 'images', chat);
                         }}
                       >
                         <Download size={20} />
@@ -137,7 +125,7 @@ const ImageChat = (props: PropType) => {
                 className="hover:text-red-500"
                 onClick={() => {
                   if (chat?.id) handleDeleteChatById(chat?.id);
-                  else toast.error("Something wrong");
+                  else toast.error('Something wrong');
                 }}
               >
                 <Trash2 size={20} />

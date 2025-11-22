@@ -8,29 +8,28 @@ import {
   ManyToOne,
   OneToMany,
   JoinColumn,
-} from "typeorm";
-import { User } from "./User";
-import { Message } from "./Message";
-import { Participant } from "./Participant";
+} from 'typeorm';
+import { User } from './User';
+import { Message } from './Message';
+import { Participant } from './Participant';
+import { ConversationType } from '@notify/types';
 
-export enum ConversationType {
-  DIRECT = "direct",
-  GROUP = "group",
-}
-
-@Entity("conversations")
+@Entity('conversations')
 export class Conversation {
-  @PrimaryGeneratedColumn("uuid")
+  @PrimaryGeneratedColumn('uuid')
   id!: string;
 
   @Column({ nullable: false })
   name!: string;
 
+  @Column({ nullable: true })
+  avatar?: string;
+
   @Column({ nullable: false })
   ownerId!: string;
 
   @Column({
-    type: "enum",
+    type: 'enum',
     enum: ConversationType,
     default: ConversationType.GROUP,
   })
@@ -47,7 +46,7 @@ export class Conversation {
 
   // Relations
   @ManyToOne(() => User, (user) => user.ownedConversations)
-  @JoinColumn({ name: "ownerId" })
+  @JoinColumn({ name: 'ownerId' })
   owner!: User;
 
   @OneToMany(() => Message, (message) => message.conversation)

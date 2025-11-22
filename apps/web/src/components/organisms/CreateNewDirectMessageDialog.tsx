@@ -1,7 +1,7 @@
-import { Dispatch, FormEvent, SetStateAction, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { Dispatch, FormEvent, SetStateAction, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogClose,
@@ -10,13 +10,12 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { UserSearchInput } from "@/components/molecules/UserSearchInput";
-import { useCreateConversation } from "@/hooks/useCreateConversation";
-import type { ChatServiceInternalModelsUserResponse } from "@/services/schemas";
-import { useConversationStore } from "@/store/useConversationStore";
-import { useAuthStore } from "@/store/useAuthStore";
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { UserSearchInput } from '@/components/molecules/UserSearchInput';
+import { useCreateConversation } from '@/hooks/useCreateConversation';
+import type { UserDto } from '@notify/types';
+import { useConversationStore } from '@/store/useConversationStore';
 
 interface CreateNewDirectMessageDialogProps {
   openDirectMessage: boolean;
@@ -28,37 +27,37 @@ const CreateNewDirectMessageDialog = (props: CreateNewDirectMessageDialogProps) 
   const { openDirectMessage, setOpenDirectMessage, children } = props;
   const router = useRouter();
 
-  const { user } = useAuthStore((state) => state);
   const { directConversations } = useConversationStore((state) => state);
 
-  const { formData, loading, createConversation, updateSelectedUsers, resetForm } = useCreateConversation({
-    defaultType: "direct",
-    onSuccess: (conversation) => {
-      // Navigate to the newly created conversation
-      router.push(`/messages/${conversation.id}`);
-      setOpenDirectMessage(false);
-    },
-  });
+  const { formData, loading, createConversation, updateSelectedUsers, resetForm } =
+    useCreateConversation({
+      defaultType: 'direct',
+      onSuccess: (conversation) => {
+        // Navigate to the newly created conversation
+        router.push(`/messages/${conversation.id}`);
+        setOpenDirectMessage(false);
+      },
+    });
 
   // Check if selected users already have a direct conversation
   const existingDirectConversation = useMemo(() => {
     if (formData.selectedUsers.length !== 1) return null;
 
     const selectedUser = formData.selectedUsers[0];
-    if (!selectedUser || !user) return null;
+    if (!selectedUser) return null;
 
     // Find existing direct conversation between current user and selected user
     // Now using email for uniqueness since backend returns email as conversation name for direct conversations
     return directConversations.find((conversation) => {
-      if (conversation.type !== "direct") return false;
+      if (conversation.type !== 'direct') return false;
 
       // Check if conversation name matches the selected user's email
-      const selectedUserEmail = selectedUser.email?.toLowerCase() || "";
+      const selectedUserEmail = selectedUser.email?.toLowerCase() || '';
       const conversationName = conversation.name.toLowerCase();
 
       return conversationName === selectedUserEmail;
     });
-  }, [formData.selectedUsers, directConversations, user]);
+  }, [formData.selectedUsers, directConversations]);
 
   const handleCreateDirectMessage = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -82,7 +81,7 @@ const CreateNewDirectMessageDialog = (props: CreateNewDirectMessageDialogProps) 
     }
   };
 
-  const handleUserSelection = (users: ChatServiceInternalModelsUserResponse[]) => {
+  const handleUserSelection = (users: UserDto[]) => {
     updateSelectedUsers(users);
   };
 
@@ -110,8 +109,8 @@ const CreateNewDirectMessageDialog = (props: CreateNewDirectMessageDialogProps) 
           {existingDirectConversation && formData.selectedUsers.length === 1 && (
             <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
               <p className="text-sm text-blue-800">
-                Direct message conversation already exists with {formData.selectedUsers[0]?.email}. Click "Open Conversation" to
-                join.
+                Direct message conversation already exists with {formData.selectedUsers[0]?.email}.
+                Click "Open Conversation" to join.
               </p>
             </div>
           )}
@@ -122,8 +121,16 @@ const CreateNewDirectMessageDialog = (props: CreateNewDirectMessageDialogProps) 
                 Cancel
               </Button>
             </DialogClose>
-            <Button type="submit" variant="default" disabled={loading || formData.selectedUsers.length !== 1}>
-              {loading ? "Creating..." : existingDirectConversation ? "Open Conversation" : "Create Direct Message"}
+            <Button
+              type="submit"
+              variant="default"
+              disabled={loading || formData.selectedUsers.length !== 1}
+            >
+              {loading
+                ? 'Creating...'
+                : existingDirectConversation
+                  ? 'Open Conversation'
+                  : 'Create Direct Message'}
             </Button>
           </DialogFooter>
         </form>

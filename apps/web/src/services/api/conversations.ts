@@ -2,15 +2,15 @@ import {
   ApiErrorResponse,
   ApiMessageResponse,
   ConversationDetailApiResponse,
-  ConversationDetailResponse,
+  ConversationDetailResponseDto,
   ConversationMembershipRequest,
   ConversationMutationResponse,
   ConversationResponse,
   ConversationType,
   ConversationListApiResponse,
   CreateConversationRequest,
-  UserConversationsResponse,
-} from "@notify/types";
+  ConversationListResponseDto,
+} from '@notify/types';
 import {
   useMutation,
   UseMutationOptions,
@@ -18,25 +18,27 @@ import {
   UseQueryOptions,
   QueryKey,
   UseQueryResult,
-} from "@tanstack/react-query";
-import { AxiosError } from "axios";
+} from '@tanstack/react-query';
+import { AxiosError } from 'axios';
 
-import { apiClient } from "../axios-config";
+import { apiClient } from '../axios-config';
 
-const CONVERSATIONS_QUERY_KEY = ["conversations"];
+const CONVERSATIONS_QUERY_KEY = ['conversations'];
 
-const fetchConversations = async (): Promise<UserConversationsResponse> => {
-  const { data } = await apiClient.get<ConversationListApiResponse>("/conversations");
+const fetchConversations = async (): Promise<ConversationListResponseDto> => {
+  const { data } = await apiClient.get<ConversationListApiResponse>('/conversations');
   return data.data;
 };
 
-const fetchConversationById = async (id: string): Promise<ConversationDetailResponse> => {
+const fetchConversationById = async (id: string): Promise<ConversationDetailResponseDto> => {
   const { data } = await apiClient.get<ConversationDetailApiResponse>(`/conversations/${id}`);
   return data.data;
 };
 
-const createConversationRequest = async (payload: CreateConversationRequest): Promise<ConversationResponse> => {
-  const { data } = await apiClient.post<ConversationMutationResponse>("/conversations", payload);
+const createConversationRequest = async (
+  payload: CreateConversationRequest
+): Promise<ConversationResponse> => {
+  const { data } = await apiClient.post<ConversationMutationResponse>('/conversations', payload);
   return data.data;
 };
 
@@ -68,14 +70,16 @@ const removeUserFromConversationRequest = async ({
   id: string;
   body: ConversationMembershipRequest;
 }): Promise<ApiMessageResponse> => {
-  const { data } = await apiClient.delete<ApiMessageResponse>(`/conversations/${id}/user`, { data: body });
+  const { data } = await apiClient.delete<ApiMessageResponse>(`/conversations/${id}/user`, {
+    data: body,
+  });
   return data;
 };
 
-export const useConversationsQuery = <TData = UserConversationsResponse>(
-  options?: UseQueryOptions<UserConversationsResponse, AxiosError<ApiErrorResponse>, TData>
+export const useConversationsQuery = <TData = ConversationListResponseDto>(
+  options?: UseQueryOptions<ConversationListResponseDto, AxiosError<ApiErrorResponse>, TData>
 ): UseQueryResult<TData, AxiosError<ApiErrorResponse>> => {
-  return useQuery<UserConversationsResponse, AxiosError<ApiErrorResponse>, TData>({
+  return useQuery<ConversationListResponseDto, AxiosError<ApiErrorResponse>, TData>({
     queryKey: CONVERSATIONS_QUERY_KEY,
     queryFn: fetchConversations,
     staleTime: 30_000,
@@ -83,11 +87,14 @@ export const useConversationsQuery = <TData = UserConversationsResponse>(
   });
 };
 
-export const useConversationQuery = <TData = ConversationDetailResponse>(
+export const useConversationQuery = <TData = ConversationDetailResponseDto>(
   id: string | undefined,
-  options?: UseQueryOptions<ConversationDetailResponse, AxiosError<ApiErrorResponse>, TData>
+  options?: Omit<
+    UseQueryOptions<ConversationDetailResponseDto, AxiosError<ApiErrorResponse>, TData>,
+    'queryKey' | 'queryFn'
+  >
 ): UseQueryResult<TData, AxiosError<ApiErrorResponse>> => {
-  return useQuery<ConversationDetailResponse, AxiosError<ApiErrorResponse>, TData>({
+  return useQuery<ConversationDetailResponseDto, AxiosError<ApiErrorResponse>, TData>({
     queryKey: [...CONVERSATIONS_QUERY_KEY, id] as QueryKey,
     queryFn: () => fetchConversationById(id!),
     enabled: Boolean(id),
@@ -102,18 +109,20 @@ export const useCreateConversationMutation = (
     CreateConversationRequest & { type: ConversationType }
   >
 ) => {
-  return useMutation<ConversationResponse, AxiosError<ApiErrorResponse>, CreateConversationRequest>({
-    mutationKey: ["conversations", "create"],
-    mutationFn: createConversationRequest,
-    ...options,
-  });
+  return useMutation<ConversationResponse, AxiosError<ApiErrorResponse>, CreateConversationRequest>(
+    {
+      mutationKey: ['conversations', 'create'],
+      mutationFn: createConversationRequest,
+      ...options,
+    }
+  );
 };
 
 export const useDeleteConversationMutation = (
   options?: UseMutationOptions<ApiMessageResponse, AxiosError<ApiErrorResponse>, string>
 ) => {
   return useMutation<ApiMessageResponse, AxiosError<ApiErrorResponse>, string>({
-    mutationKey: ["conversations", "delete"],
+    mutationKey: ['conversations', 'delete'],
     mutationFn: deleteConversationRequest,
     ...options,
   });
@@ -123,7 +132,7 @@ export const useLeaveConversationMutation = (
   options?: UseMutationOptions<ApiMessageResponse, AxiosError<ApiErrorResponse>, string>
 ) => {
   return useMutation<ApiMessageResponse, AxiosError<ApiErrorResponse>, string>({
-    mutationKey: ["conversations", "leave"],
+    mutationKey: ['conversations', 'leave'],
     mutationFn: leaveConversationRequest,
     ...options,
   });
@@ -136,13 +145,15 @@ export const useAddConversationMemberMutation = (
     { id: string; body: ConversationMembershipRequest }
   >
 ) => {
-  return useMutation<ApiMessageResponse, AxiosError<ApiErrorResponse>, { id: string; body: ConversationMembershipRequest }>(
-    {
-      mutationKey: ["conversations", "members", "add"],
-      mutationFn: addUserToConversationRequest,
-      ...options,
-    }
-  );
+  return useMutation<
+    ApiMessageResponse,
+    AxiosError<ApiErrorResponse>,
+    { id: string; body: ConversationMembershipRequest }
+  >({
+    mutationKey: ['conversations', 'members', 'add'],
+    mutationFn: addUserToConversationRequest,
+    ...options,
+  });
 };
 
 export const useRemoveConversationMemberMutation = (
@@ -152,12 +163,13 @@ export const useRemoveConversationMemberMutation = (
     { id: string; body: ConversationMembershipRequest }
   >
 ) => {
-  return useMutation<ApiMessageResponse, AxiosError<ApiErrorResponse>, { id: string; body: ConversationMembershipRequest }>(
-    {
-      mutationKey: ["conversations", "members", "remove"],
-      mutationFn: removeUserFromConversationRequest,
-      ...options,
-    }
-  );
+  return useMutation<
+    ApiMessageResponse,
+    AxiosError<ApiErrorResponse>,
+    { id: string; body: ConversationMembershipRequest }
+  >({
+    mutationKey: ['conversations', 'members', 'remove'],
+    mutationFn: removeUserFromConversationRequest,
+    ...options,
+  });
 };
-

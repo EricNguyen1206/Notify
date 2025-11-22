@@ -3,16 +3,16 @@ import { ConversationService } from "@/services/conversation.service";
 import { MessageService } from "@/services/message.service";
 import { RedisService } from "@/services/redis.service";
 import {
-  WebSocketMessage,
-  newConnectMessage,
-  newChannelMessage,
-  newJoinChannelMessage,
-  newLeaveChannelMessage,
-  newErrorMessage,
-  isChannelMessage,
-  isChannelJoinMessage,
-  isChannelLeaveMessage,
-} from "./message-types";
+  SocketEvent,
+  createJoinedConversationPayload,
+  createLeftConversationPayload,
+  createMessageDto,
+  createUserJoinedPayload,
+  createUserLeftPayload,
+  ClientToServerEvents,
+  ServerToClientEvents,
+  MessageDto,
+} from "@notify/types";
 import { logger } from "@/utils/logger";
 
 export class Hub {
@@ -21,14 +21,15 @@ export class Hub {
   private conversationService: ConversationService;
   private messageService: MessageService;
   private redisService: RedisService;
+  private io: SocketIOServer<ClientToServerEvents, ServerToClientEvents>;
 
   constructor(
-    // @ts-ignore - Intentionally unused, kept for future use
-    private _io: SocketIOServer,
+    io: SocketIOServer<ClientToServerEvents, ServerToClientEvents>,
     conversationService: ConversationService,
     messageService: MessageService,
     redisService: RedisService
   ) {
+    this.io = io;
     this.conversationService = conversationService;
     this.messageService = messageService;
     this.redisService = redisService;
@@ -44,10 +45,6 @@ export class Hub {
 
       // Set user online in Redis
       await this.redisService.setUserOnline(userIdStr);
-
-      // Send connect message
-      const connectMessage = newConnectMessage(userId, `User-${userId}`);
-      socket.emit("message", connectMessage);
 
       logger.info("Client registered", { userId, socketId: socket.id });
     } catch (error) {
@@ -67,10 +64,10 @@ export class Hub {
       // Set user offline in Redis
       await this.redisService.setUserOffline(userIdStr);
 
-      // Remove from all channels
+      // Remove from all conversations
       for (const [conversationId, conversationClients] of this.conversations.entries()) {
         if (conversationClients.has(userIdStr)) {
-          await this.leaveConversation(userId, parseInt(conversationId));
+          await this.leaveConversation(userId, parseInt(conversationId), `User-${userId}`);
         }
       }
 
@@ -81,8 +78,8 @@ export class Hub {
     }
   }
 
-  // Join a channel
-  async joinConversation(userId: number, conversationId: number): Promise<void> {
+  // Join a conversation
+  async joinConversation(userId: number, conversationId: number, username: string): Promise<void> {
     try {
       const userIdStr = userId.toString();
       const conversationIdStr = conversationId.toString();
@@ -93,221 +90,179 @@ export class Hub {
         throw new Error("User not connected");
       }
 
-      // Check if user is already in channel
+      // Check if user is already in conversation
       if (this.isUserInConversation(userId, conversationId)) {
         return;
       }
 
-      // Add user to channel in memory
+      // Add user to conversation in memory
       if (!this.conversations.has(conversationIdStr)) {
         this.conversations.set(conversationIdStr, new Map());
       }
       this.conversations.get(conversationIdStr)!.set(userIdStr, socket);
 
-      // Add user to channel in Redis
+      // Add user to conversation in Redis
       await this.redisService.joinConversation(userIdStr, conversationIdStr);
 
-      // Notify channel members
-      await this.notifyParticipants(conversationId, userId, "join");
+      // Emit joined_conversation to the user
+      const joinedPayload = createJoinedConversationPayload(conversationId, userId, username);
+      socket.emit(SocketEvent.JOINED_CONVERSATION, joinedPayload);
 
-      logger.info("User joined channel", { userId, conversationId });
+      // Notify other participants
+      const userJoinedPayload = createUserJoinedPayload(conversationId, userId, username);
+      this.broadcastToConversation(conversationId, SocketEvent.USER_JOINED, userJoinedPayload, userId);
+
+      logger.info("User joined conversation", { userId, conversationId });
     } catch (error) {
-      logger.error("Join channel error:", error);
+      logger.error("Join conversation error:", error);
       throw error;
     }
   }
 
-  // Leave a channel
-  async leaveConversation(userId: number, conversationId: number): Promise<void> {
+  // Leave a conversation
+  async leaveConversation(userId: number, conversationId: number, username: string): Promise<void> {
     try {
       const userIdStr = userId.toString();
       const conversationIdStr = conversationId.toString();
 
-      // Remove user from channel in memory
+      // Get user socket
+      const socket = this.clients.get(userIdStr);
+
+      // Remove user from conversation in memory
       const conversationClients = this.conversations.get(conversationIdStr);
       if (conversationClients) {
         conversationClients.delete(userIdStr);
 
-        // Remove empty channels
+        // Remove empty conversations
         if (conversationClients.size === 0) {
           this.conversations.delete(conversationIdStr);
         }
       }
 
-      // Remove user from channel in Redis
+      // Remove user from conversation in Redis
       await this.redisService.leaveConversation(userIdStr, conversationIdStr);
 
-      // Notify channel members
-      await this.notifyParticipants(conversationId, userId, "leave");
+      // Emit left_conversation to the user if socket exists
+      if (socket) {
+        const leftPayload = createLeftConversationPayload(conversationId, userId, username);
+        socket.emit(SocketEvent.LEFT_CONVERSATION, leftPayload);
+      }
 
-      logger.info("User left channel", { userId, conversationId });
+      // Notify other participants
+      const userLeftPayload = createUserLeftPayload(conversationId, userId, username);
+      this.broadcastToConversation(conversationId, SocketEvent.USER_LEFT, userLeftPayload, userId);
+
+      logger.info("User left conversation", { userId, conversationId });
     } catch (error) {
-      logger.error("Leave channel error:", error);
+      logger.error("Leave conversation error:", error);
       throw error;
     }
   }
 
-  // Broadcast message to all members of a channel
-  async broadcastToConversation(conversationId: number, message: WebSocketMessage): Promise<void> {
+  // Broadcast event to all members of a conversation (excluding sender if specified)
+  public broadcastToConversation<T>(
+    conversationId: number,
+    event: SocketEvent,
+    payload: T,
+    excludeUserId?: number
+  ): void {
     try {
       const conversationIdStr = conversationId.toString();
       const conversationClients = this.conversations.get(conversationIdStr);
 
       if (!conversationClients || conversationClients.size === 0) {
-        logger.warn("No clients in channel", { conversationId });
+        logger.warn("No clients in conversation", { conversationId });
         return;
       }
 
-      // Send to all clients in channel
+      const excludeUserIdStr = excludeUserId?.toString();
+
+      // Send to all clients in conversation (except excluded user)
       for (const [userId, socket] of conversationClients) {
+        if (excludeUserIdStr && userId === excludeUserIdStr) {
+          continue;
+        }
+
         try {
-          socket.emit("message", message);
+          socket.emit(event as any, payload);
         } catch (error) {
-          logger.error("Error sending message to client", { userId, conversationId, error });
+          logger.error("Error sending event to client", { userId, conversationId, event, error });
         }
       }
 
-      logger.debug("Message broadcasted to channel", {
+      logger.debug("Event broadcasted to conversation", {
         conversationId,
+        event,
         clientCount: conversationClients.size,
       });
     } catch (error) {
-      logger.error("Broadcast to channel error:", error);
+      logger.error("Broadcast to conversation error:", error);
       throw error;
     }
   }
 
-  // Handle incoming client message
-  async handleClientMessage(socket: Socket, message: WebSocketMessage): Promise<void> {
+  // Handle incoming message
+  async handleMessage(
+    senderId: string,
+    senderName: string,
+    conversationId: number,
+    text?: string | null,
+    url?: string | null,
+    fileName?: string | null
+  ): Promise<void> {
     try {
-      if (isChannelJoinMessage(message)) {
-        await this.handleJoinConversation(socket, message);
-      } else if (isChannelLeaveMessage(message)) {
-        await this.handleLeaveChannel(socket, message);
-      } else if (isChannelMessage(message)) {
-        await this.handleConversationMessage(socket, message);
-      } else {
-        logger.warn("Unknown message type", { type: message.type });
-      }
-    } catch (error) {
-      logger.error("Handle client message error:", error);
-
-      // Send error message back to client
-      const errorMessage = newErrorMessage("MESSAGE_HANDLE_ERROR", "Failed to handle message", {
-        originalMessage: message,
-        error: error instanceof Error ? error.message : String(error),
-      });
-      socket.emit("message", errorMessage);
-    }
-  }
-
-  // Handle join channel message
-  private async handleJoinConversation(_socket: Socket, message: WebSocketMessage): Promise<void> {
-    try {
-      const { conversation_id, user_id } = message.data;
-
-      if (!user_id || !conversation_id) {
-        throw new Error("Missing user_id or conversation_id");
-      }
-
-      await this.joinConversation(user_id, conversation_id);
-    } catch (error) {
-      logger.error("Handle join channel error:", error);
-      throw error;
-    }
-  }
-
-  // Handle leave channel message
-  private async handleLeaveChannel(_socket: Socket, message: WebSocketMessage): Promise<void> {
-    try {
-      const { conversation_id, user_id } = message.data;
-
-      if (!user_id || !conversation_id) {
-        throw new Error("Missing user_id or conversation_id");
-      }
-
-      await this.leaveConversation(user_id, conversation_id);
-    } catch (error) {
-      logger.error("Handle leave channel error:", error);
-      throw error;
-    }
-  }
-
-  // Handle channel message
-  private async handleConversationMessage(_socket: Socket, message: WebSocketMessage): Promise<void> {
-    try {
-      const { conversation_id, sender_id, text, url, file_name } = message.data;
-
-      if (!conversation_id || !sender_id) {
-        throw new Error("Missing conversation_id or sender_id");
-      }
-
       // Validate message content
-      if (!text && !url && !file_name) {
-        throw new Error("Message must have text, url, or file_name");
+      if (!text && !url && !fileName) {
+        throw new Error("Message must have text, url, or fileName");
       }
 
       // Save message to database
-      const savedMessage = await this.messageService.createMessage(sender_id, {
-        conversationId: conversation_id,
-        text,
-        url,
-        fileName: file_name,
-      });
+      const messageData: {
+        conversationId: string;
+        text?: string;
+        url?: string;
+        fileName?: string;
+      } = {
+        conversationId: String(conversationId),
+      };
 
-      // Get sender info for the message
-      // Note: In a real implementation, you'd get sender info from database
-      await this.conversationService.getConversationByIdPublic(conversation_id);
-      const senderName = `User-${sender_id}`;
-      const senderAvatar = undefined;
+      if (text) messageData.text = text;
+      if (url) messageData.url = url;
+      if (fileName) messageData.fileName = fileName;
 
-      // Create channel message for broadcasting
-      const channelMessage = newChannelMessage(
-        conversation_id,
-        sender_id,
+      const savedMessage = await this.messageService.createMessage(senderId, messageData);
+
+      // Get sender info (in production, fetch from database/cache)
+      const senderAvatar = undefined; // TODO: fetch from user service
+
+      // Create message DTO for broadcasting
+      const newMessage: MessageDto = createMessageDto(
+        savedMessage.id,
+        String(conversationId),
+        senderId,
         senderName,
         senderAvatar,
         text,
         url,
-        file_name
+        fileName,
+        savedMessage.createdAt
       );
 
-      // Broadcast to all channel members
-      await this.broadcastToConversation(conversation_id, channelMessage);
+      // Broadcast to all conversation members (including sender for confirmation)
+      this.broadcastToConversation(conversationId, SocketEvent.NEW_MESSAGE as any, newMessage);
 
-      logger.info("Channel message handled", {
-        conversationId: conversation_id,
-        senderId: sender_id,
+      logger.info("Message handled", {
+        conversationId,
+        senderId,
         messageId: savedMessage.id,
       });
     } catch (error) {
-      logger.error("Handle channel message error:", error);
+      logger.error("Handle message error:", error);
       throw error;
     }
   }
 
-  // Notify channel members about join/leave events
-  private async notifyParticipants(conversationId: number, userId: number, action: "join" | "leave"): Promise<void> {
-    try {
-      // Get user info (in real implementation, get from database)
-      const username = `User-${userId}`;
-
-      let message: WebSocketMessage;
-      if (action === "join") {
-        message = newJoinChannelMessage(conversationId, userId, username);
-      } else {
-        message = newLeaveChannelMessage(conversationId, userId, username);
-      }
-
-      // Broadcast to all channel members
-      await this.broadcastToConversation(conversationId, message);
-    } catch (error) {
-      logger.error("Notify participants error:", error);
-      throw error;
-    }
-  }
-
-  // Check if user is in a channel
+  // Check if user is in a conversation
   private isUserInConversation(userId: number, conversationId: number): boolean {
     const userIdStr = userId.toString();
     const conversationIdStr = conversationId.toString();
@@ -315,7 +270,7 @@ export class Hub {
     return conversationClients ? conversationClients.has(userIdStr) : false;
   }
 
-  // Get channel member count
+  // Get conversation member count
   getParticipantCount(conversationId: number): number {
     const conversationIdStr = conversationId.toString();
     const conversationClients = this.conversations.get(conversationIdStr);
@@ -327,7 +282,7 @@ export class Hub {
     return Array.from(this.clients.keys()).map((id) => parseInt(id));
   }
 
-  // Get channel members
+  // Get conversation members
   getParticipants(conversationId: number): number[] {
     const conversationIdStr = conversationId.toString();
     const conversationClients = this.conversations.get(conversationIdStr);

@@ -3,8 +3,8 @@
 import { useScreenDimensions } from "@/hooks/useScreenDimensions";
 import { useConversationMessagesQuery } from "@/services/api/messages";
 import { useConversationQuery } from "@/services/api/conversations";
+import { useCurrentUserQuery } from "@/services/api/users";
 import { MessageResponse } from "@notify/types";
-import { useAuthStore } from "@/store/useAuthStore";
 import { useConversationStore } from "@/store/useConversationStore";
 import { Message, useChatStore } from "@/store/useChatStore";
 import { ChatMessage, ConnectionState, useSocketStore } from "@/store/useSocketStore";
@@ -129,14 +129,14 @@ export const useChatData = (conversationId: string | undefined) => {
         id: String(chat.id ?? ""),
         conversationId: String(chat.conversationId ?? conversationId ?? ""),
         createdAt: chat.createdAt ? new Date(chat.createdAt).toISOString() : new Date().toISOString(),
-        fileName: chat.fileName,
-        receiverId: chat.receiverId ? String(chat.receiverId) : undefined,
-        senderAvatar: chat.senderAvatar,
+        ...(chat.fileName !== undefined && { fileName: chat.fileName }),
+        ...(chat.receiverId !== undefined && { receiverId: String(chat.receiverId) }),
+        ...(chat.senderAvatar !== undefined && { senderAvatar: chat.senderAvatar }),
         senderId: String(chat.senderId ?? ""),
-        senderName: chat.senderName,
-        text: chat.text,
-        type: chat.type,
-        url: chat.url,
+        ...(chat.senderName !== undefined && { senderName: chat.senderName }),
+        ...(chat.text !== undefined && { text: chat.text }),
+        ...(chat.type !== undefined && { type: chat.type }),
+        ...(chat.url !== undefined && { url: chat.url }),
       })
     );
   }, [chatsData?.data, conversationId]);
@@ -294,13 +294,13 @@ export const useWebSocketMessageHandler = (conversationId: string | undefined) =
           id: String(chatMessage.id),
           conversationId: String(chatMessage.conversationId),
           senderId: String(chatMessage.senderId),
-          senderName: chatMessage.senderName,
-          senderAvatar: chatMessage.senderAvatar,
-          text: chatMessage.text,
+          ...(chatMessage.senderName !== undefined && { senderName: chatMessage.senderName }),
+          ...(chatMessage.senderAvatar !== undefined && { senderAvatar: chatMessage.senderAvatar }),
+          ...(chatMessage.text !== undefined && { text: chatMessage.text }),
           createdAt: chatMessage.createdAt,
-          type: chatMessage.type,
-          url: chatMessage.url,
-          fileName: chatMessage.fileName,
+          ...(chatMessage.type !== undefined && { type: chatMessage.type }),
+          ...(chatMessage.url !== undefined && { url: chatMessage.url }),
+          ...(chatMessage.fileName !== undefined && { fileName: chatMessage.fileName }),
         };
 
         // Add message to chat store
@@ -319,8 +319,8 @@ export const useWebSocketMessageHandler = (conversationId: string | undefined) =
 
 // Main hook that combines all other hooks
 export const useChatPage = () => {
-  const sessionUser = useAuthStore((state) => state.user);
-  const user = useAuthStore((state) => state.user);
+  const { data: sessionUser } = useCurrentUserQuery();
+  const { data: user } = useCurrentUserQuery();
 
   const { screenHeight, isOverFlow, updateOverflow } = useScreenDimensions(720);
   const { conversationId, currentConversation, connectionState } = useConversationNavigation();

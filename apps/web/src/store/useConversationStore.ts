@@ -1,15 +1,16 @@
-import { UserType } from "@notify/types";
-import { create } from "zustand";
+import { ConversationDetailDto, ConversationDto, UserDto } from '@notify/types';
+import { create } from 'zustand';
 
+// TODO: keep this for now, but remove it later
 export interface EnhancedConversation {
   id: string;
   name: string;
   ownerId: string;
-  type: "group" | "direct";
+  type: 'group' | 'direct';
   avatar: string;
   lastActivity: Date;
   unreadCount: number;
-  members?: UserType[];
+  members?: UserDto[];
 }
 
 // stores/conversationStore.ts
@@ -17,9 +18,9 @@ export interface ConversationState {
   // Existing state
   unreadCounts: Record<string, number>;
   activeConversationId: string | null;
-  currentConversation: EnhancedConversation | null;
-  groupConversations: EnhancedConversation[];
-  directConversations: EnhancedConversation[];
+  currentConversation: ConversationDetailDto | null;
+  groupConversations: ConversationDto[];
+  directConversations: ConversationDto[];
 
   // New WebSocket conversation tracking state
   currentConversationId: string | null; // Track current WebSocket conversation (string for WebSocket API)
@@ -34,7 +35,7 @@ export interface ConversationState {
   setDirectConversations: (conversations: EnhancedConversation[]) => void;
   addGroupConversation: (conversation: EnhancedConversation) => void;
   addDirectConversation: (conversation: EnhancedConversation) => void;
-  removeConversation: (conversationId: string, type: "group" | "direct") => void;
+  removeConversation: (conversationId: string, type: 'group' | 'direct') => void;
 
   // New WebSocket conversation management methods
   setCurrentConversationId: (conversationId: string | null) => void;
@@ -72,8 +73,10 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
     set((state) => ({
       unreadCounts: { ...state.unreadCounts, [conversationId]: 0 },
     })),
-  setGroupConversations: (conversations: EnhancedConversation[]) => set({ groupConversations: conversations }),
-  setDirectConversations: (conversations: EnhancedConversation[]) => set({ directConversations: conversations }),
+  setGroupConversations: (conversations: EnhancedConversation[]) =>
+    set({ groupConversations: conversations }),
+  setDirectConversations: (conversations: EnhancedConversation[]) =>
+    set({ directConversations: conversations }),
   addGroupConversation: (conversation: EnhancedConversation) =>
     set((state) => ({
       groupConversations: [...state.groupConversations, conversation],
@@ -82,11 +85,16 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
     set((state) => ({
       directConversations: [...state.directConversations, conversation],
     })),
-  removeConversation: (conversationId: string, type: "group" | "direct") =>
+  removeConversation: (conversationId: string, type: 'group' | 'direct') =>
     set((state) => ({
-      groupConversations: type === "group" ? state.groupConversations.filter((ch) => ch.id !== conversationId) : state.groupConversations,
+      groupConversations:
+        type === 'group'
+          ? state.groupConversations.filter((ch) => ch.id !== conversationId)
+          : state.groupConversations,
       directConversations:
-        type === "direct" ? state.directConversations.filter((ch) => ch.id !== conversationId) : state.directConversations,
+        type === 'direct'
+          ? state.directConversations.filter((ch) => ch.id !== conversationId)
+          : state.directConversations,
     })),
 
   // New WebSocket conversation management methods
@@ -109,7 +117,8 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
       return {
         joinedConversations: newJoinedConversations,
         // Clear current conversation if we're leaving it
-        currentConversationId: state.currentConversationId === conversationId ? null : state.currentConversationId,
+        currentConversationId:
+          state.currentConversationId === conversationId ? null : state.currentConversationId,
       };
     });
   },
@@ -138,4 +147,3 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
     return get().currentConversationId === conversationId;
   },
 }));
-

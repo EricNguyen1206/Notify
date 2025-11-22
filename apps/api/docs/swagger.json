@@ -48,7 +48,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RegisterRequest"
+                "$ref": "#/components/schemas/SignupRequestDto"
               },
               "example": {
                 "username": "johndoe",
@@ -118,7 +118,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/LoginRequest"
+                "$ref": "#/components/schemas/SigninRequestDto"
               },
               "example": {
                 "email": "john@example.com",
@@ -1719,7 +1719,7 @@
         },
         "required": ["id", "username", "email", "createdAt"]
       },
-      "UserResponse": {
+      "UserDto": {
         "type": "object",
         "properties": {
           "id": {
@@ -1769,7 +1769,7 @@
         },
         "required": ["currentPassword"]
       },
-      "RegisterRequest": {
+      "SignupRequestDto": {
         "type": "object",
         "required": ["username", "email", "password"],
         "properties": {
@@ -1791,7 +1791,7 @@
           }
         }
       },
-      "LoginRequest": {
+      "SigninRequestDto": {
         "type": "object",
         "required": ["email", "password"],
         "properties": {
@@ -1819,11 +1819,11 @@
             "description": "JWT refresh token (expires in 30 days)"
           },
           "user": {
-            "$ref": "#/components/schemas/UserResponse"
+            "$ref": "#/components/schemas/UserDto"
           }
         }
       },
-      "RefreshTokenResponse": {
+      "RefreshTokenResponseDto": {
         "type": "object",
         "required": ["accessToken"],
         "properties": {
@@ -1883,7 +1883,7 @@
         },
         "required": ["id", "name", "type", "ownerId"]
       },
-      "ConversationDetailResponse": {
+      "ConversationDetailResponseDto": {
         "type": "object",
         "properties": {
           "id": {
@@ -1907,13 +1907,13 @@
           "members": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/UserResponse"
+              "$ref": "#/components/schemas/UserDto"
             }
           }
         },
         "required": ["id", "name", "type", "ownerId", "createdAt", "members"]
       },
-      "UserConversationsResponse": {
+      "ConversationListResponseDto": {
         "type": "object",
         "properties": {
           "direct": {
@@ -2069,12 +2069,13 @@
             "minimum": 1,
             "maximum": 100
           },
-          "before": {
+          "offset": {
             "type": "integer",
-            "nullable": true
+            "nullable": false
           },
           "hasMore": {
-            "type": "boolean"
+            "type": "boolean",
+            "nullable": true
           }
         },
         "required": ["limit", "hasMore"]
@@ -2255,7 +2256,7 @@
             "type": "boolean"
           },
           "data": {
-            "$ref": "#/components/schemas/UserResponse"
+            "$ref": "#/components/schemas/UserDto"
           },
           "message": {
             "type": "string",
@@ -2273,7 +2274,7 @@
           "data": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/UserResponse"
+              "$ref": "#/components/schemas/UserDto"
             }
           }
         },
@@ -2298,7 +2299,7 @@
             "type": "boolean"
           },
           "data": {
-            "$ref": "#/components/schemas/UserConversationsResponse"
+            "$ref": "#/components/schemas/ConversationListResponseDto"
           }
         },
         "required": ["success", "data"]

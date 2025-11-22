@@ -1,31 +1,37 @@
-import { ApiErrorResponse, ApiResponse, UpdateProfileRequest, UserResponse } from "@notify/types";
-import { useMutation, UseMutationOptions, useQuery, UseQueryOptions, UseQueryResult } from "@tanstack/react-query";
-import { AxiosError } from "axios";
+import { ApiErrorResponse, ApiResponse, UpdateProfileRequest, UserDto } from '@notify/types';
+import {
+  useMutation,
+  UseMutationOptions,
+  useQuery,
+  UseQueryOptions,
+  UseQueryResult,
+} from '@tanstack/react-query';
+import { AxiosError } from 'axios';
 
-import { apiClient } from "../axios-config";
+import { apiClient } from '../axios-config';
 
-const getCurrentUser = async (): Promise<UserResponse> => {
-  const { data } = await apiClient.get<ApiResponse<UserResponse>>("/users/profile");
+const getCurrentUser = async (): Promise<UserDto> => {
+  const { data } = await apiClient.get<ApiResponse<UserDto>>('/users/profile');
   return data.data;
 };
 
-const searchUsers = async (username: string): Promise<UserResponse[]> => {
-  const { data } = await apiClient.get<UserResponse[]>("/users/search", {
+const searchUsers = async (username: string): Promise<UserDto[]> => {
+  const { data } = await apiClient.get<UserDto[]>('/users/search', {
     params: { username },
   });
   return data;
 };
 
-const updateProfile = async (payload: UpdateProfileRequest): Promise<UserResponse> => {
-  const { data } = await apiClient.put<ApiResponse<UserResponse>>("/users/profile", payload);
+const updateProfile = async (payload: UpdateProfileRequest): Promise<UserDto> => {
+  const { data } = await apiClient.put<ApiResponse<UserDto>>('/users/profile', payload);
   return data.data;
 };
 
 export const useCurrentUserQuery = (
-  options?: UseQueryOptions<UserResponse, AxiosError<ApiErrorResponse>>
-): UseQueryResult<UserResponse, AxiosError<ApiErrorResponse>> => {
-  return useQuery<UserResponse, AxiosError<ApiErrorResponse>>({
-    queryKey: ["user", "current"],
+  options?: UseQueryOptions<UserDto, AxiosError<ApiErrorResponse>>
+): UseQueryResult<UserDto, AxiosError<ApiErrorResponse>> => {
+  return useQuery<UserDto, AxiosError<ApiErrorResponse>>({
+    queryKey: ['user', 'current'],
     queryFn: getCurrentUser,
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: (failureCount, error) => {
@@ -39,9 +45,11 @@ export const useCurrentUserQuery = (
   });
 };
 
-export const useSearchUsersQuery = (username: string): UseQueryResult<UserResponse[], AxiosError<ApiErrorResponse>> => {
+export const useSearchUsersQuery = (
+  username: string
+): UseQueryResult<UserDto[], AxiosError<ApiErrorResponse>> => {
   return useQuery({
-    queryKey: ["users", "search", username],
+    queryKey: ['users', 'search', username],
     queryFn: () => searchUsers(username),
     enabled: !!username && username.length >= 2,
     staleTime: 30_000,
@@ -49,10 +57,10 @@ export const useSearchUsersQuery = (username: string): UseQueryResult<UserRespon
 };
 
 export const useUpdateProfileMutation = (
-  options?: UseMutationOptions<UserResponse, AxiosError<ApiErrorResponse>, UpdateProfileRequest>
+  options?: UseMutationOptions<UserDto, AxiosError<ApiErrorResponse>, UpdateProfileRequest>
 ) => {
-  return useMutation<UserResponse, AxiosError<ApiErrorResponse>, UpdateProfileRequest>({
-    mutationKey: ["users", "profile", "update"],
+  return useMutation<UserDto, AxiosError<ApiErrorResponse>, UpdateProfileRequest>({
+    mutationKey: ['users', 'profile', 'update'],
     mutationFn: updateProfile,
     ...options,
   });

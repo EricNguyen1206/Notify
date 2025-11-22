@@ -1,14 +1,21 @@
-import { BeforeInsert, BeforeUpdate, CreateDateColumn, UpdateDateColumn, PrimaryGeneratedColumn } from "typeorm";
-import { Column, JoinColumn, Entity, ManyToOne, Unique, Index } from "typeorm";
-import { User } from "./User";
+import {
+  BeforeInsert,
+  BeforeUpdate,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Column,
+  JoinColumn,
+  Entity,
+  ManyToOne,
+  Unique,
+  Index,
+} from 'typeorm';
+import { User } from './User';
 
-@Entity("friends")
-@Unique(["userId", "friendId"])
-@Index("IDX_friends_user_friend", ["userId", "friendId"])
+@Entity('friends')
+@Unique(['userId', 'friendId'])
+@Index('IDX_friends_user_friend', ['userId', 'friendId'])
 export class Friends {
-  @PrimaryGeneratedColumn("uuid")
-  id!: string;
-
   @Column({ nullable: false })
   userId!: string;
 
@@ -16,11 +23,11 @@ export class Friends {
   friendId!: string;
 
   @ManyToOne(() => User)
-  @JoinColumn({ name: "userId" })
+  @JoinColumn({ name: 'userId' })
   user!: User;
 
   @ManyToOne(() => User)
-  @JoinColumn({ name: "friendId" })
+  @JoinColumn({ name: 'friendId' })
   friend!: User;
 
   @CreateDateColumn()

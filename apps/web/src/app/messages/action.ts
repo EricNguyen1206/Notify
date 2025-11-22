@@ -101,7 +101,7 @@ export const useConversationFiltering = (searchQuery: string) => {
  * Hook for managing WebSocket connection
  * This ensures the connection is established only once
  */
-export const useWebSocketConnection = (userId: string | null) => {
+export const useWebSocketConnection = (_userId: string | null) => {
   const { isConnected, connectionState, error } = useSocketStore();
 
   // Use ref to track if component is mounted to prevent state updates after unmount

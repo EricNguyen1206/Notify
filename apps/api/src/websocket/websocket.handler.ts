@@ -3,21 +3,36 @@ import { Hub } from "./hub";
 import { ConversationService } from "@/services/conversation.service";
 import { MessageService } from "@/services/message.service";
 import { RedisService } from "@/services/redis.service";
-import { WebSocketMessage } from "./message-types";
+import {
+  SocketEvent,
+  AuthenticatePayload,
+  JoinConversationPayload,
+  LeaveConversationPayload,
+  SendMessagePayload,
+  createAuthenticatedPayload,
+  createErrorPayload,
+  ClientToServerEvents,
+  ServerToClientEvents,
+} from "@notify/types";
 import { logger } from "@/utils/logger";
 import jwt from "jsonwebtoken";
 import { config } from "@/config/config";
+
+// Extend Socket type with authenticated user info
+interface AuthenticatedSocket extends Socket {
+  userId?: number;
+  username?: string;
+}
 
 export class WebSocketHandler {
   private hub: Hub;
 
   constructor(
-    io: SocketIOServer,
+    io: SocketIOServer<ClientToServerEvents, ServerToClientEvents>,
     conversationService: ConversationService,
     messageService: MessageService,
     redisService: RedisService
   ) {
-    // Services are passed to Hub but not directly used here
     this.hub = new Hub(io, conversationService, messageService, redisService);
   }
 
@@ -28,94 +43,135 @@ export class WebSocketHandler {
   }
 
   // Handle new WebSocket connection
-  public handleConnection(socket: Socket): void {
+  public handleConnection(socket: AuthenticatedSocket): void {
     logger.info("New WebSocket connection", { socketId: socket.id });
 
     // Handle authentication
-    socket.on("authenticate", async (data: { token: string }) => {
+    socket.on(SocketEvent.AUTHENTICATE, async (payload: AuthenticatePayload) => {
       try {
-        const userId = await this.authenticateUser(data.token);
-        if (userId) {
+        const authResult = await this.authenticateUser(payload.token);
+        if (authResult) {
           // Register client with hub
-          await this.hub.registerClient(socket, userId);
+          await this.hub.registerClient(socket, authResult.userId);
 
-          // Store user ID in socket for easy access
-          (socket as any).userId = userId;
+          // Store user info in socket for easy access
+          socket.userId = authResult.userId;
+          socket.username = authResult.username;
 
-          socket.emit("authenticated", { userId });
-          logger.info("User authenticated", { userId, socketId: socket.id });
+          // Send authenticated event
+          const authenticatedPayload = createAuthenticatedPayload(authResult.userId, authResult.username);
+          socket.emit(SocketEvent.AUTHENTICATED, authenticatedPayload);
+
+          logger.info("User authenticated", {
+            userId: authResult.userId,
+            username: authResult.username,
+            socketId: socket.id,
+          });
         } else {
-          socket.emit("error", { message: "Authentication failed" });
+          const errorPayload = createErrorPayload("AUTH_FAILED", "Authentication failed");
+          socket.emit(SocketEvent.ERROR, errorPayload);
           socket.disconnect();
         }
       } catch (error) {
         logger.error("Authentication error:", error);
-        socket.emit("error", { message: "Authentication failed" });
+        const errorPayload = createErrorPayload(
+          "AUTH_ERROR",
+          "Authentication error",
+          error instanceof Error ? error.message : String(error)
+        );
+        socket.emit(SocketEvent.ERROR, errorPayload);
         socket.disconnect();
       }
     });
 
-    // Handle incoming messages
-    socket.on("message", async (message: WebSocketMessage) => {
-      try {
-        const userId = (socket as any).userId;
-        if (!userId) {
-          socket.emit("error", { message: "Not authenticated" });
-          return;
-        }
-
-        // Add user_id to message if not present
-        if (!message.user_id) {
-          message.user_id = userId;
-        }
-
-        await this.hub.handleClientMessage(socket, message);
-      } catch (error) {
-        logger.error("Message handling error:", error);
-        socket.emit("error", { message: "Failed to handle message" });
-      }
-    });
-
     // Handle join conversation
-    socket.on("join_conversation", async (data: { conversation_id: number }) => {
+    socket.on(SocketEvent.JOIN_CONVERSATION, async (payload: JoinConversationPayload) => {
       try {
-        const userId = (socket as any).userId;
-        if (!userId) {
-          socket.emit("error", { message: "Not authenticated" });
+        if (!socket.userId) {
+          const errorPayload = createErrorPayload("NOT_AUTHENTICATED", "Not authenticated");
+          socket.emit(SocketEvent.ERROR, errorPayload);
           return;
         }
 
-        await this.hub.joinConversation(userId, data.conversation_id);
-        socket.emit("joined_conversation", { conversation_id: data.conversation_id });
+        await this.hub.joinConversation(socket.userId, payload.conversation_id, socket.username || "");
+        logger.info("User joined conversation", {
+          userId: socket.userId,
+          conversationId: payload.conversation_id,
+        });
       } catch (error) {
         logger.error("Join conversation error:", error);
-        socket.emit("error", { message: "Failed to join conversation" });
+        const errorPayload = createErrorPayload(
+          "JOIN_FAILED",
+          "Failed to join conversation",
+          error instanceof Error ? error.message : String(error)
+        );
+        socket.emit(SocketEvent.ERROR, errorPayload);
       }
     });
 
     // Handle leave conversation
-    socket.on("leave_conversation", async (data: { conversation_id: number }) => {
+    socket.on(SocketEvent.LEAVE_CONVERSATION, async (payload: LeaveConversationPayload) => {
       try {
-        const userId = (socket as any).userId;
-        if (!userId) {
-          socket.emit("error", { message: "Not authenticated" });
+        if (!socket.userId) {
+          const errorPayload = createErrorPayload("NOT_AUTHENTICATED", "Not authenticated");
+          socket.emit(SocketEvent.ERROR, errorPayload);
           return;
         }
 
-        await this.hub.leaveConversation(userId, data.conversation_id);
-        socket.emit("left_conversation", { conversation_id: data.conversation_id });
+        await this.hub.leaveConversation(socket.userId, payload.conversation_id, socket.username || "");
+        logger.info("User left conversation", {
+          userId: socket.userId,
+          conversationId: payload.conversation_id,
+        });
       } catch (error) {
         logger.error("Leave conversation error:", error);
-        socket.emit("error", { message: "Failed to leave conversation" });
+        const errorPayload = createErrorPayload(
+          "LEAVE_FAILED",
+          "Failed to leave conversation",
+          error instanceof Error ? error.message : String(error)
+        );
+        socket.emit(SocketEvent.ERROR, errorPayload);
+      }
+    });
+
+    // Handle send message
+    socket.on(SocketEvent.SEND_MESSAGE, async (payload: SendMessagePayload) => {
+      try {
+        if (!socket.userId) {
+          const errorPayload = createErrorPayload("NOT_AUTHENTICATED", "Not authenticated");
+          socket.emit(SocketEvent.ERROR, errorPayload);
+          return;
+        }
+
+        await this.hub.handleMessage(
+          String(socket.userId),
+          socket.username || "",
+          payload.conversation_id,
+          payload.text,
+          payload.url,
+          payload.fileName
+        );
+
+        logger.info("Message sent", {
+          userId: socket.userId,
+          conversationId: payload.conversation_id,
+        });
+      } catch (error) {
+        logger.error("Send message error:", error);
+        const errorPayload = createErrorPayload(
+          "SEND_MESSAGE_FAILED",
+          "Failed to send message",
+          error instanceof Error ? error.message : String(error)
+        );
+        socket.emit(SocketEvent.ERROR, errorPayload);
       }
     });
 
     // Handle disconnect
-    socket.on("disconnect", async (reason: string) => {
+    socket.on(SocketEvent.DISCONNECT, async (reason: string) => {
       try {
-        const userId = (socket as any).userId;
-        if (userId) {
-          await this.hub.unregisterClient(socket, userId);
+        if (socket.userId) {
+          await this.hub.unregisterClient(socket, socket.userId);
         }
         logger.info("WebSocket disconnected", { socketId: socket.id, reason });
       } catch (error) {
@@ -130,10 +186,12 @@ export class WebSocketHandler {
   }
 
   // Authenticate user from JWT token
-  private async authenticateUser(token: string): Promise<number | null> {
+  private async authenticateUser(token: string): Promise<{ userId: number; username: string } | null> {
     try {
       const decoded = jwt.verify(token, config.jwt.secret) as any;
-      return decoded.userId || decoded.id;
+      const userId = decoded.userId || decoded.id;
+      const username = decoded.username || decoded.name || `User-${userId}`;
+      return { userId, username };
     } catch (error) {
       logger.error("JWT verification error:", error);
       return null;

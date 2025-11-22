@@ -1,44 +1,63 @@
-import { SigninRequest, SigninResponse, RegisterRequest, UserResponse, ApiErrorResponse, RefreshTokenResponse, ApiMessageResponse } from "@notify/types";
-import { useMutation, UseMutationOptions } from "@tanstack/react-query";
-import { AxiosError } from "axios";
+import {
+  SigninRequestDto,
+  SignupRequestDto,
+  UserDto,
+  ApiErrorResponse,
+  RefreshTokenResponseDto,
+  ApiMessageResponse,
+  ApiResponse,
+} from '@notify/types';
+import { useMutation, UseMutationOptions } from '@tanstack/react-query';
+import { AxiosError } from 'axios';
 
-import { apiClient } from "../axios-config";
+import { apiClient } from '../axios-config';
 
-const signin = async (payload: SigninRequest): Promise<SigninResponse> => {
-  const { data } = await apiClient.post<SigninResponse>("/auth/signin", payload);
+const signin = async (payload: SigninRequestDto): Promise<ApiResponse<UserDto>> => {
+  const { data } = await apiClient.post<ApiResponse<UserDto>>('/auth/signin', payload);
   return data;
 };
 
-const signup = async (payload: RegisterRequest): Promise<{ success: boolean; data: UserResponse }> => {
-  const { data } = await apiClient.post<{ success: boolean; data: UserResponse }>("/auth/signup", payload);
+const signup = async (payload: SignupRequestDto): Promise<{ success: boolean; data: UserDto }> => {
+  const { data } = await apiClient.post<{ success: boolean; data: UserDto }>(
+    '/auth/signup',
+    payload
+  );
   return data;
 };
 
 const signout = async (): Promise<ApiMessageResponse> => {
-  const { data } = await apiClient.post<ApiMessageResponse>("/auth/signout");
+  const { data } = await apiClient.post<ApiMessageResponse>('/auth/signout');
   return data;
 };
 
-const refresh = async (): Promise<RefreshTokenResponse> => {
-  const { data } = await apiClient.post<RefreshTokenResponse>("/auth/refresh");
+const refresh = async (): Promise<RefreshTokenResponseDto> => {
+  const { data } = await apiClient.post<RefreshTokenResponseDto>('/auth/refresh');
   return data;
 };
 
 export const useSigninMutation = (
-  options?: UseMutationOptions<SigninResponse, AxiosError<ApiErrorResponse>, SigninRequest>
+  options?: UseMutationOptions<ApiResponse<UserDto>, AxiosError<ApiErrorResponse>, SigninRequestDto>
 ) => {
-  return useMutation<SigninResponse, AxiosError<ApiErrorResponse>, SigninRequest>({
-    mutationKey: ["auth", "signin"],
+  return useMutation<ApiResponse<UserDto>, AxiosError<ApiErrorResponse>, SigninRequestDto>({
+    mutationKey: ['auth', 'signin'],
     mutationFn: signin,
     ...options,
   });
 };
 
 export const useSignupMutation = (
-  options?: UseMutationOptions<{ success: boolean; data: UserResponse }, AxiosError<ApiErrorResponse>, RegisterRequest>
+  options?: UseMutationOptions<
+    { success: boolean; data: UserDto },
+    AxiosError<ApiErrorResponse>,
+    SignupRequestDto
+  >
 ) => {
-  return useMutation<{ success: boolean; data: UserResponse }, AxiosError<ApiErrorResponse>, RegisterRequest>({
-    mutationKey: ["auth", "signup"],
+  return useMutation<
+    { success: boolean; data: UserDto },
+    AxiosError<ApiErrorResponse>,
+    SignupRequestDto
+  >({
+    mutationKey: ['auth', 'signup'],
     mutationFn: signup,
     ...options,
   });
@@ -48,17 +67,17 @@ export const useSignoutMutation = (
   options?: UseMutationOptions<ApiMessageResponse, AxiosError<ApiErrorResponse>, void>
 ) => {
   return useMutation<ApiMessageResponse, AxiosError<ApiErrorResponse>, void>({
-    mutationKey: ["auth", "signout"],
+    mutationKey: ['auth', 'signout'],
     mutationFn: signout,
     ...options,
   });
 };
 
 export const useRefreshMutation = (
-  options?: UseMutationOptions<RefreshTokenResponse, AxiosError<ApiErrorResponse>, void>
+  options?: UseMutationOptions<RefreshTokenResponseDto, AxiosError<ApiErrorResponse>, void>
 ) => {
-  return useMutation<RefreshTokenResponse, AxiosError<ApiErrorResponse>, void>({
-    mutationKey: ["auth", "refresh"],
+  return useMutation<RefreshTokenResponseDto, AxiosError<ApiErrorResponse>, void>({
+    mutationKey: ['auth', 'refresh'],
     mutationFn: refresh,
     ...options,
   });
@@ -67,4 +86,3 @@ export const useRefreshMutation = (
 // Backward compatibility (deprecated)
 export const useLoginMutation = useSigninMutation;
 export const useRegisterMutation = useSignupMutation;
-

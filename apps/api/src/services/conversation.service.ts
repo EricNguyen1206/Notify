@@ -1,16 +1,15 @@
-import { AppDataSource } from "@/config/database";
-import { Conversation, ConversationType } from "@/models/Conversation";
-import { User } from "@/models/User";
-import { Participant } from "@/models/Participant";
-import { Message } from "@/models/Message";
-import { UserService } from "@/services/user.service";
-import { ConversationResponse, DirectConversationResponse, MessageResponse } from "@notify/types";
-import { logger } from "@/utils/logger";
+import { AppDataSource } from '@/config/database';
+import { Conversation } from '@/models/Conversation';
+import { User } from '@/models/User';
+import { Participant } from '@/models/Participant';
+import { UserService } from '@/services/user.service';
+import { ConversationDto, ConversationType } from '@notify/types';
+import { logger } from '@/utils/logger';
+import { UpdateConversationRequestDto } from '@notify/validators';
 
 export class ConversationService {
   private conversationRepository = AppDataSource.getRepository(Conversation);
   private participantRepository = AppDataSource.getRepository(Participant);
-  private messageRepository = AppDataSource.getRepository(Message);
   private userRepository = AppDataSource.getRepository(User);
   private userService: UserService;
 
@@ -18,228 +17,95 @@ export class ConversationService {
     this.userService = new UserService();
   }
 
-  // Private repository methods
-  private async createConversation(conversation: Conversation): Promise<Conversation> {
+  // Helper to build direct conversation response
+  private async buildConversationDto(
+    conversation: Conversation,
+
+    userId: string
+  ): Promise<ConversationDto> {
     try {
-      return await this.conversationRepository.save(conversation);
+      const friends = await this.userService.getFriendsByConversationId(conversation.id, userId);
+
+      let usrEmail = 'Unknown';
+      let avatar = '';
+
+      if (friends.length === 1 && friends[0]) {
+        usrEmail = friends[0].email;
+        avatar = friends[0].avatar || '';
+      } else if (friends.length > 1) {
+        // Multiple friends - avoid showing current user as conversation name
+        if (friends[0] && friends[0].id === userId && friends[1]) {
+          usrEmail = friends[1].email;
+          avatar = friends[1].avatar || '';
+        } else if (friends[0]) {
+          usrEmail = friends[0].email;
+          avatar = friends[0].avatar || '';
+        }
+      }
+
+      return {
+        ...conversation,
+        name: usrEmail,
+        avatar,
+      };
+      return conversation;
     } catch (error) {
-      logger.error("Create conversation error:", error);
+      logger.error('Build direct conversation response error:', error);
       throw error;
     }
   }
 
-  private async updateConversation(conversation: Conversation): Promise<Conversation> {
-    try {
-      return await this.conversationRepository.save(conversation);
-    } catch (error) {
-      logger.error("Update conversation error:", error);
-      throw error;
-    }
-  }
-
-  private async deleteConversationById(conversationId: string): Promise<void> {
-    try {
-      await this.conversationRepository.softDelete(conversationId);
-    } catch (error) {
-      logger.error("Delete conversation error:", error);
-      throw error;
-    }
-  }
-
-  private async getAllUserConversations(userId: string): Promise<Conversation[]> {
+  async getConversationById(conversationId: string): Promise<Conversation | null> {
     try {
       return await this.conversationRepository
-        .createQueryBuilder("conversation")
-        .leftJoinAndSelect("conversation.participants", "participant")
-        .leftJoinAndSelect("participant.user", "user")
-        .innerJoin("conversation.participants", "userParticipant")
-        .where("userParticipant.userId = :userId", { userId })
-        .andWhere("conversation.deletedAt IS NULL")
-        .getMany();
-    } catch (error) {
-      logger.error("Get all user conversations error:", error);
-      throw error;
-    }
-  }
-
-  private async getConversationById(conversationId: string): Promise<Conversation | null> {
-    try {
-      return await this.conversationRepository
-        .createQueryBuilder("conversation")
-        .leftJoinAndSelect("conversation.participants", "participant")
-        .leftJoinAndSelect("participant.user", "user")
-        .where("conversation.id = :conversationId", { conversationId })
-        .andWhere("conversation.deletedAt IS NULL")
+        .createQueryBuilder('conversation')
+        .leftJoinAndSelect('conversation.participants', 'participant')
+        .leftJoinAndSelect('participant.user', 'user')
+        .where('conversation.id = :conversationId', { conversationId })
+        .andWhere('conversation.deletedAt IS NULL')
         .getOne();
     } catch (error) {
-      logger.error("Get conversation by ID error:", error);
+      logger.error('Get conversation by ID error:', error);
       throw error;
     }
   }
 
-  private async addUserToConversation(conversationId: string, userId: string): Promise<void> {
-    try {
-      const conversation = await this.conversationRepository.findOne({
-        where: { id: conversationId },
-        relations: ["participants"],
-      });
-
-      if (!conversation) {
-        throw new Error("Conversation not found");
-      }
-
-      // Check if user is already a participant
-      const isAlreadyParticipant = conversation.participants.some((participant) => participant.userId === userId);
-      if (isAlreadyParticipant) {
-        throw new Error("User is already a member of this conversation");
-      }
-
-      // Add user to conversation
-      const participant = new Participant(userId, conversationId);
-      await this.participantRepository.save(participant);
-    } catch (error) {
-      logger.error("Add user to conversation error:", error);
-      throw error;
-    }
-  }
-
-  private async removeUserFromConversation(conversationId: string, userId: string): Promise<void> {
-    try {
-      await this.participantRepository.delete({
-        conversationId,
-        userId,
-      });
-    } catch (error) {
-      logger.error("Remove user from conversation error:", error);
-      throw error;
-    }
-  }
-
-  private async getChatMessagesWithPagination(
-    conversationId: string,
-    limit: number = 20,
-    before?: number
-  ): Promise<MessageResponse[]> {
-    try {
-      let query = this.messageRepository
-        .createQueryBuilder("message")
-        .leftJoinAndSelect("message.sender", "sender")
-        .where("message.conversationId = :conversationId", { conversationId })
-        .andWhere("message.deletedAt IS NULL")
-        .orderBy("message.createdAt", "ASC");
-
-      if (before) {
-        query = query.andWhere("message.createdAt < :before", { before });
-      }
-
-      const messages = await query.limit(limit).getMany();
-
-      // Convert to MessageResponse format
-      return messages.map((message) => {
-        const response: MessageResponse = {
-          id: message.id,
-          type: message.getType(),
-          senderId: message.senderId,
-          senderName: message.sender?.username || "Unknown",
-          createdAt: message.createdAt,
-        };
-        if (message.sender?.avatar !== undefined) {
-          response.senderAvatar = message.sender.avatar;
-        }
-        if (message.text !== undefined) {
-          response.text = message.text;
-        }
-        if (message.url !== undefined) {
-          response.url = message.url;
-        }
-        if (message.fileName !== undefined) {
-          response.fileName = message.fileName;
-        }
-        if (message.conversationId !== undefined) {
-          response.conversationId = message.conversationId;
-        }
-        return response;
-      });
-    } catch (error) {
-      logger.error("Get chat messages with pagination error:", error);
-      throw error;
-    }
-  }
-
-  // Public methods
   // Get all conversations for a user, separated by type (direct/group)
   async getAllConversation(userId: string): Promise<{
-    direct: DirectConversationResponse[];
-    group: ConversationResponse[];
+    direct: ConversationDto[];
+    group: ConversationDto[];
   }> {
     try {
-      const conversations = await this.getAllUserConversations(userId);
+      const conversations = await this.conversationRepository
+        .createQueryBuilder('conversation')
+        .leftJoinAndSelect('conversation.participants', 'participant')
+        .leftJoinAndSelect('participant.user', 'user')
+        .innerJoin('conversation.participants', 'userParticipant')
+        .where('userParticipant.userId = :userId', { userId })
+        .andWhere('conversation.deletedAt IS NULL')
+        .getMany();
 
-      const direct: DirectConversationResponse[] = [];
-      const group: ConversationResponse[] = [];
+      const direct: ConversationDto[] = [];
+      const group: ConversationDto[] = [];
 
       for (const conversation of conversations) {
         if (conversation.type === ConversationType.DIRECT) {
-          const directResponse = await this.buildDirectConversationResponse(conversation, userId);
+          const directResponse = await this.buildConversationDto(conversation, userId);
           direct.push(directResponse);
         } else {
-          const groupResponse: ConversationResponse = {
-            id: conversation.id,
-            name: conversation.name,
-            type: conversation.type,
-            ownerId: conversation.ownerId,
-          };
-          group.push(groupResponse);
+          group.push(conversation);
         }
       }
 
       return { direct, group };
     } catch (error) {
-      logger.error("Get all conversations error:", error);
-      throw error;
-    }
-  }
-
-  // Helper to build direct conversation response
-  private async buildDirectConversationResponse(
-    conversation: Conversation,
-    userId: string
-  ): Promise<DirectConversationResponse> {
-    try {
-      const friends = await this.userService.getFriendsByConversationId(conversation.id, userId);
-
-      let usrEmail = "Unknown";
-      let avatar = "";
-
-      if (friends.length === 1 && friends[0]) {
-        usrEmail = friends[0].email;
-        avatar = friends[0].avatar || "";
-      } else if (friends.length > 1) {
-        // Multiple friends - avoid showing current user as conversation name
-        if (friends[0] && friends[0].id === userId && friends[1]) {
-          usrEmail = friends[1].email;
-          avatar = friends[1].avatar || "";
-        } else if (friends[0]) {
-          usrEmail = friends[0].email;
-          avatar = friends[0].avatar || "";
-        }
-      }
-
-      return {
-        id: conversation.id,
-        name: usrEmail,
-        avatar,
-        type: conversation.type,
-        ownerId: conversation.ownerId,
-      };
-    } catch (error) {
-      logger.error("Build direct conversation response error:", error);
+      logger.error('Get all conversations error:', error);
       throw error;
     }
   }
 
   // Create a new conversation with specified users
-  async createConversationWithUsers(
+  async createConversation(
     name: string,
     ownerId: string,
     conversationType: ConversationType,
@@ -249,7 +115,7 @@ export class ConversationService {
       // Validate owner exists
       const owner = await this.userRepository.findOne({ where: { id: ownerId } });
       if (!owner) {
-        throw new Error("Owner not found");
+        throw new Error('Owner not found');
       }
 
       // Validate all users exist
@@ -264,7 +130,10 @@ export class ConversationService {
 
       // Auto-generate name for direct messages if not provided
       let conversationName = name;
-      if (conversationType === ConversationType.DIRECT && (!name || name === "Direct Message with User")) {
+      if (
+        conversationType === ConversationType.DIRECT &&
+        (!name || name === 'Direct Message with User')
+      ) {
         // Find the other user (not the owner) to use their email as conversation name
         const otherUser = users.find((user) => user.id !== ownerId);
         if (otherUser) {
@@ -278,14 +147,14 @@ export class ConversationService {
       conversation.ownerId = ownerId;
       conversation.type = conversationType;
 
-      const savedConversation = await this.createConversation(conversation);
+      const savedConversation = await this.conversationRepository.save(conversation);
 
       // Add all users to conversation
       for (const user of users) {
-        await this.addUserToConversation(savedConversation.id, user.id);
+        await this.addUserToConversation(ownerId, savedConversation.id, user.id);
       }
 
-      logger.info("Conversation created successfully", {
+      logger.info('Conversation created successfully', {
         conversationId: savedConversation.id,
         ownerId,
         type: conversationType,
@@ -294,25 +163,31 @@ export class ConversationService {
 
       return savedConversation;
     } catch (error) {
-      logger.error("Create conversation with users error:", error);
+      logger.error('Create conversation with users error:', error);
       throw error;
     }
   }
 
   // Update conversation name
-  async updateConversationName(conversationId: string, name: string): Promise<void> {
+  async updateConversation(
+    conversationId: string,
+    updateData: UpdateConversationRequestDto
+  ): Promise<void> {
     try {
       const conversation = await this.getConversationById(conversationId);
       if (!conversation) {
-        throw new Error("Conversation not found");
+        throw new Error('Conversation not found');
       }
 
-      conversation.name = name;
-      await this.updateConversation(conversation);
+      conversation.name = updateData.name;
+      if (updateData.avatar) {
+        conversation.avatar = updateData.avatar;
+      }
+      await this.conversationRepository.save(conversation);
 
-      logger.info("Conversation updated successfully", { conversationId, name });
+      logger.info('Conversation updated successfully', { conversationId });
     } catch (error) {
-      logger.error("Update conversation error:", error);
+      logger.error('Update conversation error:', error);
       throw error;
     }
   }
@@ -322,161 +197,108 @@ export class ConversationService {
     try {
       const conversation = await this.getConversationById(conversationId);
       if (!conversation) {
-        throw new Error("Conversation not found");
+        throw new Error('Conversation not found');
       }
 
       // Check if the user is the owner of the conversation
       if (conversation.ownerId !== ownerId) {
-        throw new Error("Only conversation owner can delete conversation");
+        throw new Error('Only conversation owner can delete conversation');
       }
 
-      await this.deleteConversationById(conversationId);
+      await this.conversationRepository.softDelete(conversationId);
 
-      logger.info("Conversation deleted successfully", { conversationId, ownerId });
+      logger.info('Conversation deleted successfully', { conversationId, ownerId });
     } catch (error) {
-      logger.error("Delete conversation error:", error);
-      throw error;
-    }
-  }
-
-  // Get conversation by ID (public method)
-  async getConversationByIdPublic(conversationId: string): Promise<Conversation> {
-    try {
-      const conversation = await this.getConversationById(conversationId);
-      if (!conversation) {
-        throw new Error("Conversation not found");
-      }
-      return conversation;
-    } catch (error) {
-      logger.error("Get conversation by ID error:", error);
-      throw error;
-    }
-  }
-
-  // Join conversation
-  async joinConversation(conversationId: string, userId: string): Promise<void> {
-    try {
-      // Check if conversation exists
-      const conversation = await this.getConversationById(conversationId);
-      if (!conversation) {
-        throw new Error("Conversation not found");
-      }
-
-      // Check if user exists
-      const user = await this.userRepository.findOne({ where: { id: userId } });
-      if (!user) {
-        throw new Error("User not found");
-      }
-
-      // Add user to conversation
-      await this.addUserToConversation(conversationId, userId);
-
-      logger.info("User joined conversation", { conversationId, userId });
-    } catch (error) {
-      logger.error("Join conversation error:", error);
-      throw error;
-    }
-  }
-
-  // Leave conversation
-  async leaveConversation(conversationId: string, userId: string): Promise<void> {
-    try {
-      // Check if conversation exists
-      const conversation = await this.getConversationById(conversationId);
-      if (!conversation) {
-        throw new Error("Conversation not found");
-      }
-
-      // Check if user exists
-      const user = await this.userRepository.findOne({ where: { id: userId } });
-      if (!user) {
-        throw new Error("User not found");
-      }
-
-      // Remove user from conversation
-      await this.removeUserFromConversation(conversationId, userId);
-
-      logger.info("User left conversation", { conversationId, userId });
-    } catch (error) {
-      logger.error("Leave conversation error:", error);
+      logger.error('Delete conversation error:', error);
       throw error;
     }
   }
 
   // Add user to conversation (only owner can add users)
-  async addUserToConversationPublic(ownerId: string, conversationId: string, targetUserId: string): Promise<void> {
+  async addUserToConversation(
+    ownerId: string,
+    conversationId: string,
+    targetUserId: string
+  ): Promise<void> {
     try {
       const conversation = await this.getConversationById(conversationId);
       if (!conversation) {
-        throw new Error("Conversation not found");
+        throw new Error('Conversation not found');
       }
 
       // Check if the user is the owner of the conversation
       if (conversation.ownerId !== ownerId) {
-        throw new Error("Only conversation owner can add users");
+        throw new Error('Only conversation owner can add users');
       }
 
       // Check if target user exists
       const targetUser = await this.userRepository.findOne({ where: { id: targetUserId } });
       if (!targetUser) {
-        throw new Error("Target user not found");
+        throw new Error('Target user not found');
       }
 
       // Add user to conversation
-      await this.addUserToConversation(conversationId, targetUserId);
+      const participant = new Participant(targetUserId, conversationId);
+      await this.participantRepository.save(participant);
 
-      logger.info("User added to conversation", { conversationId, targetUserId, ownerId });
+      logger.info('User added to conversation', { conversationId, targetUserId, ownerId });
     } catch (error) {
-      logger.error("Add user to conversation error:", error);
+      logger.error('Add user to conversation error:', error);
       throw error;
     }
   }
 
   // Remove user from conversation (only owner can remove users)
-  async removeUserFromConversationPublic(ownerId: string, conversationId: string, targetUserId: string): Promise<void> {
+  async removeUserFromConversation(
+    ownerId: string,
+    conversationId: string,
+    targetUserId: string
+  ): Promise<void> {
     try {
       const conversation = await this.getConversationById(conversationId);
       if (!conversation) {
-        throw new Error("Conversation not found");
+        throw new Error('Conversation not found');
       }
 
       // Check if the user is the owner of the conversation
       if (conversation.ownerId !== ownerId) {
-        throw new Error("Only conversation owner can remove users");
+        throw new Error('Only conversation owner can remove users');
       }
 
       // Check if target user exists
       const targetUser = await this.userRepository.findOne({ where: { id: targetUserId } });
       if (!targetUser) {
-        throw new Error("Target user not found");
+        throw new Error('Target user not found');
       }
 
       // Check if trying to remove the owner
       if (targetUserId === ownerId) {
-        throw new Error("Cannot remove conversation owner");
+        throw new Error('Cannot remove conversation owner');
       }
 
       // Remove user from conversation
-      await this.removeUserFromConversation(conversationId, targetUserId);
+      await this.participantRepository.softDelete({
+        conversationId,
+        userId: targetUserId,
+      });
 
-      logger.info("User removed from conversation", { conversationId, targetUserId, ownerId });
+      logger.info('User removed from conversation', { conversationId, targetUserId, ownerId });
     } catch (error) {
-      logger.error("Remove user from conversation error:", error);
+      logger.error('Remove user from conversation error:', error);
       throw error;
     }
   }
 
-  // Get chat messages for a conversation with pagination
-  async getChatMessagesByConversationWithPagination(
-    conversationId: string,
-    limit: number = 20,
-    before?: number
-  ): Promise<MessageResponse[]> {
-    try {
-      return await this.getChatMessagesWithPagination(conversationId, limit, before);
-    } catch (error) {
-      logger.error("Get chat messages by conversation error:", error);
-      throw error;
+  async leaveConversation(userId: string, conversationId: string) {
+    const conversation = await this.getConversationById(conversationId);
+    if (!conversation) {
+      throw new Error('Conversation not found');
     }
+
+    // Remove user from conversation
+    await this.participantRepository.softDelete({
+      conversationId,
+      userId: userId,
+    });
   }
 }

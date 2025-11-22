@@ -1,8 +1,8 @@
-import { ApiErrorResponse, ConversationMessagesApiResponse } from "@notify/types";
-import { useQuery, UseQueryOptions, UseQueryResult } from "@tanstack/react-query";
-import { AxiosError } from "axios";
+import { ApiErrorResponse, PaginatedApiResponse } from '@notify/types';
+import { useQuery, UseQueryOptions, UseQueryResult } from '@tanstack/react-query';
+import { AxiosError } from 'axios';
 
-import { apiClient } from "../axios-config";
+import { apiClient } from '../axios-config';
 
 export interface ConversationMessagesParams {
   limit?: number;
@@ -12,23 +12,25 @@ export interface ConversationMessagesParams {
 const fetchConversationMessages = async (
   conversationId: string,
   params?: ConversationMessagesParams
-): Promise<ConversationMessagesApiResponse> => {
-  const { data } = await apiClient.get<ConversationMessagesApiResponse>(`/messages/conversation/${conversationId}`, {
-    params,
-  });
+): Promise<PaginatedApiResponse<MessageDto[]>> => {
+  const { data } = await apiClient.get<PaginatedApiResponse<MessageDto[]>>(
+    `/messages/conversation/${conversationId}`,
+    {
+      params,
+    }
+  );
   return data;
 };
 
-export const useConversationMessagesQuery = <TData = ConversationMessagesApiResponse>(
+export const useConversationMessagesQuery = <TData = PaginatedApiResponse<MessageDto[]>>(
   conversationId: string | undefined,
   params?: ConversationMessagesParams,
-  options?: UseQueryOptions<ConversationMessagesApiResponse, AxiosError<ApiErrorResponse>, TData>
+  options?: UseQueryOptions<PaginatedApiResponse<MessageDto[]>, AxiosError<ApiErrorResponse>, TData>
 ): UseQueryResult<TData, AxiosError<ApiErrorResponse>> => {
-  return useQuery<ConversationMessagesApiResponse, AxiosError<ApiErrorResponse>, TData>({
-    queryKey: ["messages", conversationId, params],
+  return useQuery<PaginatedApiResponse<MessageDto[]>, AxiosError<ApiErrorResponse>, TData>({
+    queryKey: ['messages', conversationId, params],
     queryFn: () => fetchConversationMessages(conversationId!, params),
     enabled: Boolean(conversationId),
     ...options,
   });
 };
-

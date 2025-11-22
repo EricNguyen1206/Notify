@@ -21,7 +21,7 @@ const LoginEmailForm = () => {
       toast.success("Sign in successfully");
       router.push("/messages");
     },
-    onError: (error) => {
+    onError: (_error) => {
       toast.error("An error occurred during sign in");
     },
   });

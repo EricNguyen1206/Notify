@@ -31,7 +31,7 @@ apiClient.interceptors.request.use(
   },
   (error) => {
     console.error("🚨 Axios Request Error:", error);
-    return Promise.reject(error);
+    throw error;
   }
 );
 
@@ -48,15 +48,14 @@ apiClient.interceptors.response.use(
       if (isRefreshing) {
         // If already refreshing, queue this request
         return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve, reject });
-        })
-          .then((token) => {
-            originalRequest.headers = originalRequest.headers || {};
-            return apiClient(originalRequest);
-          })
-          .catch((err) => {
-            return Promise.reject(err);
+          failedQueue.push({ 
+            resolve: (token) => {
+              originalRequest.headers = originalRequest.headers || {};
+              resolve(apiClient(originalRequest));
+            }, 
+            reject 
           });
+        });
       }
 
       originalRequest._retry = true;
@@ -80,7 +79,7 @@ apiClient.interceptors.response.use(
           window.location.href = "/login";
         }
         
-        return Promise.reject(refreshError);
+        throw refreshError;
       } finally {
         isRefreshing = false;
       }
@@ -98,7 +97,7 @@ apiClient.interceptors.response.use(
       });
     }
     
-    return Promise.reject(error);
+    throw error;
   }
 );
 

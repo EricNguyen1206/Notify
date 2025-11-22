@@ -48,7 +48,7 @@ export async function handleRegister(prevState: any, formData: FormData) {
     if (adminCode) {
       // You can implement admin code validation here
       // For now, we'll just check if it matches a specific code
-      if (adminCode === process.env.ADMIN_CODE) {
+      if (adminCode === process.env['ADMIN_CODE']) {
         isAdmin = true
       }
     }

@@ -1,34 +1,31 @@
-import { EnhancedConversation } from "@/store/useConversationStore";
-import { Plus } from "lucide-react";
-import Link from "next/link";
-import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { SidebarGroup, SidebarGroupAction, SidebarGroupLabel, SidebarMenu, SidebarMenuItem } from "../ui/sidebar";
-import ChannelsSkeleton from "./ChannelsSkeleton";
-import CreateNewDirectMessageDialog from "../organisms/CreateNewDirectMessageDialog";
-import { useState } from "react";
+import { Plus } from 'lucide-react';
+import { SidebarGroup, SidebarGroupAction, SidebarGroupLabel, SidebarMenu } from '../ui/sidebar';
+import ChannelsSkeleton from './ChannelsSkeleton';
+import CreateNewDirectMessageDialog from '../organisms/CreateNewDirectMessageDialog';
+import { useState } from 'react';
+import DirectMessageCard from '../atoms/DirectMessageCard';
+import { ConversationDto } from '@notify/types';
+import { ConversationState, useConversationStore } from '@/store/useConversationStore';
 
 type SidebarDirectMessagesProps = {
-  items: EnhancedConversation[];
+  items: ConversationDto[];
   loading: boolean;
 };
 
 const SidebarDirectMessages = ({ items, loading }: SidebarDirectMessagesProps) => {
   const [openDirectMessage, setOpenDirectMessage] = useState(false);
-
-  // Helper function to extract username from email-based conversation name
-  const getDisplayName = (conversationName: string) => {
-    // If conversation name looks like an email, extract username part
-    if (conversationName.includes("@")) {
-      return conversationName.split("@")[0];
-    }
-    return conversationName;
-  };
+  const activeConversationId = useConversationStore(
+    (state: ConversationState) => state.activeConversationId
+  );
 
   return (
     <SidebarGroup>
       <SidebarGroupLabel>Direct Messages</SidebarGroupLabel>
       <div className="flex gap-1">
-        <CreateNewDirectMessageDialog openDirectMessage={openDirectMessage} setOpenDirectMessage={setOpenDirectMessage}>
+        <CreateNewDirectMessageDialog
+          openDirectMessage={openDirectMessage}
+          setOpenDirectMessage={setOpenDirectMessage}
+        >
           <SidebarGroupAction onClick={() => setOpenDirectMessage(true)}>
             <Plus /> <span className="sr-only">Direct Message</span>
           </SidebarGroupAction>
@@ -38,32 +35,15 @@ const SidebarDirectMessages = ({ items, loading }: SidebarDirectMessagesProps) =
         {loading ? (
           <ChannelsSkeleton />
         ) : (
-          items.map((item) => (
-            <SidebarMenuItem key={item.id}>
-              <Link
-                href={`/messages/${item.id}`}
-                className="flex items-center cursor-pointer transition-colors rounded-md p-2 mb-1"
-              >
-                <div className="relative mr-3">
-                  <Avatar className="w-8 h-8">
-                    <AvatarImage src={item.avatar} />
-                    <AvatarFallback color="#8B5CF6">
-                      {getDisplayName(item.name)
-                        .split(" ")
-                        .map((n: string) => n[0])
-                        .join("")}
-                    </AvatarFallback>
-                  </Avatar>
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-1">
-                    <h4 className="font-medium text-foreground text-sm truncate">{getDisplayName(item.name)}</h4>
-                  </div>
-                </div>
-              </Link>
-            </SidebarMenuItem>
-          ))
+          items.map((item) => {
+            return (
+              <DirectMessageCard
+                key={item.id}
+                convo={item}
+                isActive={item.id === activeConversationId}
+              />
+            );
+          })
         )}
       </SidebarMenu>
     </SidebarGroup>

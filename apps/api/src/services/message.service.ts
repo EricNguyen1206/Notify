@@ -1,7 +1,7 @@
-import { AppDataSource } from "@/config/database";
-import { Message } from "@/models/Message";
-import { MessageResponse } from "@notify/types";
-import { logger } from "@/utils/logger";
+import { AppDataSource } from '@/config/database';
+import { Message } from '@/models/Message';
+import { MessageDto } from '@notify/types';
+import { logger } from '@/utils/logger';
 
 export class MessageService {
   private messageRepository = AppDataSource.getRepository(Message);
@@ -11,49 +11,36 @@ export class MessageService {
     conversationId: string,
     limit: number = 50,
     before?: number
-  ): Promise<MessageResponse[]> {
+  ): Promise<MessageDto[]> {
     try {
       const queryBuilder = this.messageRepository
-        .createQueryBuilder("message")
-        .leftJoinAndSelect("message.sender", "sender")
-        .where("message.conversationId = :conversationId", { conversationId })
-        .andWhere("message.deletedAt IS NULL")
-        .orderBy("message.createdAt", "DESC")
+        .createQueryBuilder('message')
+        .leftJoinAndSelect('message.sender', 'sender')
+        .where('message.conversationId = :conversationId', { conversationId })
+        .andWhere('message.deletedAt IS NULL')
+        .orderBy('message.createdAt', 'DESC')
         .limit(limit);
 
       if (before) {
-        queryBuilder.andWhere("message.id < :before", { before });
+        queryBuilder.andWhere('message.id < :before', { before });
       }
 
       const messages = await queryBuilder.getMany();
 
       return messages.map((message) => {
-        const response: MessageResponse = {
-          id: message.id,
-          type: message.getType(),
-          senderId: message.senderId,
-          senderName: message.sender?.username || "Unknown",
-          createdAt: message.createdAt,
-        };
-        if (message.sender?.avatar !== undefined) {
-          response.senderAvatar = message.sender.avatar;
-        }
-        if (message.text !== undefined) {
-          response.text = message.text;
-        }
-        if (message.url !== undefined) {
-          response.url = message.url;
-        }
-        if (message.fileName !== undefined) {
-          response.fileName = message.fileName;
-        }
-        if (message.conversationId !== undefined) {
-          response.conversationId = message.conversationId;
-        }
-        return response;
+        const { sender, ...msg } = message;
+        return {
+          ...msg,
+          senderName: sender.username,
+          senderAvatar: sender.avatar ?? '',
+          senderId: sender.id,
+          conversationId: msg.conversationId ?? '',
+          createdAt: msg.createdAt.toISOString(),
+          updatedAt: msg.updatedAt.toISOString(),
+        } as MessageDto;
       });
     } catch (error) {
-      logger.error("Error getting conversation messages:", error);
+      logger.error('Error getting conversation messages:', error);
       throw error;
     }
   }
@@ -63,52 +50,39 @@ export class MessageService {
     friendId: string,
     limit: number = 50,
     before?: number
-  ): Promise<MessageResponse[]> {
+  ): Promise<MessageDto[]> {
     try {
       const queryBuilder = this.messageRepository
-        .createQueryBuilder("message")
-        .leftJoinAndSelect("message.sender", "sender")
+        .createQueryBuilder('message')
+        .leftJoinAndSelect('message.sender', 'sender')
         .where(
-          "(message.senderId = :userId AND message.receiverId = :friendId) OR (message.senderId = :friendId AND message.receiverId = :userId)",
+          '(message.senderId = :userId AND message.receiverId = :friendId) OR (message.senderId = :friendId AND message.receiverId = :userId)',
           { userId, friendId }
         )
-        .andWhere("message.deletedAt IS NULL")
-        .orderBy("message.createdAt", "DESC")
+        .andWhere('message.deletedAt IS NULL')
+        .orderBy('message.createdAt', 'DESC')
         .limit(limit);
 
       if (before) {
-        queryBuilder.andWhere("message.id < :before", { before });
+        queryBuilder.andWhere('message.id < :before', { before });
       }
 
       const messages = await queryBuilder.getMany();
 
       return messages.map((message) => {
-        const response: MessageResponse = {
-          id: message.id,
-          type: message.getType(),
-          senderId: message.senderId,
-          senderName: message.sender?.username || "Unknown",
-          createdAt: message.createdAt,
-        };
-        if (message.sender?.avatar !== undefined) {
-          response.senderAvatar = message.sender.avatar;
-        }
-        if (message.text !== undefined) {
-          response.text = message.text;
-        }
-        if (message.url !== undefined) {
-          response.url = message.url;
-        }
-        if (message.fileName !== undefined) {
-          response.fileName = message.fileName;
-        }
-        if (message.receiverId !== undefined) {
-          response.receiverId = message.receiverId;
-        }
-        return response;
+        const { sender, ...msg } = message;
+        return {
+          ...msg,
+          senderName: sender.username,
+          senderAvatar: sender.avatar ?? '',
+          senderId: sender.id,
+          conversationId: msg.conversationId ?? '',
+          createdAt: msg.createdAt.toISOString(),
+          updatedAt: msg.updatedAt.toISOString(),
+        } as MessageDto;
       });
     } catch (error) {
-      logger.error("Error getting direct messages:", error);
+      logger.error('Error getting direct messages:', error);
       throw error;
     }
   }
@@ -120,7 +94,7 @@ export class MessageService {
     text?: string;
     url?: string;
     fileName?: string;
-  }): Promise<MessageResponse> {
+  }): Promise<MessageDto> {
     try {
       const message = this.messageRepository.create(data);
       const savedMessage = await this.messageRepository.save(message);
@@ -128,41 +102,24 @@ export class MessageService {
       // Reload with relations
       const messageWithRelations = await this.messageRepository.findOne({
         where: { id: savedMessage.id },
-        relations: ["sender"],
+        relations: ['sender'],
       });
 
       if (!messageWithRelations) {
-        throw new Error("Message not found after creation");
+        throw new Error('Message not found after creation');
       }
-
-      const response: MessageResponse = {
-        id: messageWithRelations.id,
-        type: messageWithRelations.getType(),
-        senderId: messageWithRelations.senderId,
-        senderName: messageWithRelations.sender?.username || "Unknown",
-        createdAt: messageWithRelations.createdAt,
-      };
-      if (messageWithRelations.sender?.avatar !== undefined) {
-        response.senderAvatar = messageWithRelations.sender.avatar;
-      }
-      if (messageWithRelations.text !== undefined) {
-        response.text = messageWithRelations.text;
-      }
-      if (messageWithRelations.url !== undefined) {
-        response.url = messageWithRelations.url;
-      }
-      if (messageWithRelations.fileName !== undefined) {
-        response.fileName = messageWithRelations.fileName;
-      }
-      if (messageWithRelations.receiverId !== undefined) {
-        response.receiverId = messageWithRelations.receiverId;
-      }
-      if (messageWithRelations.conversationId !== undefined) {
-        response.conversationId = messageWithRelations.conversationId;
-      }
-      return response;
+      const { sender, ...msg } = messageWithRelations;
+      return {
+        ...msg,
+        senderName: sender.username,
+        senderAvatar: sender.avatar ?? '',
+        senderId: sender.id,
+        conversationId: msg.conversationId ?? '',
+        createdAt: msg.createdAt.toISOString(),
+        updatedAt: msg.updatedAt.toISOString(),
+      } as MessageDto;
     } catch (error) {
-      logger.error("Error creating message:", error);
+      logger.error('Error creating message:', error);
       throw error;
     }
   }
@@ -171,50 +128,34 @@ export class MessageService {
     try {
       await this.messageRepository.softDelete(messageId);
     } catch (error) {
-      logger.error("Error deleting message:", error);
+      logger.error('Error deleting message:', error);
       throw error;
     }
   }
 
-  private async getMessageByIdPrivate(messageId: string): Promise<MessageResponse | null> {
+  private async getMessageByIdPrivate(messageId: string): Promise<MessageDto | null> {
     try {
       const message = await this.messageRepository.findOne({
         where: { id: messageId },
-        relations: ["sender"],
+        relations: ['sender'],
       });
 
       if (!message) {
         return null;
       }
 
-      const response: MessageResponse = {
-        id: message.id,
-        type: message.getType(),
-        senderId: message.senderId,
-        senderName: message.sender?.username || "Unknown",
-        createdAt: message.createdAt,
-      };
-      if (message.sender?.avatar !== undefined) {
-        response.senderAvatar = message.sender.avatar;
-      }
-      if (message.text !== undefined) {
-        response.text = message.text;
-      }
-      if (message.url !== undefined) {
-        response.url = message.url;
-      }
-      if (message.fileName !== undefined) {
-        response.fileName = message.fileName;
-      }
-      if (message.receiverId !== undefined) {
-        response.receiverId = message.receiverId;
-      }
-      if (message.conversationId !== undefined) {
-        response.conversationId = message.conversationId;
-      }
-      return response;
+      const { sender, ...msg } = message;
+      return {
+        ...msg,
+        senderName: sender.username,
+        senderAvatar: sender.avatar ?? '',
+        senderId: sender.id,
+        conversationId: msg.conversationId ?? '',
+        createdAt: msg.createdAt.toISOString(),
+        updatedAt: msg.updatedAt.toISOString(),
+      } as MessageDto;
     } catch (error) {
-      logger.error("Error getting message by id:", error);
+      logger.error('Error getting message by id:', error);
       throw error;
     }
   }
@@ -225,11 +166,11 @@ export class MessageService {
     conversationId: string,
     limit: number = 20,
     before?: number
-  ): Promise<MessageResponse[]> {
+  ): Promise<MessageDto[]> {
     try {
       return await this.getConversationMessagesPrivate(conversationId, limit, before);
     } catch (error) {
-      logger.error("Get conversation messages error:", error);
+      logger.error('Get conversation messages error:', error);
       throw error;
     }
   }
@@ -244,16 +185,16 @@ export class MessageService {
       url?: string;
       fileName?: string;
     }
-  ): Promise<MessageResponse> {
+  ): Promise<MessageDto> {
     try {
       // Validate that exactly one of receiverId or conversationId is set
       if ((!data.receiverId && !data.conversationId) || (data.receiverId && data.conversationId)) {
-        throw new Error("Exactly one of receiverId or conversationId must be set");
+        throw new Error('Exactly one of receiverId or conversationId must be set');
       }
 
       // Validate that at least one content field is provided
       if (!data.text && !data.url && !data.fileName) {
-        throw new Error("At least one content field (text, url, fileName) must be provided");
+        throw new Error('At least one content field (text, url, fileName) must be provided');
       }
 
       const messageData: {
@@ -285,7 +226,7 @@ export class MessageService {
 
       const messageResponse = await this.createMessagePrivate(messageData);
 
-      logger.info("Message created successfully", {
+      logger.info('Message created successfully', {
         messageId: messageResponse.id,
         senderId,
         conversationId: data.conversationId,
@@ -294,7 +235,7 @@ export class MessageService {
 
       return messageResponse;
     } catch (error) {
-      logger.error("Create message error:", error);
+      logger.error('Create message error:', error);
       throw error;
     }
   }
@@ -305,21 +246,21 @@ export class MessageService {
     friendId: string,
     limit: number = 50,
     before?: number
-  ): Promise<MessageResponse[]> {
+  ): Promise<MessageDto[]> {
     try {
       return await this.getDirectMessagesPrivate(userId, friendId, limit, before);
     } catch (error) {
-      logger.error("Get friend messages error:", error);
+      logger.error('Get friend messages error:', error);
       throw error;
     }
   }
 
   // Get message by ID
-  async getMessageById(messageId: string): Promise<MessageResponse | null> {
+  async getMessageById(messageId: string): Promise<MessageDto | null> {
     try {
       return await this.getMessageByIdPrivate(messageId);
     } catch (error) {
-      logger.error("Get message by ID error:", error);
+      logger.error('Get message by ID error:', error);
       throw error;
     }
   }
@@ -328,9 +269,9 @@ export class MessageService {
   async deleteMessage(messageId: string): Promise<void> {
     try {
       await this.deleteMessagePrivate(messageId);
-      logger.info("Message deleted successfully", { messageId });
+      logger.info('Message deleted successfully', { messageId });
     } catch (error) {
-      logger.error("Delete message error:", error);
+      logger.error('Delete message error:', error);
       throw error;
     }
   }

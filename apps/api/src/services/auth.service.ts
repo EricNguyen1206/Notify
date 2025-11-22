@@ -1,19 +1,19 @@
-import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
-import crypto from "crypto";
-import { AppDataSource } from "@/config/database";
-import { User } from "@/models/User";
-import { Session } from "@/models/Session";
-import { config } from "@/config/config";
-import { RegisterDto, LoginDto } from "@notify/validators";
-import { UserResponse } from "@notify/types";
-import { logger } from "@/utils/logger";
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
+import { AppDataSource } from '@/config/database';
+import { User } from '@/models/User';
+import { Session } from '@/models/Session';
+import { config } from '@/config/config';
+import { SignupRequestDto, LoginDto } from '@notify/validators';
+import { UserDto } from '@notify/types';
+import { logger } from '@/utils/logger';
 
 export class AuthService {
   private userRepository = AppDataSource.getRepository(User);
   private sessionRepository = AppDataSource.getRepository(Session);
 
-  public async signup(data: RegisterDto): Promise<UserResponse> {
+  public async signup(data: SignupRequestDto): Promise<UserDto> {
     try {
       // Check if user already exists
       const existingUser = await this.userRepository.findOne({
@@ -21,7 +21,7 @@ export class AuthService {
       });
 
       if (existingUser) {
-        throw new Error("Email already exists");
+        throw new Error('Email already exists');
       }
 
       // Hash password
@@ -36,9 +36,9 @@ export class AuthService {
 
       const savedUser = await this.userRepository.save(user);
 
-      logger.info("User signed up successfully", { userId: savedUser.id, email: savedUser.email });
+      logger.info('User signed up successfully', { userId: savedUser.id, email: savedUser.email });
 
-      const response: UserResponse = {
+      const response: UserDto = {
         id: savedUser.id,
         username: savedUser.username,
         email: savedUser.email,
@@ -49,12 +49,14 @@ export class AuthService {
       }
       return response;
     } catch (error) {
-      logger.error("Signup error:", error);
+      logger.error('Signup error:', error);
       throw error;
     }
   }
 
-  public async signin(data: LoginDto): Promise<{ user: UserResponse; accessToken: string; refreshToken: string }> {
+  public async signin(
+    data: LoginDto
+  ): Promise<{ user: UserDto; accessToken: string; refreshToken: string }> {
     try {
       // Find user by email
       const user = await this.userRepository.findOne({
@@ -62,22 +64,26 @@ export class AuthService {
       });
 
       if (!user) {
-        throw new Error("Invalid credentials");
+        throw new Error('Invalid credentials');
       }
 
       // Verify password
       const isPasswordValid = await bcrypt.compare(data.password, user.password);
       if (!isPasswordValid) {
-        throw new Error("Invalid credentials");
+        throw new Error('Invalid credentials');
       }
 
       // Generate access token (short-lived)
-      const accessToken = jwt.sign({ userId: user.id, email: user.email, username: user.username }, config.jwt.secret, {
-        expiresIn: config.jwt.accessExpire,
-      } as jwt.SignOptions);
+      const accessToken = jwt.sign(
+        { userId: user.id, email: user.email, username: user.username },
+        config.jwt.secret,
+        {
+          expiresIn: config.jwt.accessExpire,
+        } as jwt.SignOptions
+      );
 
       // Generate refresh token (long-lived, 30 days)
-      const refreshToken = crypto.randomBytes(64).toString("hex");
+      const refreshToken = crypto.randomBytes(64).toString('hex');
 
       // Calculate expiration date (30 days from now)
       const expiresAt = new Date();
@@ -92,9 +98,9 @@ export class AuthService {
 
       await this.sessionRepository.save(session);
 
-      logger.info("User signed in successfully", { userId: user.id, email: user.email });
+      logger.info('User signed in successfully', { userId: user.id, email: user.email });
 
-      const userResponse: UserResponse = {
+      const userResponse: UserDto = {
         id: user.id,
         username: user.username,
         email: user.email,
@@ -110,7 +116,7 @@ export class AuthService {
         refreshToken,
       };
     } catch (error) {
-      logger.error("Signin error:", error);
+      logger.error('Signin error:', error);
       throw error;
     }
   }
@@ -120,34 +126,38 @@ export class AuthService {
       // Find session by refresh token
       const session = await this.sessionRepository.findOne({
         where: { refreshToken },
-        relations: ["user"],
+        relations: ['user'],
       });
 
       if (!session) {
-        throw new Error("Invalid refresh token");
+        throw new Error('Invalid refresh token');
       }
 
       // Check if session is expired
       if (session.isExpired()) {
-        throw new Error("Refresh token expired");
+        throw new Error('Refresh token expired');
       }
 
       // Get user
       const user = session.user;
       if (!user) {
-        throw new Error("User not found");
+        throw new Error('User not found');
       }
 
       // Generate new access token
-      const accessToken = jwt.sign({ userId: user.id, email: user.email, username: user.username }, config.jwt.secret, {
-        expiresIn: config.jwt.accessExpire,
-      } as jwt.SignOptions);
+      const accessToken = jwt.sign(
+        { userId: user.id, email: user.email, username: user.username },
+        config.jwt.secret,
+        {
+          expiresIn: config.jwt.accessExpire,
+        } as jwt.SignOptions
+      );
 
-      logger.info("Access token refreshed", { userId: user.id, sessionId: session.id });
+      logger.info('Access token refreshed', { userId: user.id, sessionId: session.id });
 
       return { accessToken };
     } catch (error) {
-      logger.error("Refresh token error:", error);
+      logger.error('Refresh token error:', error);
       throw error;
     }
   }
@@ -161,10 +171,10 @@ export class AuthService {
 
       if (session) {
         await this.sessionRepository.softDelete(session.id);
-        logger.info("User signed out successfully", { userId, sessionId: session.id });
+        logger.info('User signed out successfully', { userId, sessionId: session.id });
       }
     } catch (error) {
-      logger.error("Signout error:", error);
+      logger.error('Signout error:', error);
       throw error;
     }
   }
@@ -172,11 +182,15 @@ export class AuthService {
   public async logoutAll(userId: string): Promise<void> {
     try {
       // Delete all sessions for user
-      await this.sessionRepository.createQueryBuilder().softDelete().where("userId = :userId", { userId }).execute();
+      await this.sessionRepository
+        .createQueryBuilder()
+        .softDelete()
+        .where('userId = :userId', { userId })
+        .execute();
 
-      logger.info("All sessions logged out", { userId });
+      logger.info('All sessions logged out', { userId });
     } catch (error) {
-      logger.error("Logout all error:", error);
+      logger.error('Logout all error:', error);
       throw error;
     }
   }

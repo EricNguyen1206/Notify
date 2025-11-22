@@ -24,6 +24,16 @@ export default [
   pluginPromise.configs['flat/recommended'],
   eslintConfigPrettier,
   {
+    settings: {
+      'import/resolver': {
+        typescript: {
+          alwaysTryTypes: true,
+          project: true,
+        },
+      },
+    },
+  },
+  {
     rules: {
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
       '@typescript-eslint/explicit-function-return-type': 'off',
@@ -33,6 +43,7 @@ export default [
       'prefer-const': 'error',
       'no-var': 'error',
       'no-unused-vars': 'off',
+      'import/no-unresolved': 'off', // TypeScript compiler handles this
     },
   },
   {

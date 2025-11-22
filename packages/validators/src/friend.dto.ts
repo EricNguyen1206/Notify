@@ -1,23 +1,22 @@
 import { IsString, IsUUID, IsNotEmpty } from "class-validator";
 
-export class SendFriendRequestDto {
+export class SendFriendRequestApiRequestDto {
   @IsString()
   @IsUUID()
   @IsNotEmpty()
   toUserId!: string;
 }
 
-export class AcceptFriendRequestDto {
+export class AcceptFriendRequestApiRequestDto {
   @IsString()
   @IsUUID()
   @IsNotEmpty()
   requestId!: string;
 }
 
-export class DeclineFriendRequestDto {
+export class DeclineFriendRequestApiRequestDto {
   @IsString()
   @IsUUID()
   @IsNotEmpty()
   requestId!: string;
 }
-

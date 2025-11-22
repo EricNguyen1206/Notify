@@ -1,8 +1,10 @@
-import { IsString, IsOptional, IsNumber } from "class-validator";
+import { IsString, IsOptional, IsNumber, IsDefined, IsUUID } from "class-validator";
 
-export class SendMessageDto {
+export class SendMessageRequestDto {
   @IsString()
-  conversationId!: string;
+  @IsDefined()
+  @IsUUID()
+  conversationId: string;
 
   @IsOptional()
   @IsString()
@@ -17,13 +19,12 @@ export class SendMessageDto {
   fileName?: string;
 }
 
-export class GetMessagesDto {
+export class GetMessagesQueryDto {
   @IsOptional()
   @IsNumber()
   limit?: number;
 
   @IsOptional()
   @IsNumber()
-  before?: number;
+  offset?: number;
 }
-

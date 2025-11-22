@@ -1,6 +1,6 @@
-import { Dispatch, FormEvent, SetStateAction } from "react";
+import { Dispatch, FormEvent, SetStateAction } from 'react';
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogClose,
@@ -9,12 +9,12 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { UserSearchInput } from "@/components/molecules/UserSearchInput";
-import { useCreateConversation } from "@/hooks/useCreateConversation";
-import type { ChatServiceInternalModelsUserResponse } from "@/services/schemas";
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { UserSearchInput } from '@/components/molecules/UserSearchInput';
+import { useCreateConversation } from '@/hooks/useCreateConversation';
+import type { UserDto } from '@notify/types';
 
 interface CreateNewConversationDialogProps {
   openCreateConversation: boolean;
@@ -25,13 +25,14 @@ interface CreateNewConversationDialogProps {
 const CreateNewConversationDialog = (props: CreateNewConversationDialogProps) => {
   const { openCreateConversation, setOpenCreateConversation, children } = props;
 
-  const { formData, loading, createConversation, updateFormData, updateSelectedUsers, resetForm } = useCreateConversation({
-    defaultType: "group",
-    onSuccess: () => {
-      // Close dialog and reset form on successful creation
-      setOpenCreateConversation(false);
-    },
-  });
+  const { formData, loading, createConversation, updateFormData, updateSelectedUsers, resetForm } =
+    useCreateConversation({
+      defaultType: 'group',
+      onSuccess: () => {
+        // Close dialog and reset form on successful creation
+        setOpenCreateConversation(false);
+      },
+    });
 
   const handleCreateNewConversation = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -88,8 +89,12 @@ const CreateNewConversationDialog = (props: CreateNewConversationDialogProps) =>
                 Cancel
               </Button>
             </DialogClose>
-            <Button type="submit" variant="default" disabled={loading || formData.selectedUsers.length < 2}>
-              {loading ? "Creating..." : "Create Conversation"}
+            <Button
+              type="submit"
+              variant="default"
+              disabled={loading || formData.selectedUsers.length < 2}
+            >
+              {loading ? 'Creating...' : 'Create Conversation'}
             </Button>
           </DialogFooter>
         </form>
@@ -99,4 +104,3 @@ const CreateNewConversationDialog = (props: CreateNewConversationDialogProps) =>
 };
 
 export default CreateNewConversationDialog;
-

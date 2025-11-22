@@ -1,9 +1,9 @@
-import bcrypt from "bcryptjs";
-import { AppDataSource } from "@/config/database";
-import { User } from "@/models/User";
-import { UpdateProfileDto } from "@notify/validators";
-import { UserResponse } from "@notify/types";
-import { logger } from "@/utils/logger";
+import bcrypt from 'bcryptjs';
+import { AppDataSource } from '@/config/database';
+import { User } from '@/models/User';
+import { UpdateProfileDto } from '@notify/validators';
+import { UserDto } from '@notify/types';
+import { logger } from '@/utils/logger';
 
 export class UserService {
   private userRepository = AppDataSource.getRepository(User);
@@ -15,7 +15,7 @@ export class UserService {
         where: { id },
       });
     } catch (error) {
-      logger.error("Find user by ID error:", error);
+      logger.error('Find user by ID error:', error);
       throw error;
     }
   }
@@ -27,7 +27,7 @@ export class UserService {
         where: { email },
       });
     } catch (error) {
-      logger.error("Find user by email error:", error);
+      logger.error('Find user by email error:', error);
       throw error;
     }
   }
@@ -37,7 +37,7 @@ export class UserService {
     try {
       return await this.userRepository.save(user);
     } catch (error) {
-      logger.error("Create user error:", error);
+      logger.error('Create user error:', error);
       throw error;
     }
   }
@@ -46,7 +46,7 @@ export class UserService {
     try {
       return await this.userRepository.save(user);
     } catch (error) {
-      logger.error("Update user error:", error);
+      logger.error('Update user error:', error);
       throw error;
     }
   }
@@ -56,18 +56,18 @@ export class UserService {
     try {
       await this.userRepository.softDelete(userId);
     } catch (error) {
-      logger.error("Delete user error:", error);
+      logger.error('Delete user error:', error);
       throw error;
     }
   }
 
   // Public methods
-  public async getProfile(userId: string): Promise<UserResponse> {
+  public async getProfile(userId: string): Promise<UserDto> {
     try {
       const user = await this.findById(userId);
 
       if (!user) {
-        throw new Error("User not found");
+        throw new Error('User not found');
       }
 
       return {
@@ -78,23 +78,23 @@ export class UserService {
         createdAt: user.createdAt,
       };
     } catch (error) {
-      logger.error("Get profile error:", error);
+      logger.error('Get profile error:', error);
       throw error;
     }
   }
 
-  public async updateProfile(userId: string, data: UpdateProfileDto): Promise<UserResponse> {
+  public async updateProfile(userId: string, data: UpdateProfileDto): Promise<UserDto> {
     try {
       const user = await this.findById(userId);
 
       if (!user) {
-        throw new Error("User not found");
+        throw new Error('User not found');
       }
 
       // Verify current password
       const isCurrentPasswordValid = await bcrypt.compare(data.currentPassword, user.password);
       if (!isCurrentPasswordValid) {
-        throw new Error("Current password is incorrect");
+        throw new Error('Current password is incorrect');
       }
 
       // Update fields if provided
@@ -110,7 +110,7 @@ export class UserService {
 
       const updatedUser = await this.update(user);
 
-      logger.info("User profile updated successfully", { userId: updatedUser.id });
+      logger.info('User profile updated successfully', { userId: updatedUser.id });
 
       return {
         id: updatedUser.id,
@@ -120,16 +120,16 @@ export class UserService {
         createdAt: updatedUser.createdAt,
       };
     } catch (error) {
-      logger.error("Update profile error:", error);
+      logger.error('Update profile error:', error);
       throw error;
     }
   }
 
-  public async searchUsers(username: string): Promise<UserResponse[]> {
+  public async searchUsers(username: string): Promise<UserDto[]> {
     try {
       const users = await this.userRepository
-        .createQueryBuilder("user")
-        .where("user.username ILIKE :username", { username: `%${username}%` })
+        .createQueryBuilder('user')
+        .where('user.username ILIKE :username', { username: `%${username}%` })
         .limit(10)
         .getMany();
 
@@ -141,7 +141,7 @@ export class UserService {
         createdAt: user.createdAt,
       }));
     } catch (error) {
-      logger.error("Search users error:", error);
+      logger.error('Search users error:', error);
       throw error;
     }
   }
@@ -149,14 +149,14 @@ export class UserService {
   public async getFriendsByConversationId(conversationId: string, userId: string): Promise<User[]> {
     try {
       return await this.userRepository
-        .createQueryBuilder("user")
-        .innerJoin("user.participants", "participant")
-        .where("participant.conversationId = :conversationId", { conversationId })
-        .andWhere("user.id != :userId", { userId })
-        .andWhere("user.deletedAt IS NULL")
+        .createQueryBuilder('user')
+        .innerJoin('user.participants', 'participant')
+        .where('participant.conversationId = :conversationId', { conversationId })
+        .andWhere('user.id != :userId', { userId })
+        .andWhere('user.deletedAt IS NULL')
         .getMany();
     } catch (error) {
-      logger.error("Get friends by conversation ID error:", error);
+      logger.error('Get friends by conversation ID error:', error);
       throw error;
     }
   }

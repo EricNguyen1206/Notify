@@ -22,8 +22,9 @@ export function MessagesLayoutClient({ children }: { children: React.ReactNode }
     );
   }
 
+  const userId = user.id;
   return (
-    <ClientProviders userId={user.id}>
+    <ClientProviders userId={userId}>
       {children}
     </ClientProviders>
   );

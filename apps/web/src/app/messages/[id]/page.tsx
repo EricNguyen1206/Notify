@@ -34,7 +34,7 @@ const DirectMessagesPage = () => {
         participantCount={memberCount}
         members={conversationData?.members as any}
         ownerId={conversationData?.ownerId as any}
-        currentUserId={user?.id}
+        {...(user?.id !== undefined && { currentUserId: user.id })}
       />
 
       {/* Connection status indicator */}

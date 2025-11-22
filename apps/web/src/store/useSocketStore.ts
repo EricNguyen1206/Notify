@@ -1,81 +1,29 @@
 /**
- * Centralized WebSocket store for chat functionality
- * All WebSocket logic is handled directly in this hook for simplicity and maintainability
+ * Centralized Socket.IO store for chat functionality
+ * Uses Socket.IO client with centralized message types from @notify/types
  */
 
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
-import { useChatStore } from "./useChatStore";
+import { io, Socket } from "socket.io-client";
 import { useConversationStore } from "./useConversationStore";
-
-// WebSocket connection states
-export enum ConnectionState {
-  DISCONNECTED = "disconnected",
-  CONNECTING = "connecting",
-  CONNECTED = "connected",
-  ERROR = "error",
-}
-
-// WebSocket message types - aligned with backend
-export enum MessageType {
-  CONNECT = "connection.connect",
-  DISCONNECT = "connection.disconnect",
-  CONVERSATION_JOIN = "conversation.join",
-  CONVERSATION_LEAVE = "conversation.leave",
-  CONVERSATION_MESSAGE = "conversation.message",
-  ERROR = "error",
-}
-
-// WebSocket message interfaces - aligned with backend
-export interface WebSocketMessage {
-  id: string;
-  type: MessageType;
-  data: any;
-  timestamp: number;
-  user_id?: string;
-}
-
-export interface ConversationMessageData {
-  conversation_id: string;
-  text?: string | null;
-  url?: string | null;
-  fileName?: string | null;
-}
-
-export interface ConversationJoinLeaveData {
-  conversation_id: string;
-}
-
-export interface ErrorData {
-  code: string;
-  message: string;
-}
-
-export interface ConnectionData {
-  client_id?: string;
-  status?: string;
-}
-
-// Chat message interface for internal use
-export interface ChatMessage {
-  id: number;
-  conversationId: number;
-  senderId: number;
-  senderName: string;
-  senderAvatar: string;
-  text: string;
-  createdAt: string;
-  type: string;
-  url?: string;
-  fileName?: string;
-}
-
-// WebSocket configuration
-export interface WebSocketConfig {
-  reconnectInterval: number;
-  maxReconnectAttempts: number;
-  connectionTimeout: number;
-}
+import {
+  ConnectionState,
+  SocketEvent,
+  AuthenticatedPayload,
+  JoinedConversationPayload,
+  LeftConversationPayload,
+  UserJoinedPayload,
+  UserLeftPayload,
+  ErrorPayload,
+  createAuthenticatePayload,
+  createJoinConversationPayload,
+  createLeaveConversationPayload,
+  createSendMessagePayload,
+  ServerToClientEvents,
+  ClientToServerEvents,
+  MessageDto,
+} from "@notify/types";
 
 // Main socket store state interface
 interface SocketState {
@@ -84,22 +32,16 @@ interface SocketState {
   error: string | null;
   isConnecting: boolean;
 
-  // WebSocket instance
-  ws: WebSocket | null;
+  // Socket instance
+  socket: Socket<ServerToClientEvents, ClientToServerEvents> | null;
   userId: string;
-  url: string;
-
-  // Reconnection logic
-  reconnectAttempts: number;
-  reconnectTimer: NodeJS.Timeout | null;
-  isIntentionalDisconnect: boolean;
-  connectionPromise: { resolve: () => void; reject: (error: any) => void } | null;
+  username: string;
 
   // Configuration
-  config: WebSocketConfig;
+  url: string;
 
   // Actions
-  connect: (userId: string) => Promise<void>;
+  connect: (userId: string, token: string) => Promise<void>;
   disconnect: () => void;
   sendMessage: (conversationId: string, text: string, url?: string, fileName?: string) => void;
   joinConversation: (conversationId: string) => void;
@@ -107,8 +49,7 @@ interface SocketState {
   isConnected: () => boolean;
 
   // Internal methods
-  handleMessage: (message: WebSocketMessage) => void;
-  attemptReconnect: () => void;
+  setupEventHandlers: () => void;
 }
 
 export const useSocketStore = create<SocketState>()(
@@ -119,35 +60,30 @@ export const useSocketStore = create<SocketState>()(
       error: null,
       isConnecting: false,
 
-      // WebSocket instance
-      ws: null,
+      // Socket instance
+      socket: null,
       userId: "",
-      url: "",
-
-      // Reconnection logic
-      reconnectAttempts: 0,
-      reconnectTimer: null,
-      isIntentionalDisconnect: false,
-      connectionPromise: null,
+      username: "",
 
       // Configuration
-      config: {
-        reconnectInterval: 3000,
-        maxReconnectAttempts: 5,
-        connectionTimeout: 10000,
-      },
+      url: "",
 
-      // Connect to WebSocket
-      connect: async (userId: string) => {
-        const { ws, connectionState, config } = get();
+      // Connect to Socket.IO server
+      connect: async (userId: string, token: string) => {
+        const { socket, connectionState } = get();
 
         // Prevent multiple connection attempts
         if (connectionState === ConnectionState.CONNECTING) {
           throw new Error("Connection already in progress");
         }
 
-        if (connectionState === ConnectionState.CONNECTED && ws?.readyState === WebSocket.OPEN) {
+        if (connectionState === ConnectionState.CONNECTED && socket?.connected) {
           return;
+        }
+
+        // Disconnect existing socket if any
+        if (socket) {
+          socket.disconnect();
         }
 
         try {
@@ -156,85 +92,118 @@ export const useSocketStore = create<SocketState>()(
             error: null,
             isConnecting: true,
             userId,
-            isIntentionalDisconnect: false,
           });
 
-          const baseWsUrl = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:8080";
-          const url = `${baseWsUrl}/ws?userId=${userId}`;
+          const baseUrl = process.env["NEXT_PUBLIC_API_URL"] ?? "http://localhost:8080";
+          const url = baseUrl;
 
           set({ url });
 
           return new Promise<void>((resolve, reject) => {
-            try {
-              const wsInstance = new WebSocket(url);
-              set({ ws: wsInstance, connectionPromise: { resolve, reject } });
+            // Create Socket.IO client
+            const socketInstance = io(url, {
+              transports: ["websocket", "polling"],
+              reconnection: true,
+              reconnectionAttempts: 5,
+              reconnectionDelay: 3000,
+              timeout: 10000,
+            });
 
-              const connectionTimeout = setTimeout(() => {
-                if (get().connectionState === ConnectionState.CONNECTING) {
-                  wsInstance.close();
-                  const timeoutError = new Error("Connection timeout");
-                  const { connectionPromise } = get();
-                  if (connectionPromise) {
-                    connectionPromise.reject(timeoutError);
-                    set({ connectionPromise: null });
-                  }
+            set({ socket: socketInstance });
+
+            // Handle successful connection
+            socketInstance.on(SocketEvent.CONNECT, () => {
+              console.log("Socket.IO connected, authenticating...");
+              
+              // Authenticate with token
+              const authPayload = createAuthenticatePayload(token);
+              socketInstance.emit(SocketEvent.AUTHENTICATE, authPayload);
+            });
+
+            // Handle authentication success
+            socketInstance.on(SocketEvent.AUTHENTICATED, (payload: AuthenticatedPayload) => {
+              console.log("Authenticated successfully", payload);
+              
+              set({
+                connectionState: ConnectionState.CONNECTED,
+                isConnecting: false,
+                username: payload.username,
+              });
+
+              // Setup event handlers after authentication
+              get().setupEventHandlers();
+
+              // Auto re-join previously joined conversations
+              try {
+                const conversationStore = useConversationStore.getState();
+                const conversationsToRejoin = conversationStore.getJoinedConversations();
+                
+                if (conversationsToRejoin.length > 0) {
+                  console.log("Re-joining conversations:", conversationsToRejoin);
+                  conversationsToRejoin.forEach((conversationId) => {
+                    get().joinConversation(conversationId);
+                  });
                 }
-              }, config.connectionTimeout);
+              } catch (err) {
+                console.error("Auto re-join conversations failed:", err);
+              }
 
-              wsInstance.onopen = () => {
-                clearTimeout(connectionTimeout);
-              };
+              resolve();
+            });
 
-              wsInstance.onmessage = (event) => {
-                try {
-                  const message: WebSocketMessage = JSON.parse(event.data);
-                  get().handleMessage(message);
-                } catch (error) {
-                  // Failed to parse WebSocket message
-                }
-              };
+            // Handle connection errors
+            socketInstance.on(SocketEvent.CONNECTION_ERROR, (error: any) => {
+              console.error("Socket.IO connection error:", error);
+              set({
+                connectionState: ConnectionState.ERROR,
+                error: error.message || "Connection failed",
+                isConnecting: false,
+              });
+              reject(error);
+            });
 
-              wsInstance.onerror = (error) => {
-                clearTimeout(connectionTimeout);
+            // Handle disconnect
+            socketInstance.on(SocketEvent.DISCONNECT, (reason: string) => {
+              console.log("Socket.IO disconnected:", reason);
+              set({
+                connectionState: ConnectionState.DISCONNECTED,
+                isConnecting: false,
+              });
+
+              // Auto-reconnect is handled by Socket.IO automatically
+              // We just need to re-authenticate when reconnected
+            });
+
+            // Handle errors
+            socketInstance.on(SocketEvent.ERROR, (payload: ErrorPayload) => {
+              console.error("Socket.IO error:", payload);
+              set({
+                error: payload.message,
+              });
+
+              // If authentication failed, reject the connection promise
+              if (payload.code === "AUTH_FAILED" || payload.code === "AUTH_ERROR") {
                 set({
                   connectionState: ConnectionState.ERROR,
-                  connectionPromise: null,
+                  isConnecting: false,
                 });
+                reject(new Error(payload.message));
+              }
+            });
 
-                const { connectionPromise } = get();
-                if (connectionPromise) {
-                  connectionPromise.reject(error);
-                }
-              };
-
-              wsInstance.onclose = (event) => {
-                clearTimeout(connectionTimeout);
-
-                const { connectionState, connectionPromise, isIntentionalDisconnect } = get();
-
-                // If we were still waiting for connection confirmation, reject the promise
-                if (connectionState === ConnectionState.CONNECTING && connectionPromise) {
-                  const closeError = new Error(`WebSocket closed before confirmation: ${event.reason || event.code}`);
-                  connectionPromise.reject(closeError);
-                  set({ connectionPromise: null });
-                }
-
-                if (connectionState === ConnectionState.CONNECTED) {
-                  // Only attempt reconnection if disconnect was not intentional
-                  if (!isIntentionalDisconnect) {
-                    get().attemptReconnect();
-                  }
-                }
-
+            // Timeout handling
+            setTimeout(() => {
+              if (get().connectionState === ConnectionState.CONNECTING) {
+                socketInstance.disconnect();
+                const timeoutError = new Error("Connection timeout");
                 set({
-                  connectionState: ConnectionState.DISCONNECTED,
-                  ws: null,
-                  isIntentionalDisconnect: false,
+                  connectionState: ConnectionState.ERROR,
+                  error: "Connection timeout",
+                  isConnecting: false,
                 });
-              };
-            } catch (error) {
-              reject(error);
-            }
+                reject(timeoutError);
+              }
+            }, 15000); // 15 second timeout for full auth flow
           });
         } catch (error) {
           set({
@@ -246,60 +215,106 @@ export const useSocketStore = create<SocketState>()(
         }
       },
 
-      // Disconnect from WebSocket
+      // Setup event handlers for socket events
+      setupEventHandlers: () => {
+        const { socket } = get();
+        if (!socket) return;
+
+        // Handle new messages
+        socket.on(SocketEvent.NEW_MESSAGE, (payload: MessageDto) => {
+          console.log("New message received:", payload);
+
+          // MessageDto is already in the right format, just dispatch the event
+          // TODO: Add upsertMessageToConversation method to useChatStore
+          // const chatStore = useChatStore.getState();
+          // chatStore.upsertMessageToConversation(payload.conversationId, payload);
+
+          // Dispatch custom event for components to listen to
+          window.dispatchEvent(
+            new CustomEvent("chat-message", {
+              detail: { message: payload, conversationId: payload.conversationId },
+            })
+          );
+        });
+
+        // Handle joined conversation
+        socket.on(SocketEvent.JOINED_CONVERSATION, (payload: JoinedConversationPayload) => {
+          console.log("Joined conversation:", payload);
+          
+          window.dispatchEvent(
+            new CustomEvent("ws-conversation-join-ack", {
+              detail: { conversationId: payload.conversation_id, userId: payload.user_id },
+            })
+          );
+        });
+
+        // Handle left conversation
+        socket.on(SocketEvent.LEFT_CONVERSATION, (payload: LeftConversationPayload) => {
+          console.log("Left conversation:", payload);
+          
+          window.dispatchEvent(
+            new CustomEvent("ws-conversation-leave-ack", {
+              detail: { conversationId: payload.conversation_id, userId: payload.user_id },
+            })
+          );
+        });
+
+        // Handle user joined
+        socket.on(SocketEvent.USER_JOINED, (payload: UserJoinedPayload) => {
+          console.log("User joined conversation:", payload);
+          
+          window.dispatchEvent(
+            new CustomEvent("ws-user-joined", {
+              detail: payload,
+            })
+          );
+        });
+
+        // Handle user left
+        socket.on(SocketEvent.USER_LEFT, (payload: UserLeftPayload) => {
+          console.log("User left conversation:", payload);
+          
+          window.dispatchEvent(
+            new CustomEvent("ws-user-left", {
+              detail: payload,
+            })
+          );
+        });
+      },
+
+      // Disconnect from Socket.IO server
       disconnect: () => {
-        const { ws, reconnectTimer } = get();
+        const { socket } = get();
 
-        set({ isIntentionalDisconnect: true });
-
-        // Clear reconnection timer
-        if (reconnectTimer) {
-          clearTimeout(reconnectTimer);
-          set({ reconnectTimer: null });
-        }
-
-        // Clear connection promise if exists
-        const { connectionPromise } = get();
-        if (connectionPromise) {
-          connectionPromise.reject(new Error("Connection cancelled"));
-          set({ connectionPromise: null });
-        }
-
-        if (ws) {
-          ws.close();
+        if (socket) {
+          socket.disconnect();
         }
 
         set({
           connectionState: ConnectionState.DISCONNECTED,
           error: null,
           isConnecting: false,
-          ws: null,
-          reconnectAttempts: 0,
+          socket: null,
         });
       },
 
       // Send a message
       sendMessage: (conversationId: string, text: string, url?: string, fileName?: string) => {
-        const { ws, connectionState } = get();
-        if (!ws || connectionState !== ConnectionState.CONNECTED || ws.readyState !== WebSocket.OPEN) {
-          throw new Error("WebSocket not connected");
+        const { socket, connectionState } = get();
+        
+        if (!socket || connectionState !== ConnectionState.CONNECTED || !socket.connected) {
+          throw new Error("Socket.IO not connected");
         }
 
         try {
-          const message: WebSocketMessage = {
-            id: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
-            type: MessageType.CONVERSATION_MESSAGE,
-            data: {
-              conversation_id: conversationId,
-              text,
-              url: url || null,
-              fileName: fileName || null,
-            } as ConversationMessageData,
-            timestamp: Date.now(),
-            user_id: get().userId,
-          };
+          const payload = createSendMessagePayload(
+            parseInt(conversationId),
+            text || null,
+            url || null,
+            fileName || null
+          );
 
-          ws.send(JSON.stringify(message));
+          socket.emit(SocketEvent.SEND_MESSAGE, payload);
         } catch (error) {
           set({ error: error instanceof Error ? error.message : "Failed to send message" });
           throw error;
@@ -308,27 +323,23 @@ export const useSocketStore = create<SocketState>()(
 
       // Join a conversation
       joinConversation: (conversationId: string) => {
-        const { ws, connectionState } = get();
-        if (!ws || connectionState !== ConnectionState.CONNECTED || ws.readyState !== WebSocket.OPEN) {
-          throw new Error("WebSocket not connected");
+        const { socket, connectionState } = get();
+        
+        if (!socket || connectionState !== ConnectionState.CONNECTED || !socket.connected) {
+          throw new Error("Socket.IO not connected");
         }
 
         try {
-          const message: WebSocketMessage = {
-            id: `join-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
-            type: MessageType.CONVERSATION_JOIN,
-            data: { conversation_id: conversationId },
-            timestamp: Date.now(),
-            user_id: get().userId,
-          };
-
-          ws.send(JSON.stringify(message));
+          const payload = createJoinConversationPayload(parseInt(conversationId));
+          socket.emit(SocketEvent.JOIN_CONVERSATION, payload);
 
           // Track joined conversation for automatic re-join on reconnect
           try {
             const conversationStore = useConversationStore.getState();
             conversationStore.addJoinedConversation(conversationId);
-          } catch {}
+          } catch (err) {
+            console.error("Failed to track joined conversation:", err);
+          }
         } catch (error) {
           set({ error: error instanceof Error ? error.message : "Failed to join conversation" });
           throw error;
@@ -337,175 +348,33 @@ export const useSocketStore = create<SocketState>()(
 
       // Leave a conversation
       leaveConversation: (conversationId: string) => {
-        const { ws, connectionState } = get();
-        if (!ws || connectionState !== ConnectionState.CONNECTED) {
+        const { socket, connectionState } = get();
+        
+        if (!socket || connectionState !== ConnectionState.CONNECTED) {
           return; // Don't throw error on disconnect
         }
 
         try {
-          const message: WebSocketMessage = {
-            id: `leave-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
-            type: MessageType.CONVERSATION_LEAVE,
-            data: { conversation_id: conversationId },
-            timestamp: Date.now(),
-            user_id: get().userId,
-          };
-
-          ws.send(JSON.stringify(message));
+          const payload = createLeaveConversationPayload(parseInt(conversationId));
+          socket.emit(SocketEvent.LEAVE_CONVERSATION, payload);
 
           // Untrack joined conversation so it isn't auto re-joined later
           try {
             const conversationStore = useConversationStore.getState();
             conversationStore.removeJoinedConversation(conversationId);
-          } catch {}
+          } catch (err) {
+            console.error("Failed to untrack joined conversation:", err);
+          }
         } catch (error) {
+          console.error("Failed to leave conversation:", error);
           // Don't set error for leave operations as they're not critical
         }
       },
 
       // Check if connected
       isConnected: () => {
-        const { ws, connectionState } = get();
-        return connectionState === ConnectionState.CONNECTED && ws?.readyState === WebSocket.OPEN;
-      },
-
-      // Handle incoming WebSocket messages
-      handleMessage: (message: WebSocketMessage) => {
-        // Handle connection confirmation
-        if (message.type === MessageType.CONNECT) {
-          set({
-            connectionState: ConnectionState.CONNECTED,
-            reconnectAttempts: 0,
-            isConnecting: false,
-          });
-
-          const { connectionPromise } = get();
-          if (connectionPromise) {
-            connectionPromise.resolve();
-            set({ connectionPromise: null });
-          }
-
-          // After reconnect, automatically re-join previously joined conversations
-          try {
-            const conversationStore = useConversationStore.getState();
-            const conversationsToRejoin = conversationStore.getJoinedConversations();
-            if (conversationsToRejoin.length > 0) {
-              const { ws } = get();
-              if (ws && ws.readyState === WebSocket.OPEN) {
-                conversationsToRejoin.forEach((conversationId) => {
-                  const joinMsg: WebSocketMessage = {
-                    id: `rejoin-${conversationId}-${Date.now()}`,
-                    type: MessageType.CONVERSATION_JOIN,
-                    data: { conversation_id: conversationId },
-                    timestamp: Date.now(),
-                    user_id: get().userId,
-                  };
-                  try {
-                    ws.send(JSON.stringify(joinMsg));
-                  } catch (err) {
-                    // Failed to auto re-join conversation
-                  }
-                });
-              }
-            }
-          } catch (err) {
-            // Auto re-join conversations failed
-          }
-          return;
-        }
-
-        // Handle error messages
-        if (message.type === MessageType.ERROR) {
-          set({ error: (message.data as ErrorData).message });
-          return;
-        }
-
-        // Handle conversation messages
-        if (message.type === MessageType.CONVERSATION_MESSAGE) {
-          const messageData = message.data;
-
-          if (!messageData) {
-            return;
-          }
-
-          const chatMessage: ChatMessage = {
-            id: messageData.id,
-            conversationId: messageData.ConversationID || messageData.conversationId,
-            senderId: messageData.SenderID || messageData.senderId,
-            senderName: messageData.Sender?.Username || messageData.Sender?.username || "Unknown",
-            senderAvatar: messageData.Sender?.Avatar || messageData.Sender?.avatar || "",
-            text: messageData.Text || messageData.text || "",
-            createdAt: messageData.CreatedAt || new Date().toISOString(),
-            type: "group",
-            url: messageData.URL || undefined,
-            fileName: messageData.FileName || undefined,
-          };
-
-          // Add message to chat store
-          const chatStore = useChatStore.getState();
-          chatStore.upsertMessageToConversation(String(chatMessage.conversationId), chatMessage);
-
-          // Dispatch custom event for components to listen to
-          window.dispatchEvent(
-            new CustomEvent("chat-message", {
-              detail: { message: chatMessage, conversationId: chatMessage.conversationId },
-            })
-          );
-        }
-
-        // Dispatch ack events for join/leave to coordinate UI flows
-        if (message.type === MessageType.CONVERSATION_LEAVE) {
-          const convId = Number(message.data?.conversation_id ?? message.data?.ConversationID ?? message.data?.conversationId);
-          if (!Number.isNaN(convId)) {
-            window.dispatchEvent(
-              new CustomEvent("ws-conversation-leave-ack", {
-                detail: { conversationId: convId, userId: message.user_id },
-              })
-            );
-          }
-          return;
-        }
-
-        if (message.type === MessageType.CONVERSATION_JOIN) {
-          const convId = Number(message.data?.conversation_id ?? message.data?.ConversationID ?? message.data?.conversationId);
-          if (!Number.isNaN(convId)) {
-            window.dispatchEvent(
-              new CustomEvent("ws-conversation-join-ack", {
-                detail: { conversationId: convId, userId: message.user_id },
-              })
-            );
-          }
-          return;
-        }
-      },
-
-      // Attempt reconnection with exponential backoff
-      attemptReconnect: () => {
-        const { reconnectAttempts, config, userId } = get();
-
-        if (reconnectAttempts >= config.maxReconnectAttempts) {
-          set({ connectionState: ConnectionState.ERROR });
-          return;
-        }
-
-        const newAttempts = reconnectAttempts + 1;
-        set({ reconnectAttempts: newAttempts });
-
-        // Add exponential backoff to prevent aggressive reconnection
-        const delay = config.reconnectInterval * Math.pow(2, newAttempts - 1);
-
-        const reconnectTimer = setTimeout(() => {
-          // Only attempt reconnection if we're still disconnected
-          if (get().connectionState === ConnectionState.DISCONNECTED) {
-            get()
-              .connect(userId)
-              .catch(() => {
-                // Don't immediately retry, let the timer handle it
-              });
-          }
-        }, delay);
-
-        set({ reconnectTimer });
+        const { socket, connectionState } = get();
+        return connectionState === ConnectionState.CONNECTED && socket?.connected === true;
       },
     }),
     {
@@ -513,3 +382,6 @@ export const useSocketStore = create<SocketState>()(
     }
   )
 );
+
+// Export types for convenience
+export { ConnectionState, SocketEvent };

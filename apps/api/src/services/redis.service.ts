@@ -1,6 +1,6 @@
-import { RedisClientType } from "redis";
-import { getRedisConnection } from "@/config/redis";
-import { logger } from "@/utils/logger";
+import { RedisClientType } from 'redis';
+import { getRedisConnection } from '@/config/redis';
+import { logger } from '@/utils/logger';
 
 export class RedisService {
   private client: RedisClientType;
@@ -17,11 +17,11 @@ export class RedisService {
     const pipeline = this.client.multi();
 
     // Add to online users set
-    pipeline.sAdd("online_users", userId);
+    pipeline.sAdd('online_users', userId);
 
     // Set user status hash
     pipeline.hSet(`user:${userId}:status`, {
-      status: "online",
+      status: 'online',
       last_seen: Date.now(),
       updated_at: Date.now(),
     });
@@ -31,18 +31,18 @@ export class RedisService {
 
     await pipeline.exec();
 
-    logger.debug("User set to online", { userId });
+    logger.debug('User set to online', { userId });
   }
 
   async setUserOffline(userId: string): Promise<void> {
     const pipeline = this.client.multi();
 
     // Remove from online users set
-    pipeline.sRem("online_users", userId);
+    pipeline.sRem('online_users', userId);
 
     // Update user status
     pipeline.hSet(`user:${userId}:status`, {
-      status: "offline",
+      status: 'offline',
       last_seen: Date.now(),
       updated_at: Date.now(),
     });
@@ -52,16 +52,16 @@ export class RedisService {
 
     await pipeline.exec();
 
-    logger.debug("User set to offline", { userId });
+    logger.debug('User set to offline', { userId });
   }
 
   async isUserOnline(userId: string): Promise<boolean> {
-    const result = await this.client.sIsMember("online_users", userId);
+    const result = await this.client.sIsMember('online_users', userId);
     return result;
   }
 
   async getOnlineUsers(): Promise<string[]> {
-    return await this.client.sMembers("online_users");
+    return await this.client.sMembers('online_users');
   }
 
   // =============================================================================
@@ -77,14 +77,14 @@ export class RedisService {
     // Add conversation to user's conversations set
     pipeline.sAdd(`user:${userId}:conversations`, conversationId);
 
-    // Update conversation member count
-    pipeline.sCard(`conversation:${conversationId}:members`);
+    // Update conversation participants count
+    pipeline.sCard(`conversation:${conversationId}:participants`);
 
     await pipeline.exec();
 
     // Publish join event
     const joinEvent = {
-      type: "conversation.member.join",
+      type: 'conversation.participants.join',
       user_id: userId,
       conversation_id: conversationId,
       timestamp: Date.now(),
@@ -92,7 +92,7 @@ export class RedisService {
 
     await this.publishConversationEvent(conversationId, joinEvent);
 
-    logger.debug("User joined conversation", { userId, conversationId });
+    logger.debug('User joined conversation', { userId, conversationId });
   }
 
   async leaveConversation(userId: string, conversationId: string): Promise<void> {
@@ -108,7 +108,7 @@ export class RedisService {
 
     // Publish leave event
     const leaveEvent = {
-      type: "conversation.member.leave",
+      type: 'conversation.participants.leave',
       user_id: userId,
       conversation_id: conversationId,
       timestamp: Date.now(),
@@ -116,7 +116,7 @@ export class RedisService {
 
     await this.publishConversationEvent(conversationId, leaveEvent);
 
-    logger.debug("User left conversation", { userId, conversationId });
+    logger.debug('User left conversation', { userId, conversationId });
   }
 
   async getParticipants(conversationId: string): Promise<string[]> {
@@ -130,35 +130,19 @@ export class RedisService {
   async publishConversationMessage(conversationId: string, message: any): Promise<void> {
     const data = JSON.stringify(message);
     await this.client.publish(`chat:conversation:${conversationId}`, data);
-    logger.debug("Published conversation message", { conversationId });
+    logger.debug('Published conversation message', { conversationId });
   }
 
   async publishConversationEvent(conversationId: string, event: any): Promise<void> {
     const data = JSON.stringify(event);
     await this.client.publish(`conversation:${conversationId}:events`, data);
-    logger.debug("Published conversation event", { conversationId });
+    logger.debug('Published conversation event', { conversationId });
   }
 
   async publishUserNotification(userId: string, notification: any): Promise<void> {
     const data = JSON.stringify(notification);
     await this.client.publish(`user:${userId}:notifications`, data);
-    logger.debug("Published user notification", { userId });
-  }
-
-  subscribe(channels: string[]): ReturnType<RedisClientType["duplicate"]> {
-    const pubsub = this.client.duplicate();
-    // @ts-ignore - subscribe signature varies by Redis client version
-    pubsub.subscribe(...channels);
-    logger.debug("Subscribed to channels", { channels });
-    return pubsub;
-  }
-
-  pSubscribe(patterns: string[]): ReturnType<RedisClientType["duplicate"]> {
-    const pubsub = this.client.duplicate();
-    // @ts-ignore - pSubscribe signature varies by Redis client version
-    pubsub.pSubscribe(...patterns);
-    logger.debug("Pattern subscribed to channels", { patterns });
-    return pubsub;
+    logger.debug('Published user notification', { userId });
   }
 
   // =============================================================================
@@ -172,7 +156,7 @@ export class RedisService {
     const pipeline = this.client.multi();
 
     // Remove old entries
-    pipeline.zRemRangeByScore(key, "0", windowStart.toString());
+    pipeline.zRemRangeByScore(key, '0', windowStart.toString());
 
     // Count current entries
     pipeline.zCard(key);
@@ -203,7 +187,7 @@ export class RedisService {
   // =============================================================================
 
   async setMigrationState(version: string, status: string): Promise<void> {
-    await this.client.hSet("db:migration:status", {
+    await this.client.hSet('db:migration:status', {
       version,
       status,
       updated_at: Date.now(),
@@ -211,7 +195,7 @@ export class RedisService {
   }
 
   async getMigrationState(): Promise<Record<string, string>> {
-    return await this.client.hGetAll("db:migration:status");
+    return await this.client.hGetAll('db:migration:status');
   }
 
   // =============================================================================

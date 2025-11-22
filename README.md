@@ -28,6 +28,7 @@ A high-performance, real-time chat application built with modern technologies, f
 Notify Chat Application is a modern, scalable real-time messaging platform designed for high-performance communication. Built with a microservices architecture, it provides instant messaging capabilities with support for both direct and group conversations.
 
 ### Key Technologies
+
 - **Monorepo**: PNPM workspace with Turborepo for parallel builds
 - **Backend**: Express.js + TypeScript with TypeORM
 - **Frontend**: Next.js 15 with React 19 and TypeScript
@@ -36,6 +37,7 @@ Notify Chat Application is a modern, scalable real-time messaging platform desig
 - **Deployment**: Vercel (frontend) + Render.com (backend) + Docker support
 
 ### Architecture Philosophy
+
 - **Monorepo**: Single repository with shared packages for code reuse
 - **Microservices**: Separated frontend and backend services
 - **Real-time First**: WebSocket-based instant messaging
@@ -47,6 +49,7 @@ Notify Chat Application is a modern, scalable real-time messaging platform desig
 ## ✨ Highlight Features
 
 ### Core Functionality
+
 - ✅ **Real-time Messaging** - Instant message delivery via WebSocket
 - ✅ **Conversation Management** - Direct messages and group chats
 - ✅ **User Authentication** - Secure JWT-based authentication
@@ -55,6 +58,7 @@ Notify Chat Application is a modern, scalable real-time messaging platform desig
 - ✅ **Online Status** - Real-time user presence indicators
 
 ### Advanced Features
+
 - ✅ **Horizontal Scaling** - Redis pub/sub for multi-instance support
 - ✅ **Rate Limiting** - API and WebSocket connection throttling
 - ✅ **Health Monitoring** - Comprehensive health checks and monitoring
@@ -63,6 +67,7 @@ Notify Chat Application is a modern, scalable real-time messaging platform desig
 - ✅ **Docker Deployment** - Containerized with orchestration
 
 ### Developer Experience
+
 - ✅ **API Design First** - OpenAPI 3.0 specification with Swagger UI
 - ✅ **Type Safety** - Full TypeScript support
 - ✅ **Hot Reload** - Development with live reload
@@ -72,6 +77,7 @@ Notify Chat Application is a modern, scalable real-time messaging platform desig
 ## 📊 Performance Metrics
 
 ### Estimated Throughput
+
 - **Concurrent Users**: 10,000+ simultaneous connections
 - **Messages per Second**: 1,000+ messages/second
 - **API Requests**: 5,000+ requests/second
@@ -80,11 +86,13 @@ Notify Chat Application is a modern, scalable real-time messaging platform desig
 - **Response Time**: < 100ms for API calls, < 50ms for WebSocket messages
 
 ### Resource Requirements
+
 - **Minimum**: 4GB RAM, 2 CPU cores
 - **Recommended**: 8GB RAM, 4 CPU cores
 - **Production**: 16GB RAM, 8 CPU cores (with load balancing)
 
 ### Scalability
+
 - **Horizontal Scaling**: Support for multiple backend instances
 - **Database Scaling**: Read replicas and connection pooling
 - **Cache Scaling**: Redis cluster support
@@ -98,60 +106,60 @@ graph TB
         WEB[Web Browser]
         MOBILE[Mobile App]
     end
-    
+
     subgraph "Load Balancer"
         NGINX[Nginx Reverse Proxy]
     end
-    
+
     subgraph "Application Layer"
         FRONTEND[Next.js Frontend]
         BACKEND1[Go Backend Instance 1]
         BACKEND2[Go Backend Instance 2]
         BACKEND3[Go Backend Instance N]
     end
-    
+
     subgraph "Real-time Layer"
         WS[WebSocket Hub]
         REDIS_PUB[Redis Pub/Sub]
     end
-    
+
     subgraph "Data Layer"
         POSTGRES[(PostgreSQL)]
         REDIS_CACHE[(Redis Cache)]
     end
-    
+
     subgraph "Infrastructure"
         DOCKER[Docker Containers]
         MONITOR[Health Monitoring]
         BACKUP[Backup System]
     end
-    
+
     WEB --> NGINX
     MOBILE --> NGINX
     NGINX --> FRONTEND
     NGINX --> BACKEND1
     NGINX --> BACKEND2
     NGINX --> BACKEND3
-    
+
     FRONTEND --> BACKEND1
     FRONTEND --> BACKEND2
     FRONTEND --> BACKEND3
-    
+
     BACKEND1 --> WS
     BACKEND2 --> WS
     BACKEND3 --> WS
-    
+
     WS --> REDIS_PUB
     REDIS_PUB --> WS
-    
+
     BACKEND1 --> POSTGRES
     BACKEND2 --> POSTGRES
     BACKEND3 --> POSTGRES
-    
+
     BACKEND1 --> REDIS_CACHE
     BACKEND2 --> REDIS_CACHE
     BACKEND3 --> REDIS_CACHE
-    
+
     DOCKER --> FRONTEND
     DOCKER --> BACKEND1
     DOCKER --> BACKEND2
@@ -159,7 +167,7 @@ graph TB
     DOCKER --> NGINX
     DOCKER --> POSTGRES
     DOCKER --> REDIS_CACHE
-    
+
     MONITOR --> FRONTEND
     MONITOR --> BACKEND1
     MONITOR --> BACKEND2
@@ -167,40 +175,46 @@ graph TB
     MONITOR --> NGINX
     MONITOR --> POSTGRES
     MONITOR --> REDIS_CACHE
-    
+
     BACKUP --> POSTGRES
 ```
 
 ### Architecture Components
 
 #### 1. **Client Layer**
+
 - Web browsers and mobile applications
 - Real-time WebSocket connections
 - RESTful API consumption
 
 #### 2. **Load Balancer (Nginx)**
+
 - Reverse proxy and load balancing
 - SSL termination
 - Rate limiting and security headers
 - Static asset serving
 
 #### 3. **Application Layer**
+
 - **Frontend**: Next.js with React 19
 - **Backend**: Go microservices with Gin
 - Horizontal scaling support
 - Health monitoring
 
 #### 4. **Real-time Layer**
+
 - WebSocket hub for connection management
 - Redis pub/sub for message broadcasting
 - Conversation-based messaging
 
 #### 5. **Data Layer**
+
 - **PostgreSQL**: Primary data storage
 - **Redis**: Caching and session management
 - Connection pooling and optimization
 
 #### 6. **Infrastructure**
+
 - Docker containerization
 - Health monitoring and alerting
 - Automated backup system
@@ -248,7 +262,7 @@ Notify/
 │   │
 │   ├── validators/              # Shared Validation DTOs
 │   │   ├── src/
-│   │   │   ├── auth.dto.ts     # Auth DTOs (RegisterDto, LoginDto)
+│   │   │   ├── auth.dto.ts     # Auth DTOs (SignupRequestDto, LoginDto)
 │   │   │   ├── conversation.dto.ts  # Conversation DTOs
 │   │   │   ├── message.dto.ts  # Message DTOs
 │   │   │   └── index.ts
@@ -282,11 +296,9 @@ Notify/
 - **`@notify/types`**: Shared TypeScript interfaces and types
   - Used by both frontend and backend
   - Ensures type consistency across the stack
-  
 - **`@notify/validators`**: Validation DTOs using class-validator
   - Used by backend for request validation
   - Can be shared with frontend for form validation
-  
 - **`@notify/shared`**: Shared utilities and constants
   - Error classes
   - Helper functions (date formatting, string utilities)
@@ -295,6 +307,7 @@ Notify/
 ## 🔧 Detailed Design
 
 ### Backend Architecture
+
 The backend service is built with Express.js + TypeScript and follows a **3-layer architecture**:
 
 #### Architecture Layers
@@ -329,6 +342,7 @@ The backend service is built with Express.js + TypeScript and follows a **3-laye
   - Real-time messaging implementation
 
 ### Frontend Architecture
+
 The frontend is built with Next.js 15 and modern React patterns:
 
 - **📁 [Frontend Documentation](./apps/web/README.md)**
@@ -339,6 +353,7 @@ The frontend is built with Next.js 15 and modern React patterns:
   - UI/UX implementation
 
 ### Deployment Architecture
+
 Production-ready deployment to cloud platforms:
 
 - **📁 [Deployment Documentation](./_docs/DEPLOYMENT.md)**
@@ -349,6 +364,7 @@ Production-ready deployment to cloud platforms:
   - Monitoring and health checks
 
 ### Database Schema
+
 - **Users**: Authentication and profile management
 - **Conversations**: Direct messages and group chats
 - **Messages**: Chat history with metadata
@@ -356,6 +372,7 @@ Production-ready deployment to cloud platforms:
 - **Sessions**: User authentication sessions with refresh tokens
 
 ### Security Implementation
+
 - **JWT Authentication**: Stateless token-based auth
 - **Password Security**: bcrypt hashing with salt
 - **Rate Limiting**: Redis-based throttling
@@ -366,18 +383,21 @@ Production-ready deployment to cloud platforms:
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 - **Node.js**: >= 18.0.0
 - **PNPM**: >= 8.0.0
 - **PostgreSQL**: 13+ (for backend)
 - **Redis**: 6+ (for backend)
 
 ### 1. Clone Repository
+
 ```bash
 git clone <repository-url>
 cd Notify
 ```
 
 ### 2. Install Dependencies
+
 ```bash
 # Install all workspace dependencies
 pnpm install
@@ -386,6 +406,7 @@ pnpm install
 ### 3. Setup Environment
 
 **Backend (apps/api):**
+
 ```bash
 cd apps/api
 cp env.example .env
@@ -393,6 +414,7 @@ cp env.example .env
 ```
 
 **Frontend (apps/web):**
+
 ```bash
 cd apps/web
 # Create .env.local if needed for environment variables
@@ -401,12 +423,14 @@ cd apps/web
 ### 4. Start Development
 
 **Option A: Start both apps (recommended)**
+
 ```bash
 # From root directory
 pnpm dev
 ```
 
 **Option B: Start individually**
+
 ```bash
 # Frontend only
 pnpm --filter @notify/web dev
@@ -416,6 +440,7 @@ pnpm --filter @notify/api dev
 ```
 
 ### 5. Access Application
+
 - **Frontend**: http://localhost:3000
 - **Backend API**: http://localhost:3000
 - **API Documentation (Swagger UI)**: http://localhost:3000/api-docs
@@ -425,6 +450,7 @@ pnpm --filter @notify/api dev
 ### Monorepo Commands
 
 **Install dependencies:**
+
 ```bash
 pnpm install                    # Install all workspace dependencies
 pnpm --filter @notify/web install  # Install only frontend deps
@@ -432,6 +458,7 @@ pnpm --filter @notify/api install  # Install only backend deps
 ```
 
 **Development:**
+
 ```bash
 pnpm dev                        # Start all apps in dev mode
 pnpm --filter @notify/web dev   # Start only frontend
@@ -439,6 +466,7 @@ pnpm --filter @notify/api dev   # Start only backend
 ```
 
 **Build:**
+
 ```bash
 pnpm build                      # Build all packages
 pnpm --filter @notify/web build # Build only frontend
@@ -446,6 +474,7 @@ pnpm --filter @notify/api build # Build only backend
 ```
 
 **Testing:**
+
 ```bash
 pnpm test                       # Run all tests
 pnpm --filter @notify/web test  # Test frontend
@@ -453,6 +482,7 @@ pnpm --filter @notify/api test  # Test backend
 ```
 
 **Linting:**
+
 ```bash
 pnpm lint                       # Lint all packages
 pnpm --filter @notify/web lint  # Lint frontend
@@ -470,6 +500,7 @@ make clean      # Clean build artifacts
 ```
 
 ### Backend Development
+
 ```bash
 cd apps/api
 pnpm dev        # Start with live reload (ts-node-dev)
@@ -479,6 +510,7 @@ pnpm migration:run  # Run database migrations
 ```
 
 ### Frontend Development
+
 ```bash
 cd apps/web
 pnpm dev        # Start Next.js dev server
@@ -487,6 +519,7 @@ pnpm lint       # Run linting
 ```
 
 ### Shared Packages Development
+
 ```bash
 # Build shared packages
 pnpm --filter @notify/types build
@@ -510,11 +543,13 @@ This project supports deployment to modern cloud platforms:
 ### Quick Deployment
 
 **Frontend (Vercel):**
+
 1. Connect your GitHub repository to Vercel
 2. Set root directory to `apps/web`
 3. Vercel will auto-detect Next.js and deploy
 
 **Backend (Render.com):**
+
 1. Create a new Web Service on Render.com
 2. Connect your GitHub repository
 3. Set root directory to `apps/api`
@@ -525,10 +560,12 @@ This project supports deployment to modern cloud platforms:
 ### Monitoring and Health Checks
 
 **Vercel:**
+
 - Go to **Deployments** → Click deployment → **Logs**
 - Monitor build and runtime logs
 
 **Render.com:**
+
 - Go to your service → **Logs** tab
 - Monitor for errors and performance
 - Check health endpoints if configured
@@ -540,10 +577,12 @@ This project supports deployment to modern cloud platforms:
 The API follows an **API Design First** approach. The OpenAPI 3.0 specification is maintained in `apps/api/docs/swagger.json` and serves as the source of truth for API design.
 
 **Access Swagger UI:**
+
 - **Development**: http://localhost:3000/api-docs
 - **Raw OpenAPI JSON**: http://localhost:3000/api-docs.json
 
 **API Design First Workflow:**
+
 1. Design API endpoints in `apps/api/docs/swagger.json`
 2. Implement controllers and services to match the specification
 3. Use Swagger UI to test and validate API behavior
@@ -552,6 +591,7 @@ The API follows an **API Design First** approach. The OpenAPI 3.0 specification 
 **Note:** Swagger UI is only available in development and staging environments.
 
 ### API Endpoints Overview
+
 - **Authentication**: `/api/v1/auth/login`, `/api/v1/auth/register`, `/api/v1/auth/refresh`, `/api/v1/auth/logout`
 - **Users**: `/api/v1/users/profile`, `/api/v1/users/search`
 - **Conversations**: `/api/v1/conversations/`, `/api/v1/conversations/:id`
@@ -560,6 +600,7 @@ The API follows an **API Design First** approach. The OpenAPI 3.0 specification 
 - **WebSocket**: Real-time communication via Socket.IO (not documented in OpenAPI spec)
 
 ### WebSocket Events
+
 - **Join Conversation**: `conversation.join`
 - **Leave Conversation**: `conversation.leave`
 - **Send Message**: `conversation.message`
@@ -576,6 +617,7 @@ We welcome contributions! Please see our contributing guidelines:
 5. **Open a Pull Request**
 
 ### Development Guidelines
+
 - Follow Go coding standards for backend
 - Use TypeScript for frontend development
 - Add tests for new features
@@ -583,6 +625,7 @@ We welcome contributions! Please see our contributing guidelines:
 - Use conventional commit messages
 
 ### Code Quality
+
 - **Backend**: Go linting and testing
 - **Frontend**: ESLint, Prettier, and TypeScript
 - **Testing**: Unit and integration tests
@@ -591,6 +634,7 @@ We welcome contributions! Please see our contributing guidelines:
 ## 📄 License & Copyright
 
 ### License
+
 This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
 
 ```
@@ -618,17 +662,21 @@ SOFTWARE.
 ```
 
 ### Copyright
+
 - **Copyright © 2024 Notify Chat Application**
 - **Developed by**: Eric Nguyen
 - **Repository**: [GitHub Repository](https://github.com/EricNguyen1206/Notify)
 
 ### Third-Party Licenses
+
 This project uses several open-source libraries. Please refer to:
+
 - **Backend Dependencies**: See `chat-service/go.mod`
 - **Frontend Dependencies**: See `frontend/package.json`
 - **Docker Images**: See respective Docker Hub pages
 
 ### Acknowledgments
+
 - [Gin Web Framework](https://github.com/gin-gonic/gin) - Fast HTTP web framework
 - [Next.js](https://nextjs.org/) - React framework for production
 - [PostgreSQL](https://www.postgresql.org/) - Advanced open source database
@@ -640,6 +688,7 @@ This project uses several open-source libraries. Please refer to:
 ## 📞 Support
 
 For support and questions:
+
 - **Issues**: [GitHub Issues](https://github.com/EricNguyen1206/Notify/issues)
 - **Documentation**: [Project Wiki](https://github.com/EricNguyen1206/Notify/wiki)
 - **Discussions**: [GitHub Discussions](https://github.com/EricNguyen1206/Notify/discussions)

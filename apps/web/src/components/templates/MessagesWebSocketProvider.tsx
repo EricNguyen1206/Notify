@@ -4,7 +4,7 @@ import { memo, useEffect, useRef } from "react";
 import { useSocketStore } from "@/store/useSocketStore";
 
 interface MessagesWebSocketProviderProps {
-  userId: number;
+  userId: string | number;
   children: React.ReactNode;
 }
 

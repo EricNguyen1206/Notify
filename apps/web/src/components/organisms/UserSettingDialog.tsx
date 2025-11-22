@@ -81,7 +81,7 @@ const UserSettingDialog: React.FC<ParentComponentProps> = ({ children, open, onO
       }
 
       // Create avatar url
-      avatar = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${fullPath}`;
+      avatar = `${process.env['NEXT_PUBLIC_SUPABASE_URL']}/storage/v1/object/public/${fullPath}`;
       updateData.avatar = avatar;
       checkEdit = true;
     }
@@ -120,7 +120,7 @@ const UserSettingDialog: React.FC<ParentComponentProps> = ({ children, open, onO
 
   // Render
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open ?? false} onOpenChange={onOpenChange ?? (() => {})}>
       <DialogTrigger asChild>
         <div>{children}</div>
       </DialogTrigger>

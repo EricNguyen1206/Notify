@@ -1,9 +1,9 @@
-import { AppDataSource } from "@/config/database";
-import { FriendRequest, FriendRequestStatus } from "@/models/FriendRequest";
-import { Friends } from "@/models/Friends";
-import { User } from "@/models/User";
-import { FriendRequestResponse, FriendResponse, FriendRequestsResponse } from "@notify/types";
-import { logger } from "@/utils/logger";
+import { AppDataSource } from '@/config/database';
+import { FriendRequest, FriendRequestStatus } from '@/models/FriendRequest';
+import { Friends } from '@/models/Friends';
+import { User } from '@/models/User';
+import { FriendDto, FriendRequestDto, FriendRequestsResponse } from '@notify/types';
+import { logger } from '@/utils/logger';
 
 export class FriendService {
   private friendRequestRepository = AppDataSource.getRepository(FriendRequest);
@@ -13,17 +13,17 @@ export class FriendService {
   /**
    * Send a friend request
    */
-  async sendFriendRequest(fromUserId: string, toUserId: string): Promise<FriendRequestResponse> {
+  async sendFriendRequest(fromUserId: string, toUserId: string): Promise<FriendRequestDto> {
     try {
       // Check if user is trying to send request to themselves
       if (fromUserId === toUserId) {
-        throw new Error("You cannot send a friend request to yourself");
+        throw new Error('You cannot send a friend request to yourself');
       }
 
       // Check if target user exists
       const toUser = await this.userRepository.findOne({ where: { id: toUserId } });
       if (!toUser) {
-        throw new Error("User not found");
+        throw new Error('User not found');
       }
 
       // Check if users are already friends
@@ -35,7 +35,7 @@ export class FriendService {
       });
 
       if (existingFriendship) {
-        throw new Error("You are already friends with this user");
+        throw new Error('You are already friends with this user');
       }
 
       // Check if there's an existing pending request
@@ -48,9 +48,9 @@ export class FriendService {
 
       if (existingRequest) {
         if (existingRequest.fromUserId === fromUserId) {
-          throw new Error("You have already sent a friend request to this user");
+          throw new Error('You have already sent a friend request to this user');
         } else {
-          throw new Error("This user has already sent you a friend request");
+          throw new Error('This user has already sent you a friend request');
         }
       }
 
@@ -66,16 +66,16 @@ export class FriendService {
       // Load relations for response
       const requestWithRelations = await this.friendRequestRepository.findOne({
         where: { id: savedRequest.id },
-        relations: ["fromUser", "toUser"],
+        relations: ['fromUser', 'toUser'],
       });
 
       if (!requestWithRelations) {
-        throw new Error("Failed to create friend request");
+        throw new Error('Failed to create friend request');
       }
 
       return this.mapFriendRequestToResponse(requestWithRelations);
     } catch (error: any) {
-      logger.error("Error sending friend request:", error);
+      logger.error('Error sending friend request:', error);
       throw error;
     }
   }
@@ -83,21 +83,21 @@ export class FriendService {
   /**
    * Accept a friend request
    */
-  async acceptFriendRequest(requestId: string, userId: string): Promise<FriendResponse> {
+  async acceptFriendRequest(requestId: string, userId: string): Promise<FriendDto> {
     try {
       // Find the friend request
       const friendRequest = await this.friendRequestRepository.findOne({
         where: { id: requestId },
-        relations: ["fromUser", "toUser"],
+        relations: ['fromUser', 'toUser'],
       });
 
       if (!friendRequest) {
-        throw new Error("Friend request not found");
+        throw new Error('Friend request not found');
       }
 
       // Verify the user is the recipient of the request
       if (friendRequest.toUserId !== userId) {
-        throw new Error("You are not authorized to accept this friend request");
+        throw new Error('You are not authorized to accept this friend request');
       }
 
       // Check if request is pending
@@ -110,26 +110,13 @@ export class FriendService {
       await this.friendRequestRepository.save(friendRequest);
 
       // Create friendship record (bidirectional)
-      const friendship = this.friendsRepository.create({
-        userId: friendRequest.fromUserId,
-        friendId: friendRequest.toUserId,
-      });
+      const friendship = this.friendsRepository.create(friendRequest);
 
       const savedFriendship = await this.friendsRepository.save(friendship);
 
-      // Load relations for response
-      const friendshipWithRelations = await this.friendsRepository.findOne({
-        where: { id: savedFriendship.id },
-        relations: ["friend"],
-      });
-
-      if (!friendshipWithRelations) {
-        throw new Error("Failed to create friendship");
-      }
-
-      return this.mapFriendToResponse(friendshipWithRelations);
+      return this.mapFriendToResponse(savedFriendship);
     } catch (error: any) {
-      logger.error("Error accepting friend request:", error);
+      logger.error('Error accepting friend request:', error);
       throw error;
     }
   }
@@ -145,12 +132,12 @@ export class FriendService {
       });
 
       if (!friendRequest) {
-        throw new Error("Friend request not found");
+        throw new Error('Friend request not found');
       }
 
       // Verify the user is the recipient of the request
       if (friendRequest.toUserId !== userId) {
-        throw new Error("You are not authorized to decline this friend request");
+        throw new Error('You are not authorized to decline this friend request');
       }
 
       // Check if request is pending
@@ -162,7 +149,7 @@ export class FriendService {
       friendRequest.status = FriendRequestStatus.DECLINED;
       await this.friendRequestRepository.save(friendRequest);
     } catch (error: any) {
-      logger.error("Error declining friend request:", error);
+      logger.error('Error declining friend request:', error);
       throw error;
     }
   }
@@ -175,13 +162,13 @@ export class FriendService {
       const [sentRequests, receivedRequests] = await Promise.all([
         this.friendRequestRepository.find({
           where: { fromUserId: userId },
-          relations: ["fromUser", "toUser"],
-          order: { createdAt: "DESC" },
+          relations: ['fromUser', 'toUser'],
+          order: { createdAt: 'DESC' },
         }),
         this.friendRequestRepository.find({
           where: { toUserId: userId, status: FriendRequestStatus.PENDING },
-          relations: ["fromUser", "toUser"],
-          order: { createdAt: "DESC" },
+          relations: ['fromUser', 'toUser'],
+          order: { createdAt: 'DESC' },
         }),
       ]);
 
@@ -190,7 +177,7 @@ export class FriendService {
         received: receivedRequests.map((req) => this.mapFriendRequestToResponse(req)),
       };
     } catch (error: any) {
-      logger.error("Error getting friend requests:", error);
+      logger.error('Error getting friend requests:', error);
       throw error;
     }
   }
@@ -198,32 +185,22 @@ export class FriendService {
   /**
    * Get all friends of a user
    */
-  async getFriends(userId: string): Promise<FriendResponse[]> {
+  async getFriends(userId: string): Promise<FriendDto[]> {
     try {
       const friendships = await this.friendsRepository.find({
         where: [{ userId }, { friendId: userId }],
-        relations: ["user", "friend"],
-        order: { createdAt: "DESC" },
+        relations: ['user', 'friend'],
+        order: { createdAt: 'DESC' },
       });
 
       return friendships.map((friendship) => {
         // Determine which user is the friend (not the requesting user)
         const friend = friendship.userId === userId ? friendship.friend : friendship.user;
 
-        const response: FriendResponse = {
-          id: friendship.id || "",
-          userId: friendship.userId,
-          friendId: friendship.friendId,
-          createdAt: friendship.createdAt,
-          updatedAt: friendship.updatedAt,
-        };
+        const response: FriendDto = friendship;
 
         if (friend) {
-          response.friend = {
-            id: friend.id,
-            username: friend.username,
-            email: friend.email,
-          };
+          response.friend = friend;
           if (friend.avatar !== undefined) {
             response.friend.avatar = friend.avatar;
           }
@@ -232,7 +209,7 @@ export class FriendService {
         return response;
       });
     } catch (error: any) {
-      logger.error("Error getting friends:", error);
+      logger.error('Error getting friends:', error);
       throw error;
     }
   }
@@ -251,7 +228,7 @@ export class FriendService {
 
       return !!friendship;
     } catch (error: any) {
-      logger.error("Error checking friendship:", error);
+      logger.error('Error checking friendship:', error);
       return false;
     }
   }
@@ -259,8 +236,8 @@ export class FriendService {
   /**
    * Map FriendRequest entity to FriendRequestResponse
    */
-  private mapFriendRequestToResponse(request: FriendRequest): FriendRequestResponse {
-    const response: FriendRequestResponse = {
+  private mapFriendRequestToResponse(request: FriendRequest): FriendRequestDto {
+    const response: FriendRequestDto = {
       id: request.id,
       fromUserId: request.fromUserId,
       toUserId: request.toUserId,
@@ -270,22 +247,14 @@ export class FriendService {
     };
 
     if (request.fromUser) {
-      response.fromUser = {
-        id: request.fromUser.id,
-        username: request.fromUser.username,
-        email: request.fromUser.email,
-      };
+      response.fromUser = request.fromUser;
       if (request.fromUser.avatar !== undefined) {
         response.fromUser.avatar = request.fromUser.avatar;
       }
     }
 
     if (request.toUser) {
-      response.toUser = {
-        id: request.toUser.id,
-        username: request.toUser.username,
-        email: request.toUser.email,
-      };
+      response.toUser = request.toUser;
       if (request.toUser.avatar !== undefined) {
         response.toUser.avatar = request.toUser.avatar;
       }
@@ -297,21 +266,11 @@ export class FriendService {
   /**
    * Map Friends entity to FriendResponse
    */
-  private mapFriendToResponse(friendship: Friends): FriendResponse {
-    const response: FriendResponse = {
-      id: friendship.id || "",
-      userId: friendship.userId,
-      friendId: friendship.friendId,
-      createdAt: friendship.createdAt,
-      updatedAt: friendship.updatedAt,
-    };
+  private mapFriendToResponse(friendship: Friends): FriendDto {
+    const response: FriendDto = friendship;
 
     if (friendship.friend) {
-      response.friend = {
-        id: friendship.friend.id,
-        username: friendship.friend.username,
-        email: friendship.friend.email,
-      };
+      response.friend = friendship.friend;
       if (friendship.friend.avatar !== undefined) {
         response.friend.avatar = friendship.friend.avatar;
       }

@@ -1,28 +1,37 @@
-"use client";
-
-import { Hash, Plus, MessageCircle } from "lucide-react";
-import Link from "next/link";
-import { useState } from "react";
+import { Plus } from 'lucide-react';
+import { useState } from 'react';
 
 import {
   SidebarGroup,
   SidebarGroupAction,
   SidebarGroupLabel,
   SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-} from "@/components/ui/sidebar";
-import CreateNewConversationDialog from "../organisms/CreateNewConversationDialog";
-import ConversationsSkeleton from "./ConversationsSkeleton";
+} from '@/components/ui/sidebar';
+import CreateNewConversationDialog from '../organisms/CreateNewConversationDialog';
+import ConversationsSkeleton from './ConversationsSkeleton';
+import GroupMessageCard from '../atoms/GroupMessageCard';
+import { ConversationDto } from '@notify/types';
+import { ConversationState, useConversationStore } from '@/store/useConversationStore';
 
-export function SidebarConversations({ items, loading }: { items: any[]; loading: boolean }) {
+type SidebarGroupMessagesProps = {
+  items: ConversationDto[];
+  loading: boolean;
+};
+
+const SidebarGroupMessages = ({ items, loading }: SidebarGroupMessagesProps) => {
   const [openCreateConversation, setOpenCreateConversation] = useState(false);
+  const activeConversationId = useConversationStore(
+    (state: ConversationState) => state.activeConversationId
+  );
 
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>Conversations</SidebarGroupLabel>
+      <SidebarGroupLabel>Groups</SidebarGroupLabel>
       <div className="flex gap-1">
-        <CreateNewConversationDialog openCreateConversation={openCreateConversation} setOpenCreateConversation={setOpenCreateConversation}>
+        <CreateNewConversationDialog
+          openCreateConversation={openCreateConversation}
+          setOpenCreateConversation={setOpenCreateConversation}
+        >
           <SidebarGroupAction onClick={() => setOpenCreateConversation(true)}>
             <Plus /> <span className="sr-only">Add Conversation</span>
           </SidebarGroupAction>
@@ -33,19 +42,17 @@ export function SidebarConversations({ items, loading }: { items: any[]; loading
         {loading ? (
           <ConversationsSkeleton />
         ) : (
-          items.map((item) => (
-            <SidebarMenuItem key={item.id}>
-              <SidebarMenuButton tooltip={item.name}>
-                <Hash />
-                <Link href={`/messages/${item.id}`}>
-                  <span>{item.name}</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+          items.map((convo) => (
+            <GroupMessageCard
+              key={convo.id}
+              convo={convo}
+              isActive={convo.id === activeConversationId}
+            />
           ))
         )}
       </SidebarMenu>
     </SidebarGroup>
   );
-}
+};
 
+export default SidebarGroupMessages;

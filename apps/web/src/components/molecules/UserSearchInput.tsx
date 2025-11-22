@@ -1,14 +1,14 @@
-import { useState, useRef } from "react";
-import { Search, X, User } from "lucide-react";
+import { useState, useRef } from 'react';
+import { Search, X, User } from 'lucide-react';
 
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { useSearchUsersQuery } from "@/services/api/users";
-import type { UserResponse } from "@notify/types";
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { useSearchUsersQuery } from '@/services/api/users';
+import type { UserDto } from '@notify/types';
 
 interface UserSearchInputProps {
-  selectedUsers: UserResponse[];
-  onUsersChange: (users: UserResponse[]) => void;
+  selectedUsers: UserDto[];
+  onUsersChange: (users: UserDto[]) => void;
   maxUsers?: number;
   minUsers?: number;
   disabled?: boolean;
@@ -21,7 +21,7 @@ export const UserSearchInput = ({
   minUsers = 2,
   disabled = false,
 }: UserSearchInputProps) => {
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState('');
   const [showResults, setShowResults] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -31,14 +31,14 @@ export const UserSearchInput = ({
   // Extract data from response and filter out already selected users
   const searchResults = searchResponse || [];
   const filteredResults = searchResults.filter(
-    (user: UserResponse) => !selectedUsers.some((selected) => selected.id === user.id)
+    (user: UserDto) => !selectedUsers.some((selected) => selected.id === user.id)
   );
 
-  const handleUserSelect = (user: UserResponse) => {
+  const handleUserSelect = (user: UserDto) => {
     if (selectedUsers.length >= maxUsers) return;
 
     onUsersChange([...selectedUsers, user]);
-    setSearchTerm("");
+    setSearchTerm('');
     setShowResults(false);
     inputRef.current?.focus();
   };
@@ -68,7 +68,11 @@ export const UserSearchInput = ({
         {selectedUsers.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {selectedUsers.map((user) => (
-              <Badge key={user.id} variant="secondary" className="flex items-center gap-2 px-3 py-1">
+              <Badge
+                key={user.id}
+                variant="secondary"
+                className="flex items-center gap-2 px-3 py-1"
+              >
                 <User className="h-3 w-3" />
                 <span className="text-sm">{user.username}</span>
                 <button
@@ -87,7 +91,9 @@ export const UserSearchInput = ({
         {/* User Count Indicator */}
         <div className="text-xs text-muted-foreground">
           {selectedUsers.length} / {maxUsers} users selected
-          {!isMinUsersReached && <span className="text-destructive ml-2">(Minimum {minUsers} users required)</span>}
+          {!isMinUsersReached && (
+            <span className="text-destructive ml-2">(Minimum {minUsers} users required)</span>
+          )}
         </div>
 
         {/* Search Input */}
@@ -123,7 +129,11 @@ export const UserSearchInput = ({
               >
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
                   {user.avatar ? (
-                    <img src={user.avatar} alt={user.username} className="h-8 w-8 rounded-full object-cover" />
+                    <img
+                      src={user.avatar}
+                      alt={user.username}
+                      className="h-8 w-8 rounded-full object-cover"
+                    />
                   ) : (
                     <User className="h-4 w-4 text-muted-foreground" />
                   )}

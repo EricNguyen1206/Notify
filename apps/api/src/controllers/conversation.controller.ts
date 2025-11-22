@@ -1,7 +1,9 @@
-import { Request, Response } from "express";
-import { ConversationService } from "@/services/conversation.service";
-import { ConversationType } from "@/models/Conversation";
-import { logger } from "@/utils/logger";
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
+import { Request, Response } from 'express';
+import { ConversationService } from '@/services/conversation.service';
+import { logger } from '@/utils/logger';
+import { AuthenticatedRequest } from '@/middleware/auth/auth.middleware';
+import { ApiResponse, ConversationDetailDto, ConversationType } from '@notify/types';
 
 export class ConversationController {
   private conversationService: ConversationService;
@@ -11,10 +13,10 @@ export class ConversationController {
   }
 
   // Get all conversations for a user
-  async getUserConversations(req: Request, res: Response): Promise<void> {
+  async getUserConversations(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
-      const userId = (req as any).user.id;
-      logger.info("Get user conversations", { userId });
+      const userId = req.user!.id;
+      logger.info('Get user conversations', { userId });
 
       const conversations = await this.conversationService.getAllConversation(userId);
 
@@ -23,26 +25,26 @@ export class ConversationController {
         data: conversations,
       });
     } catch (error) {
-      logger.error("Get user conversations error:", error);
+      logger.error('Get user conversations error:', error);
       res.status(500).json({
         success: false,
-        message: "Internal server error",
+        message: 'Internal server error',
       });
     }
   }
 
   // Create a new conversation
-  async createConversation(req: Request, res: Response): Promise<void> {
+  async createConversation(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
-      const userId = (req as any).user.id;
+      const userId = req.user!.id;
       const { name, type, userIds } = req.body;
-      logger.info("Create conversation", { userId, name, type, userIds });
+      logger.info('Create conversation', { userId, name, type, userIds });
 
       // Validate input
       if (!name || !type || !userIds || !Array.isArray(userIds)) {
         res.status(400).json({
           success: false,
-          message: "Missing required fields: name, type, userIds",
+          message: 'Missing required fields: name, type, userIds',
         });
         return;
       }
@@ -51,7 +53,7 @@ export class ConversationController {
       if (!Object.values(ConversationType).includes(type)) {
         res.status(400).json({
           success: false,
-          message: "Invalid conversation type",
+          message: 'Invalid conversation type',
         });
         return;
       }
@@ -60,7 +62,7 @@ export class ConversationController {
       if (type === ConversationType.DIRECT && userIds.length !== 1) {
         res.status(400).json({
           success: false,
-          message: "Direct message conversation must have exactly 1 other user",
+          message: 'Direct message conversation must have exactly 1 other user',
         });
         return;
       }
@@ -69,7 +71,7 @@ export class ConversationController {
       if (type === ConversationType.GROUP && (userIds.length < 1 || userIds.length > 3)) {
         res.status(400).json({
           success: false,
-          message: "Group conversation must have 1-3 other users",
+          message: 'Group conversation must have 1-3 other users',
         });
         return;
       }
@@ -78,7 +80,7 @@ export class ConversationController {
       const allUserIds = [...userIds, userId];
       const uniqueUserIds = [...new Set(allUserIds)];
 
-      const conversation = await this.conversationService.createConversationWithUsers(
+      const conversation = await this.conversationService.createConversation(
         name,
         userId,
         type,
@@ -95,10 +97,10 @@ export class ConversationController {
         },
       });
     } catch (error) {
-      logger.error("Create conversation error:", error);
+      logger.error('Create conversation error:', error);
       res.status(500).json({
         success: false,
-        message: "Internal server error",
+        message: 'Internal server error',
       });
     }
   }
@@ -108,56 +110,62 @@ export class ConversationController {
     try {
       const { id } = req.params;
       const conversationId = id;
-      logger.info("Get conversation by ID", { conversationId });
+      logger.info('Get conversation by ID', { conversationId });
 
       if (!conversationId) {
         res.status(400).json({
           success: false,
-          message: "Invalid conversation ID",
+          message: 'Invalid conversation ID',
         });
         return;
       }
 
-      const conversation = await this.conversationService.getConversationByIdPublic(conversationId);
+      const conversation = await this.conversationService.getConversationById(conversationId);
 
-      res.status(200).json({
-        success: true,
-        data: {
-          id: conversation.id,
-          name: conversation.name,
-          type: conversation.type,
-          ownerId: conversation.ownerId,
-        },
-      });
+      const resData: ApiResponse<ConversationDetailDto | null> = {
+        success: false,
+        message: 'Not Fould',
+        data: null,
+      };
+
+      if (!conversation) {
+        res.status(403).json(resData);
+      }
+
+      resData.success = true;
+      resData.message = 'Success';
+      resData.data = conversation! as unknown as ConversationDetailDto;
+
+      res.status(200).json(resData);
     } catch (error) {
-      logger.error("Get conversation by ID error:", error);
-      if (error instanceof Error && error.message === "Conversation not found") {
+      logger.error('Get conversation by ID error:', error);
+      if (error instanceof Error && error.message === 'Conversation not found') {
         res.status(404).json({
           success: false,
-          message: "Conversation not found",
+          message: 'Conversation not found',
         });
       } else {
         res.status(500).json({
           success: false,
-          message: "Internal server error",
+          message: 'Internal server error',
         });
       }
     }
   }
 
   // Update conversation
-  async updateConversation(req: Request, res: Response): Promise<void> {
+  async updateConversation(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const { id } = req.params;
       const { name } = req.body;
-      const userId = (req as any).user.id;
+      const userId = req.user!.id;
       const conversationId = id;
-      logger.info("Update conversation", { conversationId, name, userId });
+      logger.info('Update conversation', { conversationId, name, userId });
 
       if (!conversationId) {
         res.status(400).json({
           success: false,
-          message: "Invalid conversation ID",
+          message: 'Invalid conversation ID',
         });
         return;
       }
@@ -165,28 +173,28 @@ export class ConversationController {
       if (!name) {
         res.status(400).json({
           success: false,
-          message: "Conversation name is required",
+          message: 'Conversation name is required',
         });
         return;
       }
 
-      await this.conversationService.updateConversationName(conversationId, name);
+      await this.conversationService.updateConversation(conversationId, name);
 
       res.status(200).json({
         success: true,
-        message: "Conversation updated successfully",
+        message: 'Conversation updated successfully',
       });
     } catch (error) {
-      logger.error("Update conversation error:", error);
-      if (error instanceof Error && error.message === "Conversation not found") {
+      logger.error('Update conversation error:', error);
+      if (error instanceof Error && error.message === 'Conversation not found') {
         res.status(404).json({
           success: false,
-          message: "Conversation not found",
+          message: 'Conversation not found',
         });
       } else {
         res.status(500).json({
           success: false,
-          message: "Internal server error",
+          message: 'Internal server error',
         });
       }
     }
@@ -198,12 +206,12 @@ export class ConversationController {
       const { id } = req.params;
       const userId = (req as any).user.id;
       const conversationId = id;
-      logger.info("Delete conversation", { conversationId, userId });
+      logger.info('Delete conversation', { conversationId, userId });
 
       if (!conversationId) {
         res.status(400).json({
           success: false,
-          message: "Invalid conversation ID",
+          message: 'Invalid conversation ID',
         });
         return;
       }
@@ -212,24 +220,27 @@ export class ConversationController {
 
       res.status(200).json({
         success: true,
-        message: "Conversation deleted successfully",
+        message: 'Conversation deleted successfully',
       });
     } catch (error) {
-      logger.error("Delete conversation error:", error);
-      if (error instanceof Error && error.message === "Conversation not found") {
+      logger.error('Delete conversation error:', error);
+      if (error instanceof Error && error.message === 'Conversation not found') {
         res.status(404).json({
           success: false,
-          message: "Conversation not found",
+          message: 'Conversation not found',
         });
-      } else if (error instanceof Error && error.message === "Only conversation owner can delete conversation") {
+      } else if (
+        error instanceof Error &&
+        error.message === 'Only conversation owner can delete conversation'
+      ) {
         res.status(403).json({
           success: false,
-          message: "Only conversation owner can delete conversation",
+          message: 'Only conversation owner can delete conversation',
         });
       } else {
         res.status(500).json({
           success: false,
-          message: "Internal server error",
+          message: 'Internal server error',
         });
       }
     }
@@ -242,12 +253,12 @@ export class ConversationController {
       const { userId: targetUserId } = req.body;
       const ownerId = (req as any).user.id;
       const conversationId = id;
-      logger.info("Add user to conversation", { conversationId, targetUserId, ownerId });
+      logger.info('Add user to conversation', { conversationId, targetUserId, ownerId });
 
       if (!conversationId) {
         res.status(400).json({
           success: false,
-          message: "Invalid conversation ID",
+          message: 'Invalid conversation ID',
         });
         return;
       }
@@ -255,38 +266,41 @@ export class ConversationController {
       if (!targetUserId) {
         res.status(400).json({
           success: false,
-          message: "Target user ID is required",
+          message: 'Target user ID is required',
         });
         return;
       }
 
-      await this.conversationService.addUserToConversationPublic(ownerId, conversationId, targetUserId);
+      await this.conversationService.addUserToConversation(ownerId, conversationId, targetUserId);
 
       res.status(200).json({
         success: true,
-        message: "User added to conversation successfully",
+        message: 'User added to conversation successfully',
       });
     } catch (error) {
-      logger.error("Add user to conversation error:", error);
-      if (error instanceof Error && error.message === "Conversation not found") {
+      logger.error('Add user to conversation error:', error);
+      if (error instanceof Error && error.message === 'Conversation not found') {
         res.status(404).json({
           success: false,
-          message: "Conversation not found",
+          message: 'Conversation not found',
         });
-      } else if (error instanceof Error && error.message === "Only conversation owner can add users") {
+      } else if (
+        error instanceof Error &&
+        error.message === 'Only conversation owner can add users'
+      ) {
         res.status(403).json({
           success: false,
-          message: "Only conversation owner can add users",
+          message: 'Only conversation owner can add users',
         });
-      } else if (error instanceof Error && error.message === "Target user not found") {
+      } else if (error instanceof Error && error.message === 'Target user not found') {
         res.status(404).json({
           success: false,
-          message: "Target user not found",
+          message: 'Target user not found',
         });
       } else {
         res.status(500).json({
           success: false,
-          message: "Internal server error",
+          message: 'Internal server error',
         });
       }
     }
@@ -298,38 +312,38 @@ export class ConversationController {
       const { id } = req.params;
       const userId = (req as any).user.id;
       const conversationId = id;
-      logger.info("Leave conversation", { conversationId, userId });
+      logger.info('Leave conversation', { conversationId, userId });
 
       if (!conversationId) {
         res.status(400).json({
           success: false,
-          message: "Invalid conversation ID",
+          message: 'Invalid conversation ID',
         });
         return;
       }
 
-      await this.conversationService.leaveConversation(conversationId, userId);
+      await this.conversationService.leaveConversation(userId, conversationId);
 
       res.status(200).json({
         success: true,
-        message: "Left conversation successfully",
+        message: 'Left conversation successfully',
       });
     } catch (error) {
-      logger.error("Leave conversation error:", error);
-      if (error instanceof Error && error.message === "Conversation not found") {
+      logger.error('Leave conversation error:', error);
+      if (error instanceof Error && error.message === 'Conversation not found') {
         res.status(404).json({
           success: false,
-          message: "Conversation not found",
+          message: 'Conversation not found',
         });
-      } else if (error instanceof Error && error.message === "User not found") {
+      } else if (error instanceof Error && error.message === 'User not found') {
         res.status(404).json({
           success: false,
-          message: "User not found",
+          message: 'User not found',
         });
       } else {
         res.status(500).json({
           success: false,
-          message: "Internal server error",
+          message: 'Internal server error',
         });
       }
     }
@@ -342,12 +356,12 @@ export class ConversationController {
       const { userId: targetUserId } = req.body;
       const ownerId = (req as any).user.id;
       const conversationId = id;
-      logger.info("Remove user from conversation", { conversationId, targetUserId, ownerId });
+      logger.info('Remove user from conversation', { conversationId, targetUserId, ownerId });
 
       if (!conversationId) {
         res.status(400).json({
           success: false,
-          message: "Invalid conversation ID",
+          message: 'Invalid conversation ID',
         });
         return;
       }
@@ -355,43 +369,50 @@ export class ConversationController {
       if (!targetUserId) {
         res.status(400).json({
           success: false,
-          message: "Target user ID is required",
+          message: 'Target user ID is required',
         });
         return;
       }
 
-      await this.conversationService.removeUserFromConversationPublic(ownerId, conversationId, targetUserId);
+      await this.conversationService.removeUserFromConversation(
+        ownerId,
+        conversationId,
+        targetUserId
+      );
 
       res.status(200).json({
         success: true,
-        message: "User removed from conversation successfully",
+        message: 'User removed from conversation successfully',
       });
     } catch (error) {
-      logger.error("Remove user from conversation error:", error);
-      if (error instanceof Error && error.message === "Conversation not found") {
+      logger.error('Remove user from conversation error:', error);
+      if (error instanceof Error && error.message === 'Conversation not found') {
         res.status(404).json({
           success: false,
-          message: "Conversation not found",
+          message: 'Conversation not found',
         });
-      } else if (error instanceof Error && error.message === "Only conversation owner can remove users") {
+      } else if (
+        error instanceof Error &&
+        error.message === 'Only conversation owner can remove users'
+      ) {
         res.status(403).json({
           success: false,
-          message: "Only conversation owner can remove users",
+          message: 'Only conversation owner can remove users',
         });
-      } else if (error instanceof Error && error.message === "Target user not found") {
+      } else if (error instanceof Error && error.message === 'Target user not found') {
         res.status(404).json({
           success: false,
-          message: "Target user not found",
+          message: 'Target user not found',
         });
-      } else if (error instanceof Error && error.message === "Cannot remove conversation owner") {
+      } else if (error instanceof Error && error.message === 'Cannot remove conversation owner') {
         res.status(400).json({
           success: false,
-          message: "Cannot remove conversation owner",
+          message: 'Cannot remove conversation owner',
         });
       } else {
         res.status(500).json({
           success: false,
-          message: "Internal server error",
+          message: 'Internal server error',
         });
       }
     }
