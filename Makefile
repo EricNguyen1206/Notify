@@ -40,8 +40,6 @@ help:
 	@echo "  $(GREEN)frontend-build$(NC)       - Build frontend for production"
 	@echo "  $(GREEN)frontend-test$(NC)        - Run frontend tests"
 	@echo "  $(GREEN)frontend-lint$(NC)        - Run frontend linting"
-	@echo "  $(GREEN)api-sync$(NC)             - Sync OpenAPI docs from backend"
-	@echo "  $(GREEN)api-generate$(NC)         - Generate TypeScript client from OpenAPI"
 	@echo ""
 	@echo "$(YELLOW)Backend Commands:$(NC)"
 	@echo "  $(GREEN)backend-install$(NC)      - Install backend dependencies"
@@ -68,7 +66,6 @@ help:
 	@echo "  $(GREEN)info$(NC)                 - Show project information and URLs"
 	@echo ""
 	@echo "$(YELLOW)Advanced Commands:$(NC)"
-	@echo "  $(GREEN)api-full$(NC)             - Complete API workflow (sync + generate)"
 	@echo "  $(GREEN)quick-start$(NC)          - Quick setup for new contributors"
 	@echo "  $(GREEN)docs$(NC)                 - Generate and serve API documentation"
 	@echo "  $(GREEN)dev-tools$(NC)            - Install development tools"
@@ -102,18 +99,6 @@ frontend-lint:
 	@echo "$(BLUE)🔍 Running frontend linting...$(NC)"
 	@pnpm --filter @notify/web lint
 	@echo "$(GREEN)✅ Frontend linting completed$(NC)"
-
-## Sync OpenAPI documentation from backend service
-api-sync:
-	@echo "$(BLUE)📄 Syncing OpenAPI documentation from backend...$(NC)"
-	@cd $(BACKEND_DIR) && make swagger-sync
-	@echo "$(GREEN)✅ OpenAPI documentation synced$(NC)"
-
-## Generate TypeScript client code from OpenAPI specification
-api-generate:
-	@echo "$(BLUE)⚙️  Generating TypeScript client from OpenAPI...$(NC)"
-	@cd $(FRONTEND_DIR) && npm run gen:api
-	@echo "$(GREEN)✅ TypeScript client generated$(NC)"
 
 # =============================================================================
 # BACKEND COMMANDS
@@ -214,10 +199,6 @@ setup: install migrate-seed
 # ADVANCED COMMANDS
 # =============================================================================
 
-## Full API workflow: sync docs and generate client
-api-full: api-sync api-generate
-	@echo "$(GREEN)✅ Complete API workflow completed$(NC)"
-
 ## Reset database (DESTRUCTIVE - use with caution)
 db-reset:
 	@echo "$(RED)⚠️  WARNING: This will destroy all data in the database!$(NC)"
@@ -317,8 +298,8 @@ backend-build: validate-dirs
 # PHONY TARGETS
 # =============================================================================
 
-.PHONY: help frontend-install frontend-dev frontend-build frontend-test frontend-lint api-sync api-generate \
+.PHONY: help frontend-install frontend-dev frontend-build frontend-test frontend-lint \
         backend-install backend-dev backend-build backend-test migrate seed migrate-seed \
         install dev test build clean health status setup \
-        api-full db-reset dev-tools integration-test docs quick-start check-env info \
+        db-reset dev-tools integration-test docs quick-start check-env info \
         validate-dirs

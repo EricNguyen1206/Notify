@@ -102,6 +102,22 @@ docker-compose down
 
 ## 📚 API Documentation
 
+### Swagger UI
+
+The API documentation is available via Swagger UI using an **API Design First** approach. The OpenAPI 3.0 specification is maintained in `docs/swagger.json` and serves as the source of truth for API design.
+
+**Access Swagger UI:**
+- **Development**: http://localhost:3000/api-docs
+- **Raw JSON**: http://localhost:3000/api-docs.json
+
+**API Design First Workflow:**
+1. Design the API endpoints in `docs/swagger.json`
+2. Implement controllers and services to match the specification
+3. Use Swagger UI to test and validate API behavior
+4. Keep the specification updated as APIs evolve
+
+**Note:** Swagger UI is only available in development and staging environments for security reasons.
+
 ### Authentication Endpoints
 
 #### POST /api/v1/auth/register

@@ -1,0 +1,17 @@
+{
+  "name": "@notify/prettier",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Shared Prettier configuration for Notify monorepo",
+  "main": "index.js",
+  "files": [
+    "index.js"
+  ],
+  "dependencies": {
+    "prettier": "^3.6.2"
+  },
+  "peerDependencies": {
+    "prettier": "^3.0.0"
+  }
+}
+

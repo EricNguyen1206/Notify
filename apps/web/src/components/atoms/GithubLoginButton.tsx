@@ -20,7 +20,7 @@ export default function GithubLoginButton() {
   const [isPending, startTransition] = useTransition();
 
   // Event Handlers
-  const handleClickLoginButton = (provider: Provider) => {
+  const handleClickLoginButton = (_provider: Provider) => {
     startTransition(async () => {
       // const { errorMessage, url } = await loginAction(provider);
       // if (!errorMessage && url) {

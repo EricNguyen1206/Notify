@@ -8,7 +8,7 @@ export default function MessageBubble({
 }: {
   message: Message;
   isGroup: boolean;
-  userId: number;
+  userId: string;
 }) {
   if (message.senderId == userId) {
     // Sent messages (right side)

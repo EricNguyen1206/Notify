@@ -7,6 +7,8 @@ import { toast } from "react-toastify";
 import { ThemeToggle } from "../atoms/ThemeToggle";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Button } from "../ui/button";
+import { useSignoutMutation } from "@/services/api/auth";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface MainHeaderClientProps {
   user: any;
@@ -14,11 +16,22 @@ interface MainHeaderClientProps {
 
 const MainHeaderClient = ({ user }: MainHeaderClientProps) => {
   const router = useRouter();
+  const queryClient = useQueryClient();
+
+  const signoutMutation = useSignoutMutation({
+    onSuccess: () => {
+      // Clear all query cache, especially user data
+      queryClient.clear();
+      toast.success("Sign out successfully");
+      router.replace("/login");
+    },
+    onError: () => {
+      toast.error("An error occurred during sign out");
+    },
+  });
 
   const handleSignOut = () => {
-    // You may want to clear the cookie here via an API call or client logic
-    toast.success("Sign out successfully");
-    router.replace("/login");
+    signoutMutation.mutate();
   };
 
   return (

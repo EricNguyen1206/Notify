@@ -1,0 +1,37 @@
+{
+  "name": "@notify/eslint",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared ESLint configuration for Notify monorepo",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./node": "./node.js",
+    "./react": "./react.js"
+  },
+  "files": [
+    "index.js",
+    "node.js",
+    "react.js"
+  ],
+  "dependencies": {
+    "@eslint/js": "^9.0.0",
+    "@next/eslint-plugin-next": "^15.4.4",
+    "@typescript-eslint/eslint-plugin": "^8.39.0",
+    "@typescript-eslint/parser": "^8.39.0",
+    "eslint": "^9.0.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-import-resolver-typescript": "^3.6.1",
+    "eslint-plugin-import": "^2.31.0",
+    "eslint-plugin-promise": "^7.2.1",
+    "eslint-plugin-react": "^7.37.2",
+    "globals": "^15.11.0",
+    "typescript-eslint": "^8.39.0"
+  },
+  "peerDependencies": {
+    "eslint": "^9.0.0",
+    "typescript": "^5.0.0"
+  }
+}
+

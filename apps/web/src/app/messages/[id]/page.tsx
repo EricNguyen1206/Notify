@@ -11,9 +11,9 @@ import { ConnectionState } from "@/store/useSocketStore";
 const DirectMessagesPage = () => {
   const {
     user,
-    channelId,
-    currentChannel,
-    channelData,
+    conversationId,
+    currentConversation,
+    conversationData,
     memberCount,
     containerRef,
     mainRef,
@@ -27,14 +27,14 @@ const DirectMessagesPage = () => {
   return (
     <div className="w-full h-full flex flex-col bg-background">
       <ChatHeader
-        id={String(channelId)}
-        name={String(currentChannel?.name)}
-        isGroup={currentChannel?.type === "group"}
-        avatar={currentChannel?.avatar ?? ""}
+        id={String(conversationId)}
+        name={String(currentConversation?.name)}
+        isGroup={currentConversation?.type === "group"}
+        avatar={currentConversation?.avatar ?? ""}
         participantCount={memberCount}
-        members={channelData?.data?.members}
-        ownerId={channelData?.data?.ownerId}
-        currentUserId={user?.id}
+        members={conversationData?.members as any}
+        ownerId={conversationData?.ownerId as any}
+        {...(user?.id !== undefined && { currentUserId: user.id })}
       />
 
       {/* Connection status indicator */}

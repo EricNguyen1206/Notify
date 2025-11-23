@@ -1,39 +1,45 @@
-import { Router } from "express";
-import { ConversationController } from "@/controllers/conversation/conversation.controller";
-import { validateDto } from "@/middleware/validation/validation.middleware";
+import { Router } from 'express';
+import { ConversationController } from '@/controllers/conversation.controller';
+import { validateDto } from '@/middleware/validation.middleware';
 import {
-  CreateConversationDto,
-  UpdateConversationDto,
-  AddUserToConversationDto,
-  RemoveUserFromConversationDto,
-} from "@notify/validators";
+  CreateConversationRequestDto,
+  UpdateConversationRequestDto,
+  ConversationMembershipRequest,
+} from '@notify/validators';
 
 const router = Router();
 const conversationController = new ConversationController();
 
 // GET /api/v1/conversations
-router.get("/", conversationController.getUserConversations);
+router.get('/', conversationController.getUserConversations);
 
 // POST /api/v1/conversations
-router.post("/", validateDto(CreateConversationDto), conversationController.createConversation);
+router.post('/', validateDto(CreateConversationRequestDto), conversationController.createConversation);
 
 // GET /api/v1/conversations/:id
-router.get("/:id", conversationController.getConversationById);
+router.get('/:id', conversationController.getConversationById);
 
 // PUT /api/v1/conversations/:id
-router.put("/:id", validateDto(UpdateConversationDto), conversationController.updateConversation);
+router.put('/:id', validateDto(UpdateConversationRequestDto), conversationController.updateConversation);
 
 // DELETE /api/v1/conversations/:id
-router.delete("/:id", conversationController.deleteConversation);
+router.delete('/:id', conversationController.deleteConversation);
 
 // POST /api/v1/conversations/:id/user
-router.post("/:id/user", validateDto(AddUserToConversationDto), conversationController.addUserToConversation);
+router.post(
+  '/:id/user',
+  validateDto(ConversationMembershipRequest),
+  conversationController.addUserToConversation
+);
 
 // PUT /api/v1/conversations/:id/user
-router.put("/:id/user", conversationController.leaveConversation);
+router.put('/:id/user', conversationController.leaveConversation);
 
 // DELETE /api/v1/conversations/:id/user
-router.delete("/:id/user", validateDto(RemoveUserFromConversationDto), conversationController.removeUserFromConversation);
+router.delete(
+  '/:id/user',
+  validateDto(ConversationMembershipRequest),
+  conversationController.removeUserFromConversation
+);
 
 export { router as conversationRoutes };
-

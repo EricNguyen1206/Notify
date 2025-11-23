@@ -1,4 +1,4 @@
-import { UserResponse } from './user';
+import { UserDto } from "./user";
 
 // Conversation Types
 export enum ConversationType {
@@ -6,40 +6,58 @@ export enum ConversationType {
   GROUP = "group",
 }
 
-export interface Conversation {
-  id: number | string;
-  name: string;
-  type: ConversationType | 'text' | 'voice';
-  ownerId: number;
-  createdAt?: Date;
-}
-
-export interface ConversationResponse {
-  id: number;
-  name: string;
-  type: ConversationType;
-  ownerId: number;
-}
-
-export interface DirectConversationResponse {
-  id: number;
+export interface ConversationDto {
+  id: string;
   name: string;
   avatar?: string;
   type: ConversationType;
-  ownerId: number;
-}
-
-export interface ConversationDetailResponse {
-  id: number;
-  name: string;
-  type: ConversationType;
-  ownerId: number;
+  ownerId: string;
   createdAt: Date;
-  members: UserResponse[];
 }
 
-export interface UserConversationsResponse {
-  direct: DirectConversationResponse[];
-  group: ConversationResponse[];
+export interface ConversationDetailDto extends ConversationDto {
+  members: UserDto[];
+}
+
+export interface ConversationListDto {
+  direct: ConversationDto[];
+  group: ConversationDto[];
+}
+
+// API Request/Response Types
+export interface CreateConversationRequest {
+  name?: string;
+  type: ConversationType;
+  userIds: string[];
+}
+
+export interface ConversationMembershipRequest {
+  userId: string;
+}
+
+export interface ConversationResponse extends ConversationDto {
+  // Extended response from API
+}
+
+export interface ConversationMutationResponse {
+  success: boolean;
+  message: string;
+  data: ConversationResponse;
+}
+
+export interface ConversationListResponseDto extends ConversationListDto {}
+
+export interface ConversationDetailResponseDto extends ConversationDetailDto {}
+
+export interface ConversationListApiResponse {
+  success: boolean;
+  message: string;
+  data: ConversationListResponseDto;
+}
+
+export interface ConversationDetailApiResponse {
+  success: boolean;
+  message: string;
+  data: ConversationDetailResponseDto;
 }
 

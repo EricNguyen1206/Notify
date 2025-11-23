@@ -6,8 +6,8 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbP
 import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
-import { ClientProviders } from "@/components/templates/ClientProviders";
-import { cookies } from "next/headers";
+import { MessagesLayoutClient } from "@/components/templates/MessagesLayoutClient";
+import { getAccessToken } from "@/lib/getCookies";
 
 export const metadata: Metadata = {
     title: "Notify | Messages",
@@ -15,29 +15,12 @@ export const metadata: Metadata = {
 };
 
 export default async function Layout({ children }: { children: React.ReactNode }) {
-    const cookieStore = cookies();
-    const userCookie = (await cookieStore).get("user");
-    let user = null;
-    if (userCookie) {
-        try {
-            user = JSON.parse(userCookie.value);
-        } catch {
-            user = null;
-        }
-    }
-
-    if (!user || !user.id) {
-        // Optionally, you can redirect to login or show an error here
-        return (
-            <div className="flex items-center justify-center h-screen">
-                <p className="text-lg text-gray-500">Unauthorized. Please log in.</p>
-            </div>
-        );
-    }
+    // Retrieve access token from httpOnly cookie server-side
+    const accessToken = await getAccessToken();
 
     return (
         <ScreenProvider>
-            <ClientProviders userId={user.id}>
+            <MessagesLayoutClient accessToken={accessToken}>
                 <SidebarProvider>
                     <AppSidebar />
                     <SidebarInset>
@@ -68,7 +51,7 @@ export default async function Layout({ children }: { children: React.ReactNode }
                         </div>
                     </SidebarInset>
                 </SidebarProvider>
-            </ClientProviders>
+            </MessagesLayoutClient>
         </ScreenProvider>
     );
 }

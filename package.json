@@ -8,6 +8,8 @@
     "build": "turbo run build",
     "test": "turbo run test",
     "lint": "turbo run lint",
+    "format": "turbo run format",
+    "fmt": "turbo run format",
     "clean": "turbo run clean"
   },
   "keywords": [
@@ -22,6 +24,10 @@
     "pnpm": ">=8.0.0"
   },
   "devDependencies": {
+    "@notify/eslint": "workspace:*",
+    "@notify/jest": "workspace:*",
+    "@notify/prettier": "workspace:*",
+    "@notify/tsconfig": "workspace:*",
     "turbo": "^2.0.0",
     "typescript": "^5.3.2"
   },

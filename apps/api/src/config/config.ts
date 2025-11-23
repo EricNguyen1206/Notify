@@ -10,7 +10,11 @@ export const config = {
     host: process.env["HOST"] || "localhost",
   },
   database: {
+    // Direct connection URL (for migrations) - port 5432
     url: process.env["DATABASE_URL"],
+    // Session Pooler URL (for application) - port 6543 (Supabase)
+    // If not provided, falls back to DATABASE_URL
+    poolerUrl: process.env["DATABASE_POOLER_URL"] || process.env["DATABASE_URL"],
     // Fallback to individual config if DATABASE_URL not provided
     host: process.env["DB_HOST"] || "localhost",
     port: parseInt(process.env["DB_PORT"] || "5432", 10),
@@ -19,7 +23,11 @@ export const config = {
     name: process.env["DB_NAME"] || "notify_chat",
     synchronize: process.env["DB_SYNCHRONIZE"] === "true",
     logging: process.env["DB_LOGGING"] === "true",
-    ssl: process.env["NODE_ENV"] === "production",
+    // Enable SSL for production or Supabase (Supabase requires SSL)
+    ssl: process.env["NODE_ENV"] === "production" || 
+         (process.env["DATABASE_URL"]?.includes("supabase.co") ?? false) ||
+         (process.env["DATABASE_POOLER_URL"]?.includes("supabase.co") ?? false) ||
+         process.env["DB_SSL"] === "true",
   },
   redis: {
     url: process.env["REDIS_URL"],

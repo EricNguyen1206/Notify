@@ -1,7 +1,7 @@
 "use client";
 
-import { usePostAuthLogin } from "@/services/endpoints/auth/auth";
-import { useAuthStore } from "@/store/useAuthStore";
+import { useSigninMutation } from "@/services/api/auth";
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -11,56 +11,24 @@ const LoginEmailForm = () => {
   const [email, setEmail] = useState("admin@notify.com");
   const [password, setPassword] = useState("123456");
   const router = useRouter();
-  const { setUser, setIsAuthenticated, setToken } = useAuthStore();
+  const queryClient = useQueryClient();
 
-  const loginMutation = usePostAuthLogin({
-    mutation: {
-      onSuccess: (res) => {
-        const data = res.data;
-        // Assuming the response contains a token and user data
-        if (!data || !data.token || !data.user) {
-          toast.error("Invalid login response");
-          return;
-        }
-        const { token, user } = data;
-
-        if (token && user) {
-          // Store token in cookie
-          document.cookie = `token=${token}; path=/; max-age=${60 * 60}; samesite=lax${process.env.NODE_ENV === "production" ? "; secure" : ""}`;
-
-          // Store user data in cookie (as JSON string, encode to avoid issues)
-          const userCookie = encodeURIComponent(
-            JSON.stringify({
-              id: user.id,
-              email: user.email,
-              username: user.username || "",
-            })
-          );
-          document.cookie = `user=${userCookie}; path=/; max-age=${60 * 60}; samesite=lax${process.env.NODE_ENV === "production" ? "; secure" : ""}`;
-
-          // Update Zustand state
-          setToken(token);
-          setUser({
-            id: user.id!,
-            email: user.email!,
-            username: user.username || "",
-          });
-          setIsAuthenticated(true);
-
-          toast.success("Login successfully");
-          router.push("/messages");
-        }
-      },
-      onError: (error) => {
-        toast.error("An error occurred during login");
-        console.error("Login error:", error);
-      },
+  const signinMutation = useSigninMutation({
+    onSuccess: () => {
+      // Invalidate and refetch user query to get fresh user data
+      queryClient.invalidateQueries({ queryKey: ["user", "current"] });
+      
+      toast.success("Sign in successfully");
+      router.push("/messages");
+    },
+    onError: (_error) => {
+      toast.error("An error occurred during sign in");
     },
   });
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-    loginMutation.mutate({ data: { email, password } });
+    signinMutation.mutate({ email, password });
   };
 
   return (
@@ -97,9 +65,9 @@ const LoginEmailForm = () => {
       <button
         type="submit"
         className="bg-chat-primary text-white py-3 rounded-chat font-medium hover:bg-chat-secondary transition-colors disabled:opacity-50"
-        disabled={loginMutation.isPending}
+        disabled={signinMutation.isPending}
       >
-        {loginMutation.isPending ? "Loading..." : "Log In"}
+        {signinMutation.isPending ? "Loading..." : "Log In"}
       </button>
       <div className="text-xs flex items-center gap-1 font-normal">
         <p className="text-gray-400">Need an account?</p>

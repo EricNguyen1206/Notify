@@ -1,6 +1,6 @@
 "use client";
 
-import { usePostAuthRegister } from "@/services/endpoints/auth/auth";
+import { useSignupMutation } from "@/services/api/auth";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -15,17 +15,14 @@ const RegisterForm = () => {
   });
   const router = useRouter();
 
-  const registerMutation = usePostAuthRegister({
-    mutation: {
-      onSuccess: (data) => {
-        // Registration successful, redirect to login
-        toast.success("Registration successful! Please log in with your credentials.");
-        router.push("/login");
-      },
-      onError: (error) => {
-        toast.error("An error occurred during registration");
-        console.error("Registration error:", error);
-      },
+  const signupMutation = useSignupMutation({
+    onSuccess: (data) => {
+      // Registration successful, redirect to login
+      toast.success("Registration successful! Please sign in with your credentials.");
+      router.push("/login");
+    },
+    onError: () => {
+      toast.error("An error occurred during registration");
     },
   });
 
@@ -59,7 +56,7 @@ const RegisterForm = () => {
       ...(formData.adminCode && { adminCode: formData.adminCode }),
     };
 
-    registerMutation.mutate({ data: registrationData });
+    signupMutation.mutate(registrationData);
   };
 
   return (
@@ -103,9 +100,9 @@ const RegisterForm = () => {
       <button
         type="submit"
         className="bg-chat-primary text-white py-3 rounded-chat font-medium hover:bg-chat-secondary transition-colors disabled:opacity-50"
-        disabled={registerMutation.isPending}
+        disabled={signupMutation.isPending}
       >
-        {registerMutation.isPending ? "Loading..." : "Continue"}
+        {signupMutation.isPending ? "Loading..." : "Continue"}
       </button>
       <div className="text-xs flex items-center gap-1 font-normal">
         <Link href={"/login"}>

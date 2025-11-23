@@ -1,15 +1,15 @@
 "use client";
 
 import { useScreenDimensions } from "@/hooks/useScreenDimensions";
-import { useGetMessagesChannelId } from "@/services/endpoints/chats/chats";
-import { useGetChannelsId } from "@/services/endpoints/channels/channels";
-import { ChatServiceInternalModelsChatResponse } from "@/services/schemas";
-import { useAuthStore } from "@/store/useAuthStore";
+import { useConversationMessagesQuery } from "@/services/api/messages";
+import { useConversationQuery } from "@/services/api/conversations";
+import { useCurrentUserQuery } from "@/services/api/users";
+import { MessageDto } from "@notify/types";
 import { useConversationStore } from "@/store/useConversationStore";
-import { Message, useChatStore } from "@/store/useChatStore";
-import { ChatMessage, ConnectionState, useSocketStore } from "@/store/useSocketStore";
+import { useChatStore, Message } from "@/store/useChatStore";
+import { ConnectionState, useSocketStore } from "@/store/useSocketStore";
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { toast } from "react-toastify";
 
 // Hook for managing conversation navigation and validation
@@ -18,17 +18,17 @@ export const useConversationNavigation = () => {
   const router = useRouter();
   const { groupConversations, directConversations, currentConversation, setCurrentConversation } = useConversationStore();
   const { connectionState, joinConversation, leaveConversation } = useSocketStore();
-  const conversationId = params.id ? Number(params.id) : undefined;
+  const conversationId = params.id ?? undefined;
 
   // Memoize conversation lookup to avoid recomputation and noisy effects
   const resolvedConversation = useMemo(() => {
     if (!conversationId) return undefined;
-    return groupConversations.find((conv) => conv.id == conversationId) || directConversations.find((conv) => conv.id == conversationId);
+    return groupConversations.find((conv) => conv.id === conversationId) || directConversations.find((conv) => conv.id === conversationId);
   }, [conversationId, groupConversations, directConversations]);
 
   // Avoid redundant setCurrentConversation calls across renders/StrictMode
-  const lastSetConversationIdRef = useRef<number | undefined>(undefined);
-  const lastRedirectedForIdRef = useRef<number | undefined>(undefined);
+  const lastSetConversationIdRef = useRef<string | undefined>(undefined);
+  const lastRedirectedForIdRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     if (!conversationId) return;
@@ -50,8 +50,8 @@ export const useConversationNavigation = () => {
   }, [conversationId, resolvedConversation, router, setCurrentConversation]);
 
   // Serialized leave -> ack -> join
-  const joinedConversationIdRef = useRef<number | undefined>(undefined);
-  const pendingJoinConversationIdRef = useRef<number | undefined>(undefined);
+  const joinedConversationIdRef = useRef<string | undefined>(undefined);
+  const pendingJoinConversationIdRef = useRef<string | undefined>(undefined);
   const awaitingLeaveAckRef = useRef<boolean>(false);
 
   useEffect(() => {
@@ -85,10 +85,10 @@ export const useConversationNavigation = () => {
   // Listen for leave ack, then perform the pending join exactly once
   useEffect(() => {
     const handleLeaveAck = (e: Event) => {
-      const detail = (e as CustomEvent).detail as { conversationId: number; userId?: string };
+      const detail = (e as CustomEvent).detail as { conversationId: string; userId?: string };
       const prevId = joinedConversationIdRef.current;
       if (!awaitingLeaveAckRef.current || !prevId) return;
-      if (Number(detail?.conversationId) !== Number(prevId)) return;
+      if (detail?.conversationId !== prevId) return;
 
       awaitingLeaveAckRef.current = false;
       joinedConversationIdRef.current = undefined;
@@ -115,43 +115,49 @@ export const useConversationNavigation = () => {
 };
 
 // Hook for managing chat data and messages
-export const useChatData = (conversationId: number | undefined) => {
-  const { data: chatsData, isLoading: chatsLoading } = useGetMessagesChannelId(conversationId ?? 0);
-  const [optimisticChats, setOptimisticChats] = useState<Message[]>([]);
+export const useChatData = (conversationId: string | undefined) => {
+  const { data: chatsData, isLoading: chatsLoading } = useConversationMessagesQuery(conversationId);
   const { addMessageToConversation, conversations } = useChatStore();
 
-  // Get messages from chat store for current conversation
-  const storeMessages = useMemo(() => (conversationId ? conversations[String(conversationId)] || [] : []), [conversations]);
-  // Transform API data to Message format
-  const chats: Message[] = [
-    ...(Array.isArray(chatsData?.data.items)
-      ? chatsData.data.items.map((chat: ChatServiceInternalModelsChatResponse) => chat as Message)
-      : []),
-    // ...optimisticChats,
-    ...storeMessages, // Include messages from WebSocket
-  ] as Message[];
+  const storeMessages = useMemo(() => (conversationId ? conversations[conversationId] || [] : []), [conversations, conversationId]);
+
+  const apiMessages = useMemo(() => {
+    if (!Array.isArray(chatsData?.data)) return [];
+
+    return chatsData.data.map(
+      (chat: MessageDto): Message => ({
+        id: String(chat.id ?? ""),
+        conversationId: String(chat.conversationId ?? conversationId ?? ""),
+        createdAt: chat.createdAt ? new Date(chat.createdAt).toISOString() : new Date().toISOString(),
+        ...(chat.fileName !== undefined && { fileName: chat.fileName }),
+        ...(chat.senderAvatar !== undefined && { senderAvatar: chat.senderAvatar }),
+        senderId: String(chat.senderId ?? ""),
+        ...(chat.senderName !== undefined && { senderName: chat.senderName }),
+        ...(chat.text !== undefined && { text: chat.text }),
+        ...(chat.url !== undefined && { url: chat.url }),
+      })
+    );
+  }, [chatsData?.data, conversationId]);
+
+  const chats: Message[] = [...apiMessages, ...storeMessages];
 
   return {
     chats,
     chatsLoading,
-    optimisticChats,
-    setOptimisticChats,
     addMessageToConversation,
   };
 };
 
 // Hook for getting conversation details including member count
-export const useConversationDetails = (conversationId: number | undefined) => {
-  const { data: conversationData, isLoading: conversationLoading } = useGetChannelsId(conversationId ?? 0, {
-    query: {
-      enabled: !!conversationId,
-    },
+export const useConversationDetails = (conversationId: string | undefined) => {
+  const { data: conversationData, isLoading: conversationLoading } = useConversationQuery(conversationId, {
+    enabled: Boolean(conversationId),
   });
 
   const memberCount = useMemo(() => {
-    if (!conversationData?.data?.members) return 0;
-    return conversationData.data.members.length;
-  }, [conversationData?.data?.members]);
+    if (!conversationData?.members) return 0;
+    return conversationData.members.length;
+  }, [conversationData?.members]);
 
   return {
     conversationData,
@@ -232,7 +238,7 @@ export const useFormState = () => {
 
 // Hook for managing message sending (simplified - no typing indicators)
 export const useMessageSending = (
-  conversationId: number | undefined,
+  conversationId: string | undefined,
   sessionUser: any,
   setFormData: (data: { message: string }) => void,
   scrollToBottom: () => void
@@ -244,12 +250,10 @@ export const useMessageSending = (
     async (message: string) => {
       if (sessionUser?.id && message !== "" && conversationId && isConnected()) {
         try {
-          // Convert conversationId to string for the new API
-          sendMessage(String(conversationId), message);
+          sendMessage(conversationId, message);
           setFormData({ message: "" });
           scrollToBottom();
         } catch (error) {
-          console.error("Failed to send message:", error);
           toast.error("Failed to send message");
         }
       } else if (!isConnected()) {
@@ -274,27 +278,25 @@ export const useMessageSending = (
 };
 
 // Hook for handling incoming WebSocket messages
-export const useWebSocketMessageHandler = (conversationId: number | undefined) => {
+export const useWebSocketMessageHandler = (conversationId: string | undefined) => {
   const { upsertMessageToConversation } = useChatStore();
 
   useEffect(() => {
-    const handleChatMessage = (event: CustomEvent<ChatMessage>) => {
+    const handleChatMessage = (event: CustomEvent<MessageDto>) => {
       const chatMessage = event.detail;
 
       // Only process messages for the current conversation
-      if (conversationId && chatMessage.conversationId === conversationId) {
-        // Transform ChatMessage to Message format
+      if (conversationId && String(chatMessage.conversationId) === String(conversationId)) {
         const message: Message = {
-          id: chatMessage.id,
-          conversationId: chatMessage.conversationId,
-          senderId: chatMessage.senderId,
-          senderName: chatMessage.senderName,
-          senderAvatar: chatMessage.senderAvatar,
-          text: chatMessage.text,
+          id: String(chatMessage.id),
+          conversationId: String(chatMessage.conversationId),
+          senderId: String(chatMessage.senderId),
+          ...(chatMessage.senderName !== undefined && { senderName: chatMessage.senderName }),
+          ...(chatMessage.senderAvatar !== undefined && { senderAvatar: chatMessage.senderAvatar }),
+          ...(chatMessage.text !== undefined && { text: chatMessage.text }),
           createdAt: chatMessage.createdAt,
-          type: chatMessage.type,
-          url: chatMessage.url,
-          fileName: chatMessage.fileName,
+          ...(chatMessage.url !== undefined && { url: chatMessage.url }),
+          ...(chatMessage.fileName !== undefined && { fileName: chatMessage.fileName }),
         };
 
         // Add message to chat store
@@ -313,8 +315,8 @@ export const useWebSocketMessageHandler = (conversationId: number | undefined) =
 
 // Main hook that combines all other hooks
 export const useChatPage = () => {
-  const sessionUser = useAuthStore((state) => state.user);
-  const user = useAuthStore((state) => state.user);
+  const { data: sessionUser } = useCurrentUserQuery();
+  const { data: user } = useCurrentUserQuery();
 
   const { screenHeight, isOverFlow, updateOverflow } = useScreenDimensions(720);
   const { conversationId, currentConversation, connectionState } = useConversationNavigation();
@@ -347,14 +349,10 @@ export const useChatPage = () => {
     sessionUser,
     user,
 
-    // Conversation data (keeping channelId/currentChannel for backward compatibility with page component)
-    channelId: conversationId,
-    currentChannel: currentConversation,
+    // Conversation data
     conversationId,
     currentConversation,
-    channelData: conversationData,
     conversationData,
-    channelLoading: conversationLoading,
     conversationLoading,
     memberCount,
 
@@ -381,7 +379,7 @@ export const useChatPage = () => {
     containerRef,
     mainRef,
 
-    // Handlers (for backward compatibility)
+    // Handlers
     handleSendMessage: messageSending.handleSendMessage,
   };
 };

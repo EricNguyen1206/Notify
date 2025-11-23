@@ -1,32 +1,32 @@
-import { IsString, IsEnum, IsArray, IsNumber, Min, Max } from "class-validator";
+import { IsString, IsEnum, IsArray, IsUUID } from "class-validator";
 import { ConversationType } from "@notify/types";
 
-export class CreateConversationDto {
+export class CreateConversationRequestDto {
   @IsString()
-  name?: string;
+  name!: string;
+
+  @IsString()
+  avatar?: string;
 
   @IsEnum(ConversationType)
-  type: ConversationType;
+  type!: ConversationType;
 
   @IsArray()
-  @IsNumber({}, { each: true })
-  @Min(2, { message: "At least 2 users must be selected" })
-  @Max(4, { message: "Maximum 4 users allowed" })
-  userIds: number[];
-}
-
-export class UpdateConversationDto {
   @IsString()
-  name: string;
+  @IsUUID("4", { each: true })
+  userIds!: string[];
 }
 
-export class AddUserToConversationDto {
-  @IsNumber()
-  userId: number;
+export class UpdateConversationRequestDto {
+  @IsString()
+  name!: string;
+
+  @IsString()
+  avatar?: string;
 }
 
-export class RemoveUserFromConversationDto {
-  @IsNumber()
-  userId: number;
+export class ConversationMembershipRequest {
+  @IsString()
+  @IsUUID("4", { each: true })
+  userId!: string;
 }
-

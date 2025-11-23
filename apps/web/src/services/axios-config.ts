@@ -1,39 +1,91 @@
-import axios, { AxiosResponse } from "axios";
+import axios, { AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig } from "axios";
 
-const instance = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
+export const apiClient = axios.create({
+  baseURL: process.env['NEXT_PUBLIC_API_URL'] || "",
   timeout: 10000, // 10 second timeout
-});
+  withCredentials: true, // Send cookies with requests
+})
 
-// Add request interceptor to include token from cookies
-instance.interceptors.request.use(
-  (config) => {
-    // Get token from cookie
-    const getTokenFromCookie = () => {
-      if (typeof document === "undefined") return null;
-      const cookies = document.cookie.split(";");
-      const tokenCookie = cookies.find((cookie) => cookie.trim().startsWith("token="));
-      return tokenCookie ? tokenCookie.split("=")[1] : null;
-    };
+let isRefreshing = false;
+let failedQueue: Array<{
+  resolve: (value?: any) => void;
+  reject: (error?: any) => void;
+}> = [];
 
-    const token = getTokenFromCookie();
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
     }
+  });
+  failedQueue = [];
+};
+
+// Add request interceptor - no manual token handling needed (httpOnly cookies)
+apiClient.interceptors.request.use(
+  (config: InternalAxiosRequestConfig) => {
+    // Cookies are automatically sent with withCredentials: true
     return config;
   },
   (error) => {
     console.error("🚨 Axios Request Error:", error);
-    return Promise.reject(error);
+    throw error;
   }
 );
 
-// Add response interceptor for error handling
-instance.interceptors.response.use(
+// Add response interceptor for automatic token refresh
+apiClient.interceptors.response.use(
   (response) => {
     return response;
   },
-  (error) => {
+  async (error) => {
+    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+
+    // If error is 401 and we haven't tried to refresh yet
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      if (isRefreshing) {
+        // If already refreshing, queue this request
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ 
+            resolve: (token) => {
+              originalRequest.headers = originalRequest.headers || {};
+              resolve(apiClient(originalRequest));
+            }, 
+            reject 
+          });
+        });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        // Attempt to refresh token
+        await apiClient.post("/auth/refresh");
+        
+        // Process queued requests
+        processQueue(null, null);
+        
+        // Retry original request
+        return apiClient(originalRequest);
+      } catch (refreshError) {
+        // Refresh failed, process queue with error
+        processQueue(refreshError, null);
+        
+        // Redirect to login if we're in the browser
+        if (typeof window !== "undefined") {
+          window.location.href = "/login";
+        }
+        
+        throw refreshError;
+      } finally {
+        isRefreshing = false;
+      }
+    }
+
+    // Log other errors in development
     if (process.env.NODE_ENV === "development") {
       console.error("🚨 Axios Response Error:", {
         message: error.message,
@@ -44,23 +96,12 @@ instance.interceptors.response.use(
         method: error.config?.method,
       });
     }
-    return Promise.reject(error);
+    
+    throw error;
   }
 );
 
-// This function matches Orval's mutator signature
-export const axiosInstance = <T>({
-  url,
-  method,
-  ...config
-}: {
-  url: string;
-  method: string;
-  [key: string]: any;
-}): Promise<AxiosResponse<T>> => {
-  return instance({
-    url,
-    method,
-    ...config,
-  });
+export const apiRequest = async <T>(config: AxiosRequestConfig): Promise<T> => {
+  const response: AxiosResponse<T> = await apiClient.request<T>(config);
+  return response.data;
 };
