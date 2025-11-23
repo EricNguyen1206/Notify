@@ -49,6 +49,7 @@ Thumbs.db
 dist/
 build/
 .turbo/
+.turbo
 *.tar.gz
 *.zip
 

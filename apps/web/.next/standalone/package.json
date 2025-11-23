@@ -1,0 +1,36 @@
+{
+  "name": "notify-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Notify Chat Application - Monorepo",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "format": "turbo run format",
+    "fmt": "turbo run format",
+    "clean": "turbo run clean"
+  },
+  "keywords": [
+    "monorepo",
+    "chat",
+    "notify"
+  ],
+  "author": "Notify Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "devDependencies": {
+    "@notify/eslint": "workspace:*",
+    "@notify/jest": "workspace:*",
+    "@notify/prettier": "workspace:*",
+    "@notify/tsconfig": "workspace:*",
+    "turbo": "^2.0.0",
+    "typescript": "^5.3.2"
+  },
+  "packageManager": "pnpm@8.15.0"
+}
+
