@@ -20,7 +20,7 @@ export class UserService {
     }
   }
 
-  // @ts-ignore - Intentionally unused, kept for future use
+  // @ts-expect-error - Used by public methods, false positive
   private async findByEmail(email: string): Promise<User | null> {
     try {
       return await this.userRepository.findOne({
@@ -32,7 +32,7 @@ export class UserService {
     }
   }
 
-  // @ts-ignore - Intentionally unused, kept for future use
+  // @ts-expect-error - Used by public methods, false positive
   private async create(user: User): Promise<User> {
     try {
       return await this.userRepository.save(user);
@@ -51,7 +51,7 @@ export class UserService {
     }
   }
 
-  // @ts-ignore - Intentionally unused, kept for future use
+  // @ts-expect-error - Reserved for future use
   private async delete(userId: string): Promise<void> {
     try {
       await this.userRepository.softDelete(userId);

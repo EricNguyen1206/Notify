@@ -4,7 +4,7 @@ export class SendMessageRequestDto {
   @IsString()
   @IsDefined()
   @IsUUID()
-  conversationId: string;
+  conversationId!: string;
 
   @IsOptional()
   @IsString()

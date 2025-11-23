@@ -3,12 +3,12 @@ import { toast } from 'react-toastify';
 
 import { useCreateConversationMutation } from '@/services/api/conversations';
 import { useCurrentUserQuery } from '@/services/api/users';
-import { CreateConversationRequest, ConversationType } from '@notify/types';
+import { CreateConversationRequest, ConversationDto, ConversationType } from '@notify/types';
 import type { UserDto } from '@notify/types';
-import { EnhancedConversation, useConversationStore } from '@/store/useConversationStore';
+import { useConversationStore } from '@/store/useConversationStore';
 
 interface UseCreateConversationOptions {
-  onSuccess?: (conversation: EnhancedConversation) => void;
+  onSuccess?: (conversation: ConversationDto) => void;
   onError?: (error: any) => void;
   showToast?: boolean;
   defaultType?: 'group' | 'direct';
@@ -39,20 +39,18 @@ export const useCreateConversation = (options: UseCreateConversationOptions = {}
         toast.success('Conversation created successfully');
       }
 
-      // Transform API response to EnhancedConversation format
-      const newConversation: EnhancedConversation = {
+      // Transform API response to ConversationDto format
+      const newConversation: ConversationDto = {
         id: data.id,
         name: data.name,
         ownerId: data.ownerId,
-        type: formData.type,
+        type: formData.type === 'group' ? ConversationType.GROUP : ConversationType.DIRECT,
         avatar: '',
-        lastActivity: new Date(),
-        unreadCount: 0,
-        members: [],
+        createdAt: data.createdAt || new Date(),
       };
 
       // Add to appropriate conversation list in store
-      if (newConversation.type === 'group') {
+      if (newConversation.type === ConversationType.GROUP) {
         addGroupConversation(newConversation);
       } else {
         addDirectConversation(newConversation);

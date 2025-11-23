@@ -10,13 +10,11 @@ import { useConversationStore } from "./useConversationStore";
 import {
   ConnectionState,
   SocketEvent,
-  AuthenticatedPayload,
   JoinedConversationPayload,
   LeftConversationPayload,
   UserJoinedPayload,
   UserLeftPayload,
   ErrorPayload,
-  createAuthenticatePayload,
   createJoinConversationPayload,
   createLeaveConversationPayload,
   createSendMessagePayload,
@@ -100,37 +98,30 @@ export const useSocketStore = create<SocketState>()(
           set({ url });
 
           return new Promise<void>((resolve, reject) => {
-            // Create Socket.IO client
+            // Create Socket.IO client with token in handshake auth
             const socketInstance = io(url, {
               transports: ["websocket", "polling"],
               reconnection: true,
               reconnectionAttempts: 5,
               reconnectionDelay: 3000,
               timeout: 10000,
+              auth: {
+                token: token,
+              },
             });
 
             set({ socket: socketInstance });
 
-            // Handle successful connection
+            // Handle successful connection (authentication already validated by middleware)
             socketInstance.on(SocketEvent.CONNECT, () => {
-              console.log("Socket.IO connected, authenticating...");
-              
-              // Authenticate with token
-              const authPayload = createAuthenticatePayload(token);
-              socketInstance.emit(SocketEvent.AUTHENTICATE, authPayload);
-            });
-
-            // Handle authentication success
-            socketInstance.on(SocketEvent.AUTHENTICATED, (payload: AuthenticatedPayload) => {
-              console.log("Authenticated successfully", payload);
+              console.log("Socket.IO connected and authenticated successfully");
               
               set({
                 connectionState: ConnectionState.CONNECTED,
                 isConnecting: false,
-                username: payload.username,
               });
 
-              // Setup event handlers after authentication
+              // Setup event handlers after connection
               get().setupEventHandlers();
 
               // Auto re-join previously joined conversations

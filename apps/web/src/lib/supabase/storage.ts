@@ -32,27 +32,6 @@ export const handleFileExtUpload = async (bucket: string, folderName: string, fi
   }
 };
 
-export const getAllFile = async (name: string) => {
-  const { data, error } = await supabase.storage.from(name).list("images", {
-    limit: 100,
-    offset: 0,
-    sortBy: { column: "name", order: "asc" },
-  });
-
-  if (error) {
-    console.error("Error get files:", error.message);
-  } else {
-    const files = data.map((file: any) => {
-      return {
-        ...file,
-        publicUrl: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${name}/images/${file.name}`,
-      };
-    });
-
-    return files;
-  }
-};
-
 export const downloadFile = async (bucket: string, folderName: string, fileName: string) => {
   const { data, error } = await supabase.storage.from(bucket).download(`${folderName}/${fileName}`);
 
@@ -68,19 +47,4 @@ export const getPublicUrl = async (bucket: string, folderName: string, fileName:
   const { data } = supabase.storage.from(bucket).getPublicUrl(`${folderName}/${fileName}`);
 
   return data.publicUrl;
-};
-
-export const listAllFiles = async (bucket: string, folderName: string) => {
-  const { data, error } = await supabase.storage.from(bucket).list(folderName, {
-    limit: 100,
-    offset: 0,
-    sortBy: { column: "name", order: "asc" },
-  });
-
-  if (error) {
-    console.error("Error download files:", error.message);
-    return { data, status: false };
-  } else {
-    return { data, status: true };
-  }
 };

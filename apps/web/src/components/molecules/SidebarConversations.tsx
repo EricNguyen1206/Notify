@@ -18,7 +18,7 @@ type SidebarGroupMessagesProps = {
   loading: boolean;
 };
 
-const SidebarGroupMessages = ({ items, loading }: SidebarGroupMessagesProps) => {
+export const SidebarConversations = ({ items, loading }: SidebarGroupMessagesProps) => {
   const [openCreateConversation, setOpenCreateConversation] = useState(false);
   const activeConversationId = useConversationStore(
     (state: ConversationState) => state.activeConversationId
@@ -55,4 +55,4 @@ const SidebarGroupMessages = ({ items, loading }: SidebarGroupMessagesProps) => 
   );
 };
 
-export default SidebarGroupMessages;
+export default SidebarConversations;

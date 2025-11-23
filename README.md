@@ -262,7 +262,7 @@ Notify/
 │   │
 │   ├── validators/              # Shared Validation DTOs
 │   │   ├── src/
-│   │   │   ├── auth.dto.ts     # Auth DTOs (SignupRequestDto, LoginDto)
+│   │   │   ├── auth.dto.ts     # Auth DTOs (SignupRequestDto, SigninRequestDto)
 │   │   │   ├── conversation.dto.ts  # Conversation DTOs
 │   │   │   ├── message.dto.ts  # Message DTOs
 │   │   │   └── index.ts

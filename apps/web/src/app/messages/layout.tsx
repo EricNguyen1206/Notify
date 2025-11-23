@@ -7,16 +7,20 @@ import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
 import { MessagesLayoutClient } from "@/components/templates/MessagesLayoutClient";
+import { getAccessToken } from "@/lib/getCookies";
 
 export const metadata: Metadata = {
     title: "Notify | Messages",
     description: "Developed by ericnguyen1206",
 };
 
-export default function Layout({ children }: { children: React.ReactNode }) {
+export default async function Layout({ children }: { children: React.ReactNode }) {
+    // Retrieve access token from httpOnly cookie server-side
+    const accessToken = await getAccessToken();
+
     return (
         <ScreenProvider>
-            <MessagesLayoutClient>
+            <MessagesLayoutClient accessToken={accessToken}>
                 <SidebarProvider>
                     <AppSidebar />
                     <SidebarInset>

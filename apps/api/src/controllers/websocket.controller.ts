@@ -1,58 +1,187 @@
-import { Request, Response } from "express";
-import { Server as SocketIOServer } from "socket.io";
-import { WebSocketHandler } from "@/websocket/websocket.handler";
-import { ConversationService } from "@/services/conversation.service";
-import { MessageService } from "@/services/message.service";
-import { RedisService } from "@/services/redis.service";
-import { newMessage, MessageType } from "@/websocket/message-types";
-import { logger } from "@/utils/logger";
+import { Request, Response } from 'express';
+import { Server as SocketIOServer } from 'socket.io';
+import { WebSocketService } from '@/services/websocket.service';
+import { ConversationService } from '@/services/conversation.service';
+import { MessageService } from '@/services/message.service';
+import { RedisService } from '@/services/redis.service';
+import { logger } from '@/utils/logger';
+import {
+  SocketEvent,
+  JoinConversationPayload,
+  LeaveConversationPayload,
+  SendMessagePayload,
+  createErrorPayload,
+} from '@notify/types';
+import { AuthenticatedSocket } from '@/middleware/socketAuth.middleware';
 
+/**
+ * WebSocketController
+ * 
+ * Handles Socket.IO connections and HTTP endpoints for WebSocket management.
+ * Acts as a thin layer between Socket.IO and WebSocketService.
+ */
 export class WebSocketController {
-  private wsHandler: WebSocketHandler;
+  private wsService: WebSocketService;
 
-  constructor(io: SocketIOServer) {
+  constructor(_io: SocketIOServer) {
     // Initialize services
     const conversationService = new ConversationService();
     const messageService = new MessageService();
     const redisService = new RedisService();
 
-    // Initialize WebSocket handler
-    this.wsHandler = new WebSocketHandler(io, conversationService, messageService, redisService);
+    // Initialize WebSocket service
+    this.wsService = new WebSocketService(
+      redisService,
+      messageService,
+      conversationService
+    );
+
+    logger.info('WebSocketController initialized');
   }
 
-  // Handle WebSocket connection
-  handleConnection(socket: any): void {
-    this.wsHandler.handleConnection(socket);
+  // ============================================================================
+  // SOCKET.IO CONNECTION HANDLER
+  // ============================================================================
+
+  /**
+   * Handle new Socket.IO connection
+   * User is already authenticated by socketAuth middleware
+   */
+  async handleConnection(socket: AuthenticatedSocket): Promise<void> {
+    const userId = socket.userId!;
+    const username = socket.username || 'Unknown';
+
+    logger.info('New WebSocket connection', {
+      socketId: socket.id,
+      userId,
+      username,
+    });
+
+    try {
+      // Register connection
+      await this.wsService.registerClient(userId, socket);
+
+      // Setup event listeners
+      this.setupEventListeners(socket);
+
+      // Handle disconnect
+      socket.on(SocketEvent.DISCONNECT, async (reason: string) => {
+        await this.handleDisconnect(userId, reason);
+      });
+
+      // Handle errors
+      socket.on('error', (error: Error) => {
+        logger.error('Socket error', { userId, socketId: socket.id, error });
+      });
+
+    } catch (error) {
+      logger.error('Connection setup failed', error);
+      const errorPayload = createErrorPayload(
+        'CONNECTION_FAILED',
+        'Failed to establish connection',
+        error instanceof Error ? error.message : String(error)
+      );
+      socket.emit(SocketEvent.ERROR, errorPayload);
+      socket.disconnect();
+    }
   }
 
-  // Get WebSocket statistics
+  // ============================================================================
+  // EVENT LISTENERS SETUP
+  // ============================================================================
+
+  /**
+   * Setup all Socket.IO event listeners
+   */
+  private setupEventListeners(socket: AuthenticatedSocket): void {
+    const userId = socket.userId!;
+    const username = socket.username || 'Unknown';
+
+    // Join conversation
+    socket.on(SocketEvent.JOIN_CONVERSATION, async (payload: JoinConversationPayload) => {
+      try {
+        await this.wsService.handleJoinConversation(
+          userId,
+          username,
+          payload.conversation_id
+        );
+      } catch (error) {
+        this.emitError(socket, 'JOIN_FAILED', 'Failed to join conversation', error);
+      }
+    });
+
+    // Leave conversation
+    socket.on(SocketEvent.LEAVE_CONVERSATION, async (payload: LeaveConversationPayload) => {
+      try {
+        await this.wsService.handleLeaveConversation(
+          userId,
+          username,
+          payload.conversation_id
+        );
+      } catch (error) {
+        this.emitError(socket, 'LEAVE_FAILED', 'Failed to leave conversation', error);
+      }
+    });
+
+    // Send message
+    socket.on(SocketEvent.SEND_MESSAGE, async (payload: SendMessagePayload) => {
+      try {
+        await this.wsService.handleSendMessage(
+          userId,
+          username,
+          payload.conversation_id.toString(),
+          payload.text,
+          payload.url,
+          payload.fileName
+        );
+      } catch (error) {
+        this.emitError(socket, 'SEND_MESSAGE_FAILED', 'Failed to send message', error);
+      }
+    });
+  }
+
+  /**
+   * Handle user disconnect
+   */
+  private async handleDisconnect(userId: string, reason: string): Promise<void> {
+    try {
+      await this.wsService.unregisterClient(userId);
+      logger.info('User disconnected', { userId, reason });
+    } catch (error) {
+      logger.error('Disconnect handling error', error);
+    }
+  }
+
+  // ============================================================================
+  // HTTP ENDPOINTS (Admin/Stats)
+  // ============================================================================
+
+  /**
+   * GET /websocket/stats - Get WebSocket statistics
+   */
   async getWebSocketStats(_req: Request, res: Response): Promise<void> {
     try {
-      const hub = this.wsHandler.getHub();
-
-      const stats = {
-        connectedUsers: hub.getConnectedUsers().length,
-        totalConversations: hub["conversations"].size,
-        participants: Array.from(hub["conversations"].entries()).map(([conversationId, members]) => ({
-          conversationId: parseInt(conversationId),
-          memberCount: members.size,
-        })),
-      };
-
+      const onlineUsers = this.wsService.getOnlineUsers();
+      
       res.status(200).json({
         success: true,
-        data: stats,
+        data: {
+          connectedUsers: onlineUsers.length,
+          users: onlineUsers,
+        },
       });
     } catch (error) {
-      logger.error("Get WebSocket stats error:", error);
+      logger.error('Get WebSocket stats error:', error);
       res.status(500).json({
         success: false,
-        message: "Internal server error",
+        message: 'Internal server error',
       });
     }
   }
 
-  // Get participants
+  /**
+   * GET /websocket/conversations/:conversationId/participants - Get conversation participants
+   */
   async getParticipants(req: Request, res: Response): Promise<void> {
     try {
       const { conversationId } = req.params;
@@ -60,62 +189,43 @@ export class WebSocketController {
       if (!conversationId) {
         res.status(400).json({
           success: false,
-          message: "Conversation ID is required",
+          message: 'Conversation ID is required',
         });
         return;
       }
 
-      const conversationIdNum = parseInt(conversationId);
-
-      if (isNaN(conversationIdNum)) {
-        res.status(400).json({
-          success: false,
-          message: "Invalid conversation ID",
-        });
-        return;
-      }
-
-      const hub = this.wsHandler.getHub();
-      const participants = hub.getParticipants(conversationIdNum);
-      const participantCount = hub.getParticipantCount(conversationIdNum);
+      const participants = this.wsService.getRoomMembers(conversationId);
+      const participantCount = this.wsService.getRoomMemberCount(conversationId);
 
       res.status(200).json({
         success: true,
         data: {
-          conversationId: conversationIdNum,
+          conversationId,
           participants,
           participantCount,
         },
       });
     } catch (error) {
-      logger.error("Get participants error:", error);
+      logger.error('Get participants error:', error);
       res.status(500).json({
         success: false,
-        message: "Internal server error",
+        message: 'Internal server error',
       });
     }
   }
 
-  // Broadcast message to conversation (admin only)
+  /**
+   * POST /websocket/conversations/:conversationId/broadcast - Broadcast message (admin only)
+   */
   async broadcastToConversation(req: Request, res: Response): Promise<void> {
     try {
       const { conversationId } = req.params;
+      const { message } = req.body;
 
       if (!conversationId) {
         res.status(400).json({
           success: false,
-          message: "Conversation ID is required",
-        });
-        return;
-      }
-
-      const { message } = req.body;
-      const conversationIdNum = parseInt(conversationId);
-
-      if (isNaN(conversationIdNum)) {
-        res.status(400).json({
-          success: false,
-          message: "Invalid conversation ID",
+          message: 'Conversation ID is required',
         });
         return;
       }
@@ -123,42 +233,46 @@ export class WebSocketController {
       if (!message) {
         res.status(400).json({
           success: false,
-          message: "Message is required",
+          message: 'Message is required',
         });
         return;
       }
 
-      const hub = this.wsHandler.getHub();
-
-      // Create admin message using the message-types helper
-      const adminMessage = newMessage(MessageType.CONVERSATION_MESSAGE, {
-        conversation_id: conversationIdNum,
-        sender_id: 0, // System/admin user
-        sender_name: "System",
+      // Broadcast admin message
+      const adminMessagePayload = {
+        id: Date.now().toString(),
+        conversationId: conversationId,
+        senderId: '0',
+        senderName: 'System',
         text: message,
-        message_type: "text" as const,
-      });
+        createdAt: new Date().toISOString(),
+      };
 
-      await hub.broadcastToConversation(conversationIdNum, adminMessage);
+      this.wsService.broadcastToRoom(
+        conversationId,
+        SocketEvent.NEW_MESSAGE,
+        adminMessagePayload
+      );
 
       res.status(200).json({
         success: true,
-        message: "Message broadcasted successfully",
+        message: 'Message broadcasted successfully',
       });
     } catch (error) {
-      logger.error("Broadcast to conversation error:", error);
+      logger.error('Broadcast to conversation error:', error);
       res.status(500).json({
         success: false,
-        message: "Internal server error",
+        message: 'Internal server error',
       });
     }
   }
 
-  // Get connected users
+  /**
+   * GET /websocket/users/online - Get list of online users
+   */
   async getConnectedUsers(_req: Request, res: Response): Promise<void> {
     try {
-      const hub = this.wsHandler.getHub();
-      const connectedUsers = hub.getConnectedUsers();
+      const connectedUsers = this.wsService.getOnlineUsers();
 
       res.status(200).json({
         success: true,
@@ -168,15 +282,17 @@ export class WebSocketController {
         },
       });
     } catch (error) {
-      logger.error("Get connected users error:", error);
+      logger.error('Get connected users error:', error);
       res.status(500).json({
         success: false,
-        message: "Internal server error",
+        message: 'Internal server error',
       });
     }
   }
 
-  // Disconnect user (admin only)
+  /**
+   * POST /websocket/users/:userId/disconnect - Disconnect user (admin only)
+   */
   async disconnectUser(req: Request, res: Response): Promise<void> {
     try {
       const { userId } = req.params;
@@ -184,54 +300,70 @@ export class WebSocketController {
       if (!userId) {
         res.status(400).json({
           success: false,
-          message: "User ID is required",
+          message: 'User ID is required',
         });
         return;
       }
 
-      const userIdNum = parseInt(userId);
+      const connectedUsers = this.wsService.getOnlineUsers();
 
-      if (isNaN(userIdNum)) {
-        res.status(400).json({
-          success: false,
-          message: "Invalid user ID",
-        });
-        return;
-      }
-
-      const hub = this.wsHandler.getHub();
-      const connectedUsers = hub.getConnectedUsers();
-
-      if (!connectedUsers.includes(userIdNum)) {
+      if (!connectedUsers.includes(userId)) {
         res.status(404).json({
           success: false,
-          message: "User not connected",
+          message: 'User not connected',
         });
         return;
       }
 
-      // Find and disconnect the user's socket
-      const clients = hub["clients"];
-      const userSocket = clients.get(userIdNum.toString());
-
-      if (userSocket) {
-        userSocket.disconnect(true);
+      // Get socket and disconnect
+      const socket = this.wsService.getSocket(userId);
+      if (socket) {
+        socket.disconnect(true);
         res.status(200).json({
           success: true,
-          message: "User disconnected successfully",
+          message: 'User disconnected successfully',
         });
       } else {
         res.status(404).json({
           success: false,
-          message: "User socket not found",
+          message: 'User socket not found',
         });
       }
     } catch (error) {
-      logger.error("Disconnect user error:", error);
+      logger.error('Disconnect user error:', error);
       res.status(500).json({
         success: false,
-        message: "Internal server error",
+        message: 'Internal server error',
       });
     }
+  }
+
+  // ============================================================================
+  // HELPER METHODS
+  // ============================================================================
+
+  /**
+   * Emit error to socket
+   */
+  private emitError(
+    socket: AuthenticatedSocket,
+    code: string,
+    message: string,
+    error: any
+  ): void {
+    logger.error(`${code}:`, error);
+    const errorPayload = createErrorPayload(
+      code,
+      message,
+      error instanceof Error ? error.message : String(error)
+    );
+    socket.emit(SocketEvent.ERROR, errorPayload);
+  }
+
+  /**
+   * Get WebSocketService instance (for external access if needed)
+   */
+  public getService(): WebSocketService {
+    return this.wsService;
   }
 }

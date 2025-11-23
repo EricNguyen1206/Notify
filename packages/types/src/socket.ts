@@ -24,8 +24,6 @@ export enum SocketEvent {
   // Connection events
   CONNECT = "connect",
   DISCONNECT = "disconnect",
-  AUTHENTICATE = "authenticate",
-  AUTHENTICATED = "authenticated",
   
   // Conversation events
   JOIN_CONVERSATION = "join_conversation",
@@ -56,18 +54,6 @@ export interface SocketMessage<T = any> {
   data: T;
 }
 
-// ============================================================================
-// Authentication Payloads
-// ============================================================================
-
-export interface AuthenticatePayload {
-  token: string;
-}
-
-export interface AuthenticatedPayload {
-  userId: number;
-  username: string;
-}
 
 // ============================================================================
 // Conversation Payloads
@@ -138,7 +124,6 @@ export interface ErrorPayload {
 // ============================================================================
 
 export interface ServerToClientEvents {
-  [SocketEvent.AUTHENTICATED]: (payload: AuthenticatedPayload) => void;
   [SocketEvent.JOINED_CONVERSATION]: (payload: JoinedConversationPayload) => void;
   [SocketEvent.LEFT_CONVERSATION]: (payload: LeftConversationPayload) => void;
   [SocketEvent.NEW_MESSAGE]: (payload: MessageDto) => void;
@@ -152,7 +137,6 @@ export interface ServerToClientEvents {
 // ============================================================================
 
 export interface ClientToServerEvents {
-  [SocketEvent.AUTHENTICATE]: (payload: AuthenticatePayload) => void;
   [SocketEvent.JOIN_CONVERSATION]: (payload: JoinConversationPayload) => void;
   [SocketEvent.LEAVE_CONVERSATION]: (payload: LeaveConversationPayload) => void;
   [SocketEvent.SEND_MESSAGE]: (payload: SendMessagePayload) => void;
@@ -170,16 +154,6 @@ export function createSocketMessage<T>(data: T): SocketMessage<T> {
   };
 }
 
-export function createAuthenticatePayload(token: string): AuthenticatePayload {
-  return { token };
-}
-
-export function createAuthenticatedPayload(userId: number, username: string): AuthenticatedPayload {
-  return {
-    userId,
-    username,
-  };
-}
 
 export function createJoinConversationPayload(conversationId: number): JoinConversationPayload {
   return {
@@ -309,9 +283,7 @@ export function generateMessageId(): string {
 // Type Guards
 // ============================================================================
 
-export function isAuthenticatePayload(payload: any): payload is AuthenticatePayload {
-  return typeof payload === "object" && typeof payload.token === "string";
-}
+
 
 export function isJoinConversationPayload(payload: any): payload is JoinConversationPayload {
   return typeof payload === "object" && typeof payload.conversation_id === "number";

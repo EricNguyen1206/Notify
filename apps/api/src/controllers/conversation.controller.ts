@@ -2,7 +2,7 @@
 import { Request, Response } from 'express';
 import { ConversationService } from '@/services/conversation.service';
 import { logger } from '@/utils/logger';
-import { AuthenticatedRequest } from '@/middleware/auth/auth.middleware';
+import { AuthenticatedRequest } from '@/middleware/auth.middleware';
 import { ApiResponse, ConversationDetailDto, ConversationType } from '@notify/types';
 
 export class ConversationController {

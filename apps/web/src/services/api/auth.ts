@@ -1,9 +1,6 @@
 import {
-  SigninRequestDto,
-  SignupRequestDto,
   UserDto,
   ApiErrorResponse,
-  RefreshTokenResponseDto,
   ApiMessageResponse,
   ApiResponse,
 } from '@notify/types';
@@ -11,6 +8,7 @@ import { useMutation, UseMutationOptions } from '@tanstack/react-query';
 import { AxiosError } from 'axios';
 
 import { apiClient } from '../axios-config';
+import { SigninRequestDto, SignupRequestDto } from '@/validators/index';
 
 const signin = async (payload: SigninRequestDto): Promise<ApiResponse<UserDto>> => {
   const { data } = await apiClient.post<ApiResponse<UserDto>>('/auth/signin', payload);
@@ -30,8 +28,8 @@ const signout = async (): Promise<ApiMessageResponse> => {
   return data;
 };
 
-const refresh = async (): Promise<RefreshTokenResponseDto> => {
-  const { data } = await apiClient.post<RefreshTokenResponseDto>('/auth/refresh');
+const refresh = async () => {
+  const { data } = await apiClient.post('/auth/refresh');
   return data;
 };
 
@@ -74,9 +72,9 @@ export const useSignoutMutation = (
 };
 
 export const useRefreshMutation = (
-  options?: UseMutationOptions<RefreshTokenResponseDto, AxiosError<ApiErrorResponse>, void>
+  options?: UseMutationOptions<ApiMessageResponse, AxiosError<ApiErrorResponse>, void>
 ) => {
-  return useMutation<RefreshTokenResponseDto, AxiosError<ApiErrorResponse>, void>({
+  return useMutation<ApiMessageResponse, AxiosError<ApiErrorResponse>, void>({
     mutationKey: ['auth', 'refresh'],
     mutationFn: refresh,
     ...options,

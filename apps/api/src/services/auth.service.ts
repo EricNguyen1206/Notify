@@ -5,7 +5,7 @@ import { AppDataSource } from '@/config/database';
 import { User } from '@/models/User';
 import { Session } from '@/models/Session';
 import { config } from '@/config/config';
-import { SignupRequestDto, LoginDto } from '@notify/validators';
+import { SignupRequestDto, SigninRequestDto } from '@notify/validators';
 import { UserDto } from '@notify/types';
 import { logger } from '@/utils/logger';
 
@@ -55,7 +55,7 @@ export class AuthService {
   }
 
   public async signin(
-    data: LoginDto
+    data: SigninRequestDto
   ): Promise<{ user: UserDto; accessToken: string; refreshToken: string }> {
     try {
       // Find user by email

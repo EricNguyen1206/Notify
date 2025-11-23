@@ -1,7 +1,7 @@
-import { Response } from "express";
-import { FriendService } from "@/services/friend.service";
-import { AuthenticatedRequest } from "@/middleware/auth/auth.middleware";
-import { logger } from "@/utils/logger";
+import { Response } from 'express';
+import { FriendService } from '@/services/friend.service';
+import { AuthenticatedRequest } from '@/middleware/auth.middleware';
+import { logger } from '@/utils/logger';
 
 export class FriendController {
   private friendService: FriendService;
@@ -24,12 +24,12 @@ export class FriendController {
       res.status(201).json({
         success: true,
         data: friendRequest,
-        message: "Friend request sent successfully",
+        message: 'Friend request sent successfully',
       });
     } catch (error: any) {
-      logger.error("Send friend request error:", error);
+      logger.error('Send friend request error:', error);
 
-      if (error.message.includes("cannot send a friend request to yourself")) {
+      if (error.message.includes('cannot send a friend request to yourself')) {
         res.status(400).json({
           success: false,
           message: error.message,
@@ -37,7 +37,7 @@ export class FriendController {
         return;
       }
 
-      if (error.message.includes("already") || error.message.includes("already sent")) {
+      if (error.message.includes('already') || error.message.includes('already sent')) {
         res.status(400).json({
           success: false,
           message: error.message,
@@ -45,7 +45,7 @@ export class FriendController {
         return;
       }
 
-      if (error.message.includes("not found")) {
+      if (error.message.includes('not found')) {
         res.status(404).json({
           success: false,
           message: error.message,
@@ -55,7 +55,7 @@ export class FriendController {
 
       res.status(500).json({
         success: false,
-        message: "Failed to send friend request",
+        message: 'Failed to send friend request',
         details: error.message,
       });
     }
@@ -73,7 +73,7 @@ export class FriendController {
       if (!requestId) {
         res.status(400).json({
           success: false,
-          message: "Request ID is required",
+          message: 'Request ID is required',
         });
         return;
       }
@@ -83,12 +83,12 @@ export class FriendController {
       res.status(200).json({
         success: true,
         data: friendship,
-        message: "Friend request accepted successfully",
+        message: 'Friend request accepted successfully',
       });
     } catch (error: any) {
-      logger.error("Accept friend request error:", error);
+      logger.error('Accept friend request error:', error);
 
-      if (error.message.includes("not found")) {
+      if (error.message.includes('not found')) {
         res.status(404).json({
           success: false,
           message: error.message,
@@ -96,7 +96,7 @@ export class FriendController {
         return;
       }
 
-      if (error.message.includes("not authorized") || error.message.includes("already")) {
+      if (error.message.includes('not authorized') || error.message.includes('already')) {
         res.status(400).json({
           success: false,
           message: error.message,
@@ -106,7 +106,7 @@ export class FriendController {
 
       res.status(500).json({
         success: false,
-        message: "Failed to accept friend request",
+        message: 'Failed to accept friend request',
         details: error.message,
       });
     }
@@ -124,7 +124,7 @@ export class FriendController {
       if (!requestId) {
         res.status(400).json({
           success: false,
-          message: "Request ID is required",
+          message: 'Request ID is required',
         });
         return;
       }
@@ -133,12 +133,12 @@ export class FriendController {
 
       res.status(200).json({
         success: true,
-        message: "Friend request declined successfully",
+        message: 'Friend request declined successfully',
       });
     } catch (error: any) {
-      logger.error("Decline friend request error:", error);
+      logger.error('Decline friend request error:', error);
 
-      if (error.message.includes("not found")) {
+      if (error.message.includes('not found')) {
         res.status(404).json({
           success: false,
           message: error.message,
@@ -146,7 +146,7 @@ export class FriendController {
         return;
       }
 
-      if (error.message.includes("not authorized") || error.message.includes("already")) {
+      if (error.message.includes('not authorized') || error.message.includes('already')) {
         res.status(400).json({
           success: false,
           message: error.message,
@@ -156,7 +156,7 @@ export class FriendController {
 
       res.status(500).json({
         success: false,
-        message: "Failed to decline friend request",
+        message: 'Failed to decline friend request',
         details: error.message,
       });
     }
@@ -177,11 +177,11 @@ export class FriendController {
         data: requests,
       });
     } catch (error: any) {
-      logger.error("Get friend requests error:", error);
+      logger.error('Get friend requests error:', error);
 
       res.status(500).json({
         success: false,
-        message: "Failed to get friend requests",
+        message: 'Failed to get friend requests',
         details: error.message,
       });
     }
@@ -202,11 +202,11 @@ export class FriendController {
         data: friends,
       });
     } catch (error: any) {
-      logger.error("Get friends error:", error);
+      logger.error('Get friends error:', error);
 
       res.status(500).json({
         success: false,
-        message: "Failed to get friends",
+        message: 'Failed to get friends',
         details: error.message,
       });
     }

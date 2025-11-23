@@ -14,7 +14,7 @@ export class SignupRequestDto {
   password!: string;
 }
 
-export class LoginDto {
+export class SigninRequestDto {
   @IsEmail()
   email!: string;
 

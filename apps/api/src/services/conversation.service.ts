@@ -70,6 +70,11 @@ export class ConversationService {
     }
   }
 
+  // Alias for WebSocket service compatibility
+  async findById(conversationId: string): Promise<Conversation | null> {
+    return this.getConversationById(conversationId);
+  }
+
   // Get all conversations for a user, separated by type (direct/group)
   async getAllConversation(userId: string): Promise<{
     direct: ConversationDto[];

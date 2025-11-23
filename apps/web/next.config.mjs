@@ -3,6 +3,7 @@ const nextConfig = {
   // Enable standalone output for Docker optimization
   output: "standalone",
   reactStrictMode: false,
+  transpilePackages: ["@notify/validators"],
 
   images: {
     remotePatterns: [

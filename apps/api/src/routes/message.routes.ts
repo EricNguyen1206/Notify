@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { MessageController } from '@/controllers/message.controller';
-import { validateDto } from '@/middleware/validation/validation.middleware';
+import { validateDto } from '@/middleware/validation.middleware';
 import { SendMessageRequestDto } from '@notify/validators';
 
 const router = Router();

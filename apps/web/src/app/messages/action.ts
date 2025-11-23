@@ -1,6 +1,7 @@
 import { useConversationsQuery } from "@/services/api/conversations";
-import { EnhancedConversation, useConversationStore } from "@/store/useConversationStore";
+import { useConversationStore } from "@/store/useConversationStore";
 import { useSocketStore } from "@/store/useSocketStore";
+import { ConversationDto, ConversationType } from "@notify/types";
 import { useEffect, useMemo, useState, useRef } from "react";
 
 /**
@@ -19,9 +20,9 @@ export const useConversationSearch = () => {
 };
 
 /**
- * Transforms API conversation data to EnhancedConversation format
+ * Transforms API conversation data to ConversationDto format
  */
-const transformConversationData = (conversations: any[], type: "group" | "direct"): EnhancedConversation[] => {
+const transformConversationData = (conversations: any[], type: "group" | "direct"): ConversationDto[] => {
   if (!Array.isArray(conversations)) return [];
 
   return conversations.map(
@@ -30,13 +31,10 @@ const transformConversationData = (conversations: any[], type: "group" | "direct
         id: String(ch.id ?? ""),
         name: ch.name,
         ownerId: String(ch.ownerId ?? ""),
-        createdAt: new Date(),
-        type,
+        createdAt: ch.createdAt || new Date(),
+        type: type === "group" ? ConversationType.GROUP : ConversationType.DIRECT,
         avatar: ch.avatar || "",
-        lastActivity: new Date(),
-        unreadCount: 0,
-        members: [],
-      }) as EnhancedConversation
+      }) as ConversationDto
   );
 };
 
@@ -165,7 +163,7 @@ export const conversationUtils = {
   /**
    * Get conversation by ID from store
    */
-  getConversationById: (conversationId: string): EnhancedConversation | null => {
+  getConversationById: (conversationId: string): ConversationDto | null => {
     const { groupConversations, directConversations } = useConversationStore.getState();
     return [...groupConversations, ...directConversations].find((conv) => conv.id === conversationId) || null;
   },
@@ -173,8 +171,8 @@ export const conversationUtils = {
   /**
    * Format conversation name for display
    */
-  formatConversationName: (conversation: EnhancedConversation): string => {
-    return conversation.type === "group" ? `#${conversation.name}` : conversation.name;
+  formatConversationName: (conversation: ConversationDto): string => {
+    return conversation.type === ConversationType.GROUP ? `#${conversation.name}` : conversation.name;
   },
 
   /**

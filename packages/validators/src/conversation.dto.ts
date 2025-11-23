@@ -3,23 +3,23 @@ import { ConversationType } from "@notify/types";
 
 export class CreateConversationRequestDto {
   @IsString()
-  name: string;
+  name!: string;
 
   @IsString()
   avatar?: string;
 
   @IsEnum(ConversationType)
-  type: ConversationType;
+  type!: ConversationType;
 
   @IsArray()
   @IsString()
   @IsUUID("4", { each: true })
-  userIds: string[];
+  userIds!: string[];
 }
 
 export class UpdateConversationRequestDto {
   @IsString()
-  name: string;
+  name!: string;
 
   @IsString()
   avatar?: string;
@@ -28,5 +28,5 @@ export class UpdateConversationRequestDto {
 export class ConversationMembershipRequest {
   @IsString()
   @IsUUID("4", { each: true })
-  userId: string;
+  userId!: string;
 }

@@ -1,24 +1,12 @@
-import { ConversationDetailDto, ConversationDto, UserDto } from '@notify/types';
+import { ConversationDto } from '@notify/types';
 import { create } from 'zustand';
-
-// TODO: keep this for now, but remove it later
-export interface EnhancedConversation {
-  id: string;
-  name: string;
-  ownerId: string;
-  type: 'group' | 'direct';
-  avatar: string;
-  lastActivity: Date;
-  unreadCount: number;
-  members?: UserDto[];
-}
 
 // stores/conversationStore.ts
 export interface ConversationState {
   // Existing state
   unreadCounts: Record<string, number>;
   activeConversationId: string | null;
-  currentConversation: ConversationDetailDto | null;
+  currentConversation: ConversationDto | null;
   groupConversations: ConversationDto[];
   directConversations: ConversationDto[];
 
@@ -29,12 +17,12 @@ export interface ConversationState {
   // Existing methods
   setUnreadCount: (conversationId: string, count: number) => void;
   setActiveConversation: (conversationId: string) => void;
-  setCurrentConversation: (conversation: EnhancedConversation) => void;
+  setCurrentConversation: (conversation: ConversationDto) => void;
   markAsRead: (conversationId: string) => void;
-  setGroupConversations: (conversations: EnhancedConversation[]) => void;
-  setDirectConversations: (conversations: EnhancedConversation[]) => void;
-  addGroupConversation: (conversation: EnhancedConversation) => void;
-  addDirectConversation: (conversation: EnhancedConversation) => void;
+  setGroupConversations: (conversations: ConversationDto[]) => void;
+  setDirectConversations: (conversations: ConversationDto[]) => void;
+  addGroupConversation: (conversation: ConversationDto) => void;
+  addDirectConversation: (conversation: ConversationDto) => void;
   removeConversation: (conversationId: string, type: 'group' | 'direct') => void;
 
   // New WebSocket conversation management methods
@@ -73,15 +61,15 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
     set((state) => ({
       unreadCounts: { ...state.unreadCounts, [conversationId]: 0 },
     })),
-  setGroupConversations: (conversations: EnhancedConversation[]) =>
+  setGroupConversations: (conversations: ConversationDto[]) =>
     set({ groupConversations: conversations }),
-  setDirectConversations: (conversations: EnhancedConversation[]) =>
+  setDirectConversations: (conversations: ConversationDto[]) =>
     set({ directConversations: conversations }),
-  addGroupConversation: (conversation: EnhancedConversation) =>
+  addGroupConversation: (conversation: ConversationDto) =>
     set((state) => ({
       groupConversations: [...state.groupConversations, conversation],
     })),
-  addDirectConversation: (conversation: EnhancedConversation) =>
+  addDirectConversation: (conversation: ConversationDto) =>
     set((state) => ({
       directConversations: [...state.directConversations, conversation],
     })),

@@ -4,12 +4,12 @@ import { useScreenDimensions } from "@/hooks/useScreenDimensions";
 import { useConversationMessagesQuery } from "@/services/api/messages";
 import { useConversationQuery } from "@/services/api/conversations";
 import { useCurrentUserQuery } from "@/services/api/users";
-import { MessageResponse } from "@notify/types";
+import { MessageDto } from "@notify/types";
 import { useConversationStore } from "@/store/useConversationStore";
-import { Message, useChatStore } from "@/store/useChatStore";
-import { ChatMessage, ConnectionState, useSocketStore } from "@/store/useSocketStore";
+import { useChatStore, Message } from "@/store/useChatStore";
+import { ConnectionState, useSocketStore } from "@/store/useSocketStore";
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { toast } from "react-toastify";
 
 // Hook for managing conversation navigation and validation
@@ -125,17 +125,15 @@ export const useChatData = (conversationId: string | undefined) => {
     if (!Array.isArray(chatsData?.data)) return [];
 
     return chatsData.data.map(
-      (chat: MessageResponse): Message => ({
+      (chat: MessageDto): Message => ({
         id: String(chat.id ?? ""),
         conversationId: String(chat.conversationId ?? conversationId ?? ""),
         createdAt: chat.createdAt ? new Date(chat.createdAt).toISOString() : new Date().toISOString(),
         ...(chat.fileName !== undefined && { fileName: chat.fileName }),
-        ...(chat.receiverId !== undefined && { receiverId: String(chat.receiverId) }),
         ...(chat.senderAvatar !== undefined && { senderAvatar: chat.senderAvatar }),
         senderId: String(chat.senderId ?? ""),
         ...(chat.senderName !== undefined && { senderName: chat.senderName }),
         ...(chat.text !== undefined && { text: chat.text }),
-        ...(chat.type !== undefined && { type: chat.type }),
         ...(chat.url !== undefined && { url: chat.url }),
       })
     );
@@ -284,12 +282,11 @@ export const useWebSocketMessageHandler = (conversationId: string | undefined) =
   const { upsertMessageToConversation } = useChatStore();
 
   useEffect(() => {
-    const handleChatMessage = (event: CustomEvent<ChatMessage>) => {
+    const handleChatMessage = (event: CustomEvent<MessageDto>) => {
       const chatMessage = event.detail;
 
       // Only process messages for the current conversation
       if (conversationId && String(chatMessage.conversationId) === String(conversationId)) {
-        // Transform ChatMessage to Message format
         const message: Message = {
           id: String(chatMessage.id),
           conversationId: String(chatMessage.conversationId),
@@ -298,7 +295,6 @@ export const useWebSocketMessageHandler = (conversationId: string | undefined) =
           ...(chatMessage.senderAvatar !== undefined && { senderAvatar: chatMessage.senderAvatar }),
           ...(chatMessage.text !== undefined && { text: chatMessage.text }),
           createdAt: chatMessage.createdAt,
-          ...(chatMessage.type !== undefined && { type: chatMessage.type }),
           ...(chatMessage.url !== undefined && { url: chatMessage.url }),
           ...(chatMessage.fileName !== undefined && { fileName: chatMessage.fileName }),
         };

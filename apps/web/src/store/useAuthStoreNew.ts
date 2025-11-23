@@ -1,11 +1,11 @@
 import { create } from "zustand";
 import { authService } from "@/services/authService";
 import { toast } from "react-toastify";
-import { User } from "@supabase/supabase-js";
+import { UserDto } from "@notify/types";
 
 export interface AuthState {
     accessToken: string | null;
-    user: User | null;
+    user: UserDto | null;
     loading: boolean;
   
     setAccessToken: (accessToken: string) => void;
@@ -40,7 +40,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ loading: true });
 
       //  gọi api
-      await authService.signUp(username, password, email, firstName, lastName);
+      await authService.signUp({
+        username,
+        password,
+        email,
+      });
 
       toast.success("Đăng ký thành công! Bạn sẽ được chuyển sang trang đăng nhập.");
     } catch (error) {
@@ -51,15 +55,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  signIn: async (username, password) => {
+  signIn: async (email, password) => {
     try {
       set({ loading: true });
 
-      const { accessToken } = await authService.signIn(username, password);
-      get().setAccessToken(accessToken);
+      const { success, message } = await authService.signIn({
+        email,
+        password,
+      });
+
+      if (!success) {
+        toast.error(message);
+        return;
+      }
 
       await get().getProfile();
-
       toast.success("Chào mừng bạn quay lại với Moji 🎉");
     } catch (error) {
       console.error(error);
@@ -83,9 +93,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   getProfile: async () => {
     try {
       set({ loading: true });
-      const user = await authService.getProfile();
+      const {data} = await authService.getProfile();
 
-      set({ user });
+      set({ user: data });
     } catch (error) {
       console.error(error);
       set({ user: null, accessToken: null });
@@ -99,12 +109,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       set({ loading: true });
       const { user, getProfile, setAccessToken } = get();
-      const accessToken = await authService.refresh();
-
-      setAccessToken(accessToken);
-
-      if (!user) {
-        await getProfile();
+      const {success} = await authService.refresh();
+      if (!success) {
+        toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!");
+        get().clearState();
       }
     } catch (error) {
       console.error(error);

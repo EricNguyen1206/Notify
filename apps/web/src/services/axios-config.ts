@@ -1,10 +1,10 @@
 import axios, { AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig } from "axios";
 
 export const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
+  baseURL: process.env['NEXT_PUBLIC_API_URL'] || "",
   timeout: 10000, // 10 second timeout
   withCredentials: true, // Send cookies with requests
-});
+})
 
 let isRefreshing = false;
 let failedQueue: Array<{

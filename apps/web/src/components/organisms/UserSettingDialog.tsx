@@ -21,8 +21,8 @@ import { Label } from "../ui/label";
 
 // API
 import { useCurrentUserQuery, useUpdateProfileMutation } from "@/services/api/users";
-import type { UpdateProfileRequest } from "@notify/types";
 import { useQueryClient } from "@tanstack/react-query";
+import { UpdateProfileDto } from '@notify/validators';
 
 type ParentComponentProps = {
   children: React.ReactNode;
@@ -63,7 +63,7 @@ const UserSettingDialog: React.FC<ParentComponentProps> = ({ children, open, onO
     let avatar = null;
     let checkEdit = false;
 
-    const updateData: UpdateProfileRequest = {
+    const updateData: UpdateProfileDto = {
       currentPassword: formData.currentPassword,
     };
 

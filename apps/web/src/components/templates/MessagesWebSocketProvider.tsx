@@ -5,10 +5,11 @@ import { useSocketStore } from "@/store/useSocketStore";
 
 interface MessagesWebSocketProviderProps {
   userId: string | number;
+  token: string;
   children: React.ReactNode;
 }
 
-function MessagesWebSocketProvider({ userId, children }: MessagesWebSocketProviderProps) {
+function MessagesWebSocketProvider({ userId, token, children }: MessagesWebSocketProviderProps) {
   const { connect, disconnect, isConnected } = useSocketStore();
   const hasConnected = useRef(false);
 
@@ -19,7 +20,7 @@ function MessagesWebSocketProvider({ userId, children }: MessagesWebSocketProvid
     // Only connect if we haven't connected yet and we're not already connected
     if (!hasConnected.current && !isConnected()) {
       hasConnected.current = true;
-      connect(userIdString).catch(() => {
+      connect(userIdString, token).catch(() => {
         // Reset the flag on error so we can try again if needed
         hasConnected.current = false;
       });
@@ -30,7 +31,7 @@ function MessagesWebSocketProvider({ userId, children }: MessagesWebSocketProvid
       hasConnected.current = false;
       disconnect();
     };
-  }, [userId]); // Only depend on userId, not connectionState
+  }, [userId, token]); // Also depend on token changes
 
   return <>{children}</>;
 }

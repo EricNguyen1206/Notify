@@ -1,9 +1,8 @@
 import api from '@/lib/axios';
+import { SigninRequestDto, SignupRequestDto } from '@/validators/index';
 import {
   ApiMessageResponse,
   ApiResponse,
-  SigninRequestDto,
-  SignupRequestDto,
   UserDto,
 } from '@notify/types';
 

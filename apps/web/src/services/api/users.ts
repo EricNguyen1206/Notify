@@ -1,4 +1,4 @@
-import { ApiErrorResponse, ApiResponse, UpdateProfileRequest, UserDto } from '@notify/types';
+import { ApiErrorResponse, ApiResponse, UserDto } from '@notify/types';
 import {
   useMutation,
   UseMutationOptions,
@@ -9,6 +9,7 @@ import {
 import { AxiosError } from 'axios';
 
 import { apiClient } from '../axios-config';
+import { UpdateProfileDto } from '@/validators/auth.dto';
 
 const getCurrentUser = async (): Promise<UserDto> => {
   const { data } = await apiClient.get<ApiResponse<UserDto>>('/users/profile');
@@ -22,7 +23,7 @@ const searchUsers = async (username: string): Promise<UserDto[]> => {
   return data;
 };
 
-const updateProfile = async (payload: UpdateProfileRequest): Promise<UserDto> => {
+const updateProfile = async (payload: UpdateProfileDto): Promise<UserDto> => {
   const { data } = await apiClient.put<ApiResponse<UserDto>>('/users/profile', payload);
   return data.data;
 };
@@ -57,9 +58,9 @@ export const useSearchUsersQuery = (
 };
 
 export const useUpdateProfileMutation = (
-  options?: UseMutationOptions<UserDto, AxiosError<ApiErrorResponse>, UpdateProfileRequest>
+  options?: UseMutationOptions<UserDto, AxiosError<ApiErrorResponse>, UpdateProfileDto>
 ) => {
-  return useMutation<UserDto, AxiosError<ApiErrorResponse>, UpdateProfileRequest>({
+  return useMutation<UserDto, AxiosError<ApiErrorResponse>, UpdateProfileDto>({
     mutationKey: ['users', 'profile', 'update'],
     mutationFn: updateProfile,
     ...options,
